@@ -1,0 +1,1240 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F1F4F5">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Sehnenlog">
+<meta name="description" content="Trainingstagebuch und Reha-Plan für die Tibialis-posterior-Sehne">
+<title>Sehnenlog</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2214%22%20fill%3D%22%2318211F%22%2F%3E%3Cpath%20d%3D%22M20%2044%20L20%2020%20M20%2032%20Q32%2020%2044%2032%22%20stroke%3D%22%235FB79A%22%20stroke-width%3D%226%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%2F%3E%3C%2Fsvg%3E">
+<style>
+html, body { margin: 0; padding: 0; background: #F1F4F5; }
+body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
+
+  :root {
+    --paper: #F1F4F5; --card: #FFFFFF; --ink: #18211F; --ink-soft: #5C6A6B;
+    --rule: #D2DBDC; --rule-soft: #E5EBEC; --act: #1D5B6E;
+    --up: #2E7D5B; --down: #A93B31;
+    --up-bg: #E6F1EC; --hold-bg: #F6EEDD; --down-bg: #F7E7E5;
+    --sans: ui-sans-serif, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  #root { font-family: var(--sans); color: var(--ink); background: var(--paper); line-height: 1.5;
+    -webkit-font-smoothing: antialiased; padding: 20px 14px 48px; }
+  #root * { box-sizing: border-box; }
+  .boot { padding: 40px 0; text-align: center; color: var(--ink-soft); }
+  .wrap { max-width: 640px; margin: 0 auto; }
+
+  .masthead { margin-bottom: 14px; }
+  .masthead h1 { margin: 0; font-size: 26px; font-weight: 650; letter-spacing: -0.02em; }
+  .masthead p { margin: 4px 0 0; font-size: 13.5px; color: var(--ink-soft); }
+
+  .tabs { display: flex; gap: 5px; margin-bottom: 16px; flex-wrap: wrap; }
+  .tabs button { font-family: inherit; font-size: 14px; font-weight: 600; padding: 9px 14px;
+    border-radius: 7px; border: 1px solid var(--rule); background: #fff; color: var(--ink-soft); cursor: pointer; }
+  .tabs button[aria-selected="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
+
+  .card { background: var(--card); border: 1px solid var(--rule-soft); border-radius: 10px; padding: 18px; margin-bottom: 14px; }
+  .card h2 { margin: 0 0 4px; font-size: 16px; font-weight: 650; letter-spacing: -0.01em; }
+  .card .lede { margin: 0 0 14px; font-size: 13.5px; color: var(--ink-soft); }
+
+  .verdict { border: 1px solid var(--rule); border-radius: 10px; padding: 20px; margin-bottom: 14px; }
+  .verdict.up { background: var(--up-bg); border-color: #BFDACE; }
+  .verdict.hold { background: var(--hold-bg); border-color: #E3D2AE; }
+  .verdict.down { background: var(--down-bg); border-color: #E8C4C0; }
+  .verdict.none { background: var(--card); }
+  .verdict-kicker { font-size: 13px; color: var(--ink-soft); margin: 0 0 6px; }
+  .verdict-word { margin: 0; font-size: 32px; font-weight: 680; letter-spacing: -0.03em; line-height: 1.1; }
+  .verdict.up .verdict-word { color: var(--up); }
+  .verdict.hold .verdict-word { color: #9A6B12; }
+  .verdict.down .verdict-word { color: var(--down); }
+  .verdict ul { margin: 12px 0 0; padding-left: 18px; font-size: 14px; }
+  .verdict li { margin-bottom: 5px; }
+  .verdict .todo { margin: 14px 0 0; padding-top: 12px; border-top: 1px solid rgba(0,0,0,0.09); font-size: 14px; }
+
+  .field { margin-bottom: 18px; }
+  .field > label, .field-label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 3px; }
+  .hint { font-size: 12.5px; color: var(--ink-soft); margin: 0 0 8px; }
+
+  .scale { display: flex; gap: 3px; }
+  .scale button { flex: 1; min-width: 0; height: 42px; font-family: inherit; font-size: 14px;
+    font-variant-numeric: tabular-nums; color: var(--ink); background: #EDF1F2;
+    border: 1px solid transparent; border-radius: 5px; cursor: pointer; padding: 0; }
+  .scale button:hover { background: #E2E9EA; }
+  .scale button[aria-pressed="true"] { background: var(--ink); color: #fff; font-weight: 650; }
+  .scale-rule { position: relative; height: 17px; margin-top: 4px; font-size: 11.5px; color: var(--ink-soft); }
+  .scale-rule span { position: absolute; top: 0; transform: translateX(-50%); white-space: nowrap; }
+  .scale-rule i { position: absolute; top: -4px; width: 1px; height: 6px; background: var(--ink-soft); }
+
+  .seg { display: flex; flex-wrap: wrap; gap: 6px; }
+  .seg button { font-family: inherit; font-size: 13.5px; padding: 8px 13px; border-radius: 6px;
+    border: 1px solid var(--rule); background: #fff; color: var(--ink); cursor: pointer; }
+  .seg button:hover { border-color: var(--act); }
+  .seg button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #fff; font-weight: 600; }
+
+  input[type="text"], input[type="date"], input[type="time"], input[type="number"], textarea {
+    width: 100%; font-family: inherit; font-size: 15px; color: var(--ink);
+    padding: 9px 11px; border: 1px solid var(--rule); border-radius: 6px; background: #fff; }
+  input[type="number"] { -moz-appearance: textfield; }
+  textarea { resize: vertical; min-height: 58px; }
+  input:focus, textarea:focus, button:focus-visible { outline: 2px solid var(--act); outline-offset: 1px; }
+
+  .grid2 { display: flex; gap: 10px; }
+  .grid2 > div { flex: 1; min-width: 0; }
+  .sublabel { font-size: 12.5px; color: var(--ink-soft); margin-bottom: 3px; display: block; }
+
+  .exrow { background: #F7F9F9; border: 1px solid var(--rule-soft); border-radius: 7px; padding: 10px 11px; margin-bottom: 8px; }
+  .exrow-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 7px; }
+  .exrow-name { font-size: 14px; font-weight: 600; }
+  .exrow-dose { font-size: 11.5px; color: var(--ink-soft); white-space: nowrap; }
+  .exrow-in { display: flex; gap: 7px; }
+  .exrow-in > div { flex: 1; min-width: 0; }
+  .exrow-in input { padding: 7px 8px; font-size: 14px; text-align: center; }
+  .exrow-in span { font-size: 11px; color: var(--ink-soft); display: block; text-align: center; margin-bottom: 2px; }
+
+  .check { display: flex; align-items: flex-start; gap: 9px; font-size: 14px; cursor: pointer; margin-bottom: 10px; }
+  .check input { margin-top: 3px; width: 16px; height: 16px; accent-color: var(--act); }
+
+  .btn { font-family: inherit; font-size: 15px; font-weight: 600; padding: 11px 18px; border-radius: 7px;
+    border: 1px solid var(--act); background: var(--act); color: #fff; cursor: pointer; }
+  .btn:hover { background: #17495A; }
+  .btn.ghost { background: #fff; color: var(--act); }
+  .btn.quiet { background: #fff; color: var(--ink-soft); border-color: var(--rule); font-weight: 500; }
+  .btn.small { font-size: 13.5px; padding: 8px 13px; }
+  .btn[disabled] { opacity: .45; cursor: default; }
+  .btn-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+  .pending { border-left: 3px solid var(--act); }
+  .warnbox { background: var(--hold-bg); border: 1px solid #E3D2AE; border-radius: 7px;
+    padding: 10px 12px; font-size: 13px; margin: -2px 0 12px; }
+  .warnbox b { color: #9A6B12; }
+
+  .row { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--rule-soft); }
+  .row:last-child { border-bottom: 0; }
+  .row-main { flex: 1; min-width: 0; }
+  .row-title { font-size: 14.5px; font-weight: 600; }
+  .row-sub { font-size: 12.5px; color: var(--ink-soft); margin-top: 1px; }
+  .nums { display: flex; gap: 6px; flex-shrink: 0; }
+  .num { width: 38px; text-align: center; font-variant-numeric: tabular-nums; }
+  .num b { display: block; font-size: 17px; font-weight: 650; line-height: 1.2; }
+  .num s { display: block; font-size: 10.5px; color: var(--ink-soft); text-decoration: none; }
+  .num.miss b { color: var(--rule); }
+  .del { background: none; border: 0; cursor: pointer; color: var(--rule); font-size: 18px;
+    line-height: 1; padding: 4px 2px; flex-shrink: 0; font-family: inherit; }
+  .del:hover { color: var(--down); }
+  .rowbtns { display: flex; flex-direction: column; gap: 2px; flex-shrink: 0; }
+  .edit { background: none; border: 0; cursor: pointer; color: var(--ink-soft); font-size: 11.5px;
+    padding: 2px 3px; font-family: inherit; text-decoration: underline; }
+  .edit:hover { color: var(--act); }
+  .row.editing { background: #EAF1F3; border-radius: 6px; }
+  .editbar { background: #EAF1F3; border: 1px solid #C4D7DD; border-radius: 7px;
+    padding: 10px 12px; font-size: 13px; margin-bottom: 14px; }
+  .editbar b { color: var(--act); }
+  .empty { font-size: 14px; color: var(--ink-soft); padding: 6px 0 2px; }
+
+  .spark { width: 100%; height: 68px; display: block; margin-bottom: 4px; }
+  .spark-legend { font-size: 12px; color: var(--ink-soft); display: flex; gap: 16px; }
+  .spark-legend i { display: inline-block; width: 16px; height: 2px; vertical-align: middle; margin-right: 5px; }
+
+  .flag { background: var(--down-bg); border: 1px solid #E8C4C0; border-radius: 8px;
+    padding: 14px 16px; font-size: 14px; margin-bottom: 14px; }
+  .flag b { display: block; margin-bottom: 4px; color: var(--down); }
+
+  .exportbox { width: 100%; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px; line-height: 1.45; min-height: 150px; margin-top: 10px; }
+  .note { font-size: 12.5px; color: var(--ink-soft); margin-top: 14px; }
+  .err { font-size: 13px; color: var(--down); margin-top: 8px; }
+
+  /* Akkordeon (Übungen & Plan) */
+  .blockhead { font-size: 15px; font-weight: 650; margin: 20px 0 3px; }
+  .blockhead:first-child { margin-top: 0; }
+  .blocksub { font-size: 12.5px; color: var(--ink-soft); margin: 0 0 10px; }
+  .acc { border: 1px solid var(--rule-soft); border-radius: 8px; margin-bottom: 8px; overflow: hidden; }
+  .acc > button { width: 100%; text-align: left; font-family: inherit; cursor: pointer; background: #fff;
+    border: 0; padding: 13px 14px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .acc > button:hover { background: #F7F9F9; }
+  .acc-name { font-size: 14.5px; font-weight: 600; display: block; }
+  .acc-meta { font-size: 12px; color: var(--act); font-weight: 600; margin-top: 2px; display: block; }
+  .acc-chev { color: var(--rule); font-size: 15px; flex-shrink: 0; }
+  .acc-body { padding: 0 14px 14px; border-top: 1px solid var(--rule-soft); background: #FAFCFC; }
+  .acc-body h4 { margin: 13px 0 5px; font-size: 12px; color: var(--ink-soft); font-weight: 600;
+    letter-spacing: .04em; text-transform: uppercase; }
+  .acc-body ul { margin: 0; padding-left: 17px; font-size: 13.5px; }
+  .acc-body li { margin-bottom: 4px; }
+  .acc-err { background: var(--down-bg); border-radius: 6px; padding: 9px 11px; font-size: 13px; margin-top: 11px; }
+  .acc-err b { color: var(--down); }
+  .fig { background: #fff; border: 1px solid var(--rule-soft); border-radius: 7px;
+    padding: 8px; margin-top: 12px; }
+  .fig svg { width: 100%; height: auto; display: block; }
+
+  .kv { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0;
+    border-bottom: 1px solid var(--rule-soft); font-size: 13.5px; }
+  .kv:last-child { border-bottom: 0; }
+  .kv b { font-weight: 600; }
+  .kv span { color: var(--act); font-weight: 600; white-space: nowrap; }
+
+  .prod { border: 1px solid var(--rule-soft); border-radius: 8px; padding: 13px 14px; margin-bottom: 9px; }
+  .prod-name { font-size: 14.5px; font-weight: 650; }
+  .prod-price { font-size: 13px; color: var(--act); font-weight: 600; margin: 2px 0 6px; }
+  .prod-role { font-size: 13px; color: var(--ink-soft); }
+
+  @media (max-width: 420px) {
+    .scale button { height: 38px; font-size: 13px; }
+    .verdict-word { font-size: 27px; }
+    .grid2 { flex-wrap: wrap; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .btn, .seg button, .scale button, .tabs button { transition: background-color .12s ease, color .12s ease; }
+  }
+
+</style>
+</head>
+<body>
+<div id="root"><div class="boot">Wird geladen…</div></div>
+<script type="module">
+
+
+/* Lokaler Speicher dieses Geräts. Ersetzt die Artefakt-Schnittstelle der Chat-Version. */
+const LOCAL_PREFIX = 'sehnenlog.local:';
+let memFallback = {};
+let lsOk = true;
+try { localStorage.setItem(LOCAL_PREFIX + 'probe', '1'); localStorage.removeItem(LOCAL_PREFIX + 'probe'); }
+catch (e) { lsOk = false; }
+
+window.storage = {
+  async get(k) {
+    const key = LOCAL_PREFIX + k;
+    const v = lsOk ? localStorage.getItem(key) : (key in memFallback ? memFallback[key] : null);
+    return v === null || v === undefined ? null : { key: k, value: v };
+  },
+  async set(k, v) {
+    const key = LOCAL_PREFIX + k;
+    if (lsOk) localStorage.setItem(key, v); else memFallback[key] = v;
+    if (!lsOk) throw new Error('Der Browser erlaubt keinen dauerhaften Speicher (privater Modus?). Die Daten gelten nur für diese Sitzung – bitte eine Sicherung erzeugen.');
+    return { key: k, value: v };
+  }
+};
+
+const KEY = 'sehnenlog:v3';
+const FIGS = {"calf_straight":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 900 640\" preserveAspectRatio=\"xMidYMid meet\"> <defs> <marker id=\"ah_calf_straight\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#C75B39\"/> </marker> <marker id=\"ahg_calf_straight\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#5B8C6E\"/> </marker> </defs> <g font-family=\"Arial, Helvetica, sans-serif\"> <rect x=\"430\" y=\"430\" width=\"420\" height=\"150\" rx=\"6\" fill=\"#E8E3DC\"/> <text x=\"640\" y=\"520\" font-size=\"24\" fill=\"#6B7780\" text-anchor=\"middle\" font-weight=\"normal\">Stufe / Treppe</text> <!-- leg, up position --> <g stroke=\"#26323C\" stroke-width=\"16\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill=\"none\"> <line x1=\"405\" y1=\"90\" x2=\"415\" y2=\"330\"/> <path d=\"M415,330 L360,395 M415,330 L470,430\"/> <line x1=\"470\" y1=\"430\" x2=\"560\" y2=\"430\"/> </g> <text x=\"405\" y=\"70\" font-size=\"24\" fill=\"#26323C\" text-anchor=\"middle\" font-weight=\"bold\">Knie gestreckt</text> <!-- ghost, down position --> <g stroke=\"#BFC6CC\" stroke-width=\"14\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill=\"none\" stroke-dasharray=\"14,11\"> <line x1=\"415\" y1=\"150\" x2=\"428\" y2=\"392\"/> <path d=\"M428,392 L370,520 M428,392 L470,432\"/> </g> <!-- range arrow --> <line x1=\"285\" y1=\"380\" x2=\"285\" y2=\"520\" stroke=\"#C75B39\" stroke-width=\"7\" marker-start=\"url(#ah_calf_straight)\" marker-end=\"url(#ah_calf_straight)\"/> <text x=\"258\" y=\"398\" font-size=\"25\" fill=\"#C75B39\" text-anchor=\"end\" font-weight=\"bold\">3 Sek. hoch</text> <text x=\"258\" y=\"512\" font-size=\"25\" fill=\"#C75B39\" text-anchor=\"end\" font-weight=\"bold\">3 Sek. runter</text> <line x1=\"330\" y1=\"430\" x2=\"430\" y2=\"430\" stroke=\"#6B7780\" stroke-width=\"3\" stroke-dasharray=\"8,8\"/> <text x=\"60\" y=\"600\" font-size=\"25\" fill=\"#6B7780\" text-anchor=\"start\" font-weight=\"normal\">Ferse unter die Stufenkante absenken – volle Bewegungsreichweite</text>\n</g>\n</svg>","calf_bent":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 900 640\" preserveAspectRatio=\"xMidYMid meet\"> <defs> <marker id=\"ah_calf_bent\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#C75B39\"/> </marker> <marker id=\"ahg_calf_bent\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#5B8C6E\"/> </marker> </defs> <g font-family=\"Arial, Helvetica, sans-serif\"> <rect x=\"430\" y=\"430\" width=\"420\" height=\"150\" rx=\"6\" fill=\"#E8E3DC\"/> <g stroke=\"#26323C\" stroke-width=\"16\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill=\"none\"> <line x1=\"330\" y1=\"90\" x2=\"360\" y2=\"250\"/> <line x1=\"360\" y1=\"250\" x2=\"415\" y2=\"330\"/> <path d=\"M415,330 L360,395 M415,330 L470,430\"/> <line x1=\"470\" y1=\"430\" x2=\"560\" y2=\"430\"/> </g> <path d=\"M300,255 A70,70 0 0,0 420,265\" fill=\"none\" stroke=\"#C75B39\" stroke-width=\"6\"/> <text x=\"292\" y=\"250\" font-size=\"27\" fill=\"#C75B39\" text-anchor=\"end\" font-weight=\"bold\">≈ 30°</text> <text x=\"330\" y=\"70\" font-size=\"24\" fill=\"#26323C\" text-anchor=\"middle\" font-weight=\"bold\">Knie gebeugt halten</text> <line x1=\"620\" y1=\"380\" x2=\"620\" y2=\"500\" stroke=\"#C75B39\" stroke-width=\"7\" marker-start=\"url(#ah_calf_bent)\" marker-end=\"url(#ah_calf_bent)\"/> <text x=\"645\" y=\"450\" font-size=\"25\" fill=\"#C75B39\" text-anchor=\"start\" font-weight=\"normal\">gleiches Tempo 3/3</text> <text x=\"60\" y=\"600\" font-size=\"25\" fill=\"#6B7780\" text-anchor=\"start\" font-weight=\"normal\">Beugung bleibt konstant – trifft den tiefen Wadenmuskel (Soleus)</text>\n</g>\n</svg>","iso_hold":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 900 640\" preserveAspectRatio=\"xMidYMid meet\"> <defs> <marker id=\"ah_iso_hold\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#C75B39\"/> </marker> <marker id=\"ahg_iso_hold\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#5B8C6E\"/> </marker> </defs> <g font-family=\"Arial, Helvetica, sans-serif\"> <line x1=\"120\" y1=\"470\" x2=\"780\" y2=\"470\" stroke=\"#E8E3DC\" stroke-width=\"16\" stroke-linecap=\"round\"/> <g stroke=\"#26323C\" stroke-width=\"16\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill=\"none\"> <line x1=\"380\" y1=\"110\" x2=\"392\" y2=\"345\"/> <path d=\"M392,345 L338,405 M392,345 L448,462\"/> <line x1=\"448\" y1=\"462\" x2=\"540\" y2=\"462\"/> </g> <line x1=\"292\" y1=\"405\" x2=\"292\" y2=\"470\" stroke=\"#5B8C6E\" stroke-width=\"7\" marker-start=\"url(#ahg_iso_hold)\" marker-end=\"url(#ahg_iso_hold)\"/> <text x=\"275\" y=\"445\" font-size=\"25\" fill=\"#5B8C6E\" text-anchor=\"end\" font-weight=\"normal\">Ferse angehoben</text> <circle cx=\"660\" cy=\"200\" r=\"72\" fill=\"none\" stroke=\"#5B8C6E\" stroke-width=\"8\"/> <text x=\"660\" y=\"195\" font-size=\"40\" fill=\"#5B8C6E\" text-anchor=\"middle\" font-weight=\"bold\">30–45</text> <text x=\"660\" y=\"232\" font-size=\"24\" fill=\"#5B8C6E\" text-anchor=\"middle\" font-weight=\"normal\">Sekunden</text> <text x=\"660\" y=\"320\" font-size=\"25\" fill=\"#6B7780\" text-anchor=\"middle\" font-weight=\"normal\">halten, nicht bewegen</text> <text x=\"60\" y=\"600\" font-size=\"25\" fill=\"#6B7780\" text-anchor=\"start\" font-weight=\"normal\">Position ruhig halten – wirkt bei vielen Sehnen sofort schmerzlindernd</text>\n</g>\n</svg>","tib_post":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 900 640\" preserveAspectRatio=\"xMidYMid meet\"> <defs> <marker id=\"ah_tib_post\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#C75B39\"/> </marker> <marker id=\"ahg_tib_post\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#5B8C6E\"/> </marker> </defs> <g font-family=\"Arial, Helvetica, sans-serif\"> <text x=\"450\" y=\"62\" font-size=\"25\" fill=\"#6B7780\" text-anchor=\"middle\" font-weight=\"normal\">Draufsicht – rechter Fuß</text> <!-- foot outline seen from above, toes up --> <path d=\"M470,150 C540,160 560,250 552,340 C546,420 530,470 490,490 C440,512 392,492 378,440 C362,378 372,250 396,190 C410,158 436,145 470,150 Z\" fill=\"#F5F2EE\" stroke=\"#26323C\" stroke-width=\"10\" stroke-linejoin=\"round\"/> <g fill=\"#26323C\"> <ellipse cx=\"410\" cy=\"140\" rx=\"19\" ry=\"24\"/> <ellipse cx=\"452\" cy=\"127\" rx=\"17\" ry=\"22\"/> <ellipse cx=\"490\" cy=\"130\" rx=\"15\" ry=\"20\"/> <ellipse cx=\"523\" cy=\"143\" rx=\"13\" ry=\"18\"/> <ellipse cx=\"551\" cy=\"163\" rx=\"12\" ry=\"16\"/> </g> <!-- band --> <path d=\"M760,300 C650,300 600,290 552,285\" stroke=\"#5B8C6E\" stroke-width=\"16\" fill=\"none\" stroke-linecap=\"round\"/> <text x=\"770\" y=\"262\" font-size=\"25\" fill=\"#5B8C6E\" text-anchor=\"start\" font-weight=\"bold\">Band fest</text> <text x=\"770\" y=\"296\" font-size=\"25\" fill=\"#5B8C6E\" text-anchor=\"start\" font-weight=\"bold\">verankert</text> <!-- movement arrow: foot pushes inward (medially) --> <path d=\"M360,300 C295,300 250,318 205,348\" stroke=\"#C75B39\" stroke-width=\"9\" fill=\"none\" marker-end=\"url(#ah_tib_post)\"/> <text x=\"60\" y=\"425\" font-size=\"26\" fill=\"#C75B39\" text-anchor=\"start\" font-weight=\"bold\">Fuß nach innen</text> <text x=\"60\" y=\"459\" font-size=\"26\" fill=\"#C75B39\" text-anchor=\"start\" font-weight=\"bold\">und leicht nach</text> <text x=\"60\" y=\"493\" font-size=\"26\" fill=\"#C75B39\" text-anchor=\"start\" font-weight=\"bold\">unten drücken</text> <text x=\"60\" y=\"600\" font-size=\"25\" fill=\"#6B7780\" text-anchor=\"start\" font-weight=\"normal\">Unterschenkel bleibt ruhig – nur der Fuß bewegt sich. Langsam zurück.</text>\n</g>\n</svg>","tib_ant":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 900 640\" preserveAspectRatio=\"xMidYMid meet\"> <defs> <marker id=\"ah_tib_ant\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#C75B39\"/> </marker> <marker id=\"ahg_tib_ant\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#5B8C6E\"/> </marker> </defs> <g font-family=\"Arial, Helvetica, sans-serif\"> <text x=\"450\" y=\"62\" font-size=\"25\" fill=\"#6B7780\" text-anchor=\"middle\" font-weight=\"normal\">Seitansicht – sitzend, Bein gestreckt</text> <!-- shin horizontal --> <line x1=\"120\" y1=\"300\" x2=\"470\" y2=\"300\" stroke=\"#26323C\" stroke-width=\"18\" stroke-linecap=\"round\"/> <!-- foot up position --> <g stroke=\"#26323C\" stroke-width=\"16\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill=\"none\"> <path d=\"M470,300 L500,220 M470,300 L505,330\"/> </g> <!-- ghost down --> <g stroke=\"#BFC6CC\" stroke-width=\"14\" stroke-linecap=\"round\" stroke-dasharray=\"13,10\" fill=\"none\"> <path d=\"M470,300 L545,368\"/> </g> <!-- band --> <path d=\"M498,236 C600,270 700,380 745,470\" stroke=\"#5B8C6E\" stroke-width=\"14\" fill=\"none\" stroke-linecap=\"round\"/> <text x=\"700\" y=\"520\" font-size=\"25\" fill=\"#5B8C6E\" text-anchor=\"middle\" font-weight=\"bold\">Band fixiert</text> <path d=\"M420,250 C430,200 460,178 495,180\" stroke=\"#C75B39\" stroke-width=\"9\" fill=\"none\" marker-end=\"url(#ah_tib_ant)\"/> <text x=\"390\" y=\"225\" font-size=\"27\" fill=\"#C75B39\" text-anchor=\"end\" font-weight=\"bold\">Fußspitze</text> <text x=\"390\" y=\"260\" font-size=\"27\" fill=\"#C75B39\" text-anchor=\"end\" font-weight=\"bold\">anziehen</text> <text x=\"60\" y=\"600\" font-size=\"25\" fill=\"#6B7780\" text-anchor=\"start\" font-weight=\"normal\">Gegen den Bandwiderstand anziehen, dann betont langsam ablassen</text>\n</g>\n</svg>","heel_walk":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 900 640\" preserveAspectRatio=\"xMidYMid meet\"> <defs> <marker id=\"ah_heel_walk\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#C75B39\"/> </marker> <marker id=\"ahg_heel_walk\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#5B8C6E\"/> </marker> </defs> <g font-family=\"Arial, Helvetica, sans-serif\"> <line x1=\"80\" y1=\"500\" x2=\"820\" y2=\"500\" stroke=\"#E8E3DC\" stroke-width=\"16\" stroke-linecap=\"round\"/> <g stroke=\"#26323C\" stroke-width=\"16\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill=\"none\"> <line x1=\"300\" y1=\"120\" x2=\"300\" y2=\"380\"/> <path d=\"M300,380 L285,495 M300,380 L370,318\"/> </g> <g stroke=\"#26323C\" stroke-width=\"16\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill=\"none\"> <line x1=\"470\" y1=\"120\" x2=\"500\" y2=\"370\"/> <path d=\"M500,370 L488,495 M500,370 L572,315\"/> </g> <circle cx=\"72\" cy=\"552\" r=\"13\" fill=\"#C75B39\"/> <text x=\"100\" y=\"561\" font-size=\"26\" fill=\"#C75B39\" text-anchor=\"start\" font-weight=\"bold\">Nur auf den Fersen gehen – Fußspitzen bleiben oben</text> <circle cx=\"72\" cy=\"604\" r=\"13\" fill=\"#6B7780\"/> <text x=\"100\" y=\"613\" font-size=\"26\" fill=\"#6B7780\" text-anchor=\"start\" font-weight=\"normal\">Schienbein brennt – das ist gewollt. 30 Sek. am Stück.</text>\n</g>\n</svg>","short_foot":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 900 640\" preserveAspectRatio=\"xMidYMid meet\"> <defs> <marker id=\"ah_short_foot\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#C75B39\"/> </marker> <marker id=\"ahg_short_foot\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#5B8C6E\"/> </marker> </defs> <g font-family=\"Arial, Helvetica, sans-serif\"> <text x=\"450\" y=\"62\" font-size=\"25\" fill=\"#6B7780\" text-anchor=\"middle\" font-weight=\"normal\">Seitansicht – Fußgewölbe aktiv anheben</text> <line x1=\"120\" y1=\"450\" x2=\"800\" y2=\"450\" stroke=\"#E8E3DC\" stroke-width=\"14\" stroke-linecap=\"round\"/> <!-- flat arch ghost --> <path d=\"M250,450 C340,450 480,450 600,450\" stroke=\"#BFC6CC\" stroke-width=\"12\" fill=\"none\" stroke-dasharray=\"13,10\"/> <text x=\"390\" y=\"512\" font-size=\"24\" fill=\"#BFC6CC\" text-anchor=\"middle\" font-weight=\"normal\">flach (vorher)</text> <!-- lifted arch --> <path d=\"M250,450 C340,368 470,368 600,450\" stroke=\"#26323C\" stroke-width=\"16\" fill=\"none\" stroke-linecap=\"round\"/> <circle cx=\"250\" cy=\"450\" r=\"14\" fill=\"#26323C\"/> <circle cx=\"600\" cy=\"450\" r=\"14\" fill=\"#26323C\"/> <text x=\"232\" y=\"430\" font-size=\"24\" fill=\"#6B7780\" text-anchor=\"end\" font-weight=\"normal\">Ferse bleibt</text> <text x=\"232\" y=\"458\" font-size=\"24\" fill=\"#6B7780\" text-anchor=\"end\" font-weight=\"normal\">am Boden</text> <text x=\"622\" y=\"430\" font-size=\"24\" fill=\"#6B7780\" text-anchor=\"start\" font-weight=\"normal\">Ballen bleibt</text> <text x=\"622\" y=\"458\" font-size=\"24\" fill=\"#6B7780\" text-anchor=\"start\" font-weight=\"normal\">am Boden</text> <line x1=\"425\" y1=\"345\" x2=\"425\" y2=\"270\" stroke=\"#C75B39\" stroke-width=\"9\" marker-end=\"url(#ah_short_foot)\"/> <text x=\"425\" y=\"240\" font-size=\"27\" fill=\"#C75B39\" text-anchor=\"middle\" font-weight=\"bold\">Gewölbe anheben</text> <text x=\"60\" y=\"600\" font-size=\"25\" fill=\"#C75B39\" text-anchor=\"start\" font-weight=\"normal\">Zehen bleiben lang und entspannt – nicht krallen!</text>\n</g>\n</svg>","side_plank":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 900 640\" preserveAspectRatio=\"xMidYMid meet\"> <defs> <marker id=\"ah_side_plank\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#C75B39\"/> </marker> <marker id=\"ahg_side_plank\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#5B8C6E\"/> </marker> </defs> <g font-family=\"Arial, Helvetica, sans-serif\"> <line x1=\"90\" y1=\"470\" x2=\"810\" y2=\"470\" stroke=\"#E8E3DC\" stroke-width=\"14\" stroke-linecap=\"round\"/> <g stroke=\"#26323C\" stroke-width=\"16\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill=\"none\"> <!-- forearm --> <line x1=\"200\" y1=\"470\" x2=\"290\" y2=\"470\"/> <line x1=\"255\" y1=\"470\" x2=\"270\" y2=\"330\"/> <!-- torso --> <line x1=\"270\" y1=\"330\" x2=\"560\" y2=\"415\"/> <circle cx=\"252\" cy=\"292\" r=\"34\"/> <!-- bottom leg --> <line x1=\"560\" y1=\"415\" x2=\"790\" y2=\"465\"/> </g> <!-- top leg raised --> <g stroke=\"#C75B39\" stroke-width=\"16\" stroke-linecap=\"round\" fill=\"none\"> <line x1=\"560\" y1=\"410\" x2=\"780\" y2=\"350\"/> </g> <path d=\"M700,430 C710,400 720,380 735,362\" stroke=\"#C75B39\" stroke-width=\"8\" fill=\"none\" marker-end=\"url(#ah_side_plank)\"/> <text x=\"660\" y=\"300\" font-size=\"26\" fill=\"#C75B39\" text-anchor=\"middle\" font-weight=\"bold\">oberes Bein heben</text> <line x1=\"270\" y1=\"345\" x2=\"555\" y2=\"428\" stroke=\"#5B8C6E\" stroke-width=\"5\" stroke-dasharray=\"12,9\"/> <text x=\"60\" y=\"575\" font-size=\"25\" fill=\"#5B8C6E\" text-anchor=\"start\" font-weight=\"normal\">Hüfte oben halten – gerade Linie Schulter–Hüfte–Knie</text>\n</g>\n</svg>","monster_walk":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 900 640\" preserveAspectRatio=\"xMidYMid meet\"> <defs> <marker id=\"ah_monster_walk\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#C75B39\"/> </marker> <marker id=\"ahg_monster_walk\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#5B8C6E\"/> </marker> </defs> <g font-family=\"Arial, Helvetica, sans-serif\"> <text x=\"450\" y=\"62\" font-size=\"25\" fill=\"#6B7780\" text-anchor=\"middle\" font-weight=\"normal\">Frontalansicht – Band um die Fußgelenke</text> <line x1=\"100\" y1=\"500\" x2=\"800\" y2=\"500\" stroke=\"#E8E3DC\" stroke-width=\"14\" stroke-linecap=\"round\"/> <g stroke=\"#26323C\" stroke-width=\"16\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill=\"none\"> <circle cx=\"450\" cy=\"150\" r=\"38\"/> <line x1=\"450\" y1=\"188\" x2=\"450\" y2=\"300\"/> <line x1=\"450\" y1=\"300\" x2=\"345\" y2=\"440\"/> <line x1=\"345\" y1=\"440\" x2=\"330\" y2=\"495\"/> <line x1=\"450\" y1=\"300\" x2=\"565\" y2=\"440\"/> <line x1=\"565\" y1=\"440\" x2=\"580\" y2=\"495\"/> </g> <path d=\"M330,470 C420,438 490,438 580,470\" stroke=\"#5B8C6E\" stroke-width=\"14\" fill=\"none\"/> <text x=\"455\" y=\"425\" font-size=\"25\" fill=\"#5B8C6E\" text-anchor=\"middle\" font-weight=\"bold\">Band</text> <line x1=\"290\" y1=\"495\" x2=\"180\" y2=\"495\" stroke=\"#C75B39\" stroke-width=\"9\" marker-end=\"url(#ah_monster_walk)\"/> <line x1=\"620\" y1=\"495\" x2=\"730\" y2=\"495\" stroke=\"#C75B39\" stroke-width=\"9\" marker-end=\"url(#ah_monster_walk)\"/> <text x=\"450\" y=\"560\" font-size=\"26\" fill=\"#C75B39\" text-anchor=\"middle\" font-weight=\"bold\">seitliche Schritte, Spannung im Band halten</text> <text x=\"60\" y=\"615\" font-size=\"25\" fill=\"#6B7780\" text-anchor=\"start\" font-weight=\"normal\">Knie nicht nach innen fallen lassen – Zehen zeigen nach vorn</text>\n</g>\n</svg>","pogo":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 900 640\" preserveAspectRatio=\"xMidYMid meet\"> <defs> <marker id=\"ah_pogo\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#C75B39\"/> </marker> <marker id=\"ahg_pogo\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#5B8C6E\"/> </marker> </defs> <g font-family=\"Arial, Helvetica, sans-serif\"> <line x1=\"100\" y1=\"500\" x2=\"800\" y2=\"500\" stroke=\"#E8E3DC\" stroke-width=\"14\" stroke-linecap=\"round\"/> <g stroke=\"#26323C\" stroke-width=\"16\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill=\"none\"> <circle cx=\"420\" cy=\"130\" r=\"36\"/> <line x1=\"420\" y1=\"166\" x2=\"425\" y2=\"300\"/> <line x1=\"425\" y1=\"300\" x2=\"410\" y2=\"420\"/> <line x1=\"410\" y1=\"420\" x2=\"415\" y2=\"470\"/> <path d=\"M415,470 L385,478 M415,470 L462,470\"/> </g> <line x1=\"415\" y1=\"470\" x2=\"415\" y2=\"500\" stroke=\"#BFC6CC\" stroke-width=\"6\" stroke-dasharray=\"8,7\"/> <line x1=\"640\" y1=\"440\" x2=\"640\" y2=\"292\" stroke=\"#C75B39\" stroke-width=\"9\" marker-start=\"url(#ah_pogo)\" marker-end=\"url(#ah_pogo)\"/> <text x=\"675\" y=\"336\" font-size=\"26\" fill=\"#C75B39\" text-anchor=\"start\" font-weight=\"bold\">kleine,</text> <text x=\"675\" y=\"370\" font-size=\"26\" fill=\"#C75B39\" text-anchor=\"start\" font-weight=\"bold\">schnelle</text> <text x=\"675\" y=\"404\" font-size=\"26\" fill=\"#C75B39\" text-anchor=\"start\" font-weight=\"bold\">Sprünge</text> <circle cx=\"72\" cy=\"552\" r=\"13\" fill=\"#5B8C6E\"/> <text x=\"100\" y=\"561\" font-size=\"26\" fill=\"#5B8C6E\" text-anchor=\"start\" font-weight=\"normal\">Knie fast gestreckt – die Arbeit macht das Sprunggelenk</text> <circle cx=\"72\" cy=\"604\" r=\"13\" fill=\"#6B7780\"/> <text x=\"100\" y=\"613\" font-size=\"26\" fill=\"#6B7780\" text-anchor=\"start\" font-weight=\"normal\">Bodenkontakt so kurz wie möglich, Ferse tippt nicht auf</text>\n</g>\n</svg>","hop_single":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 900 640\" preserveAspectRatio=\"xMidYMid meet\"> <defs> <marker id=\"ah_hop_single\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#C75B39\"/> </marker> <marker id=\"ahg_hop_single\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#5B8C6E\"/> </marker> </defs> <g font-family=\"Arial, Helvetica, sans-serif\"> <line x1=\"100\" y1=\"510\" x2=\"800\" y2=\"510\" stroke=\"#E8E3DC\" stroke-width=\"14\" stroke-linecap=\"round\"/> <g stroke=\"#26323C\" stroke-width=\"16\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill=\"none\"> <circle cx=\"410\" cy=\"120\" r=\"36\"/> <line x1=\"410\" y1=\"156\" x2=\"418\" y2=\"290\"/> <line x1=\"418\" y1=\"290\" x2=\"408\" y2=\"410\"/> <line x1=\"408\" y1=\"410\" x2=\"414\" y2=\"478\"/> <path d=\"M414,478 L386,486 M414,478 L460,478\"/> <!-- other leg lifted, bent --> <line x1=\"418\" y1=\"290\" x2=\"500\" y2=\"360\"/> <line x1=\"500\" y1=\"360\" x2=\"470\" y2=\"425\"/> </g> <path d=\"M300,430 C280,370 290,320 330,285\" stroke=\"#C75B39\" stroke-width=\"9\" fill=\"none\" marker-end=\"url(#ah_hop_single)\"/> <text x=\"280\" y=\"470\" font-size=\"27\" fill=\"#C75B39\" text-anchor=\"end\" font-weight=\"bold\">einbeinig</text> <text x=\"280\" y=\"505\" font-size=\"27\" fill=\"#C75B39\" text-anchor=\"end\" font-weight=\"bold\">abdrücken</text> <circle cx=\"602\" cy=\"252\" r=\"12\" fill=\"#5B8C6E\"/> <text x=\"628\" y=\"261\" font-size=\"23\" fill=\"#5B8C6E\" text-anchor=\"start\" font-weight=\"normal\">Knie über Fußspitze</text> <circle cx=\"602\" cy=\"306\" r=\"12\" fill=\"#5B8C6E\"/> <text x=\"628\" y=\"315\" font-size=\"23\" fill=\"#5B8C6E\" text-anchor=\"start\" font-weight=\"normal\">weich landen</text> <circle cx=\"602\" cy=\"360\" r=\"12\" fill=\"#5B8C6E\"/> <text x=\"628\" y=\"369\" font-size=\"23\" fill=\"#5B8C6E\" text-anchor=\"start\" font-weight=\"normal\">Gewölbe stabil halten</text> <text x=\"60\" y=\"605\" font-size=\"25\" fill=\"#6B7780\" text-anchor=\"start\" font-weight=\"normal\">Erst wenn Seilspringen schmerzfrei läuft</text>\n</g>\n</svg>","heel_rise_test":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 900 640\" preserveAspectRatio=\"xMidYMid meet\"> <defs> <marker id=\"ah_heel_rise_test\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#C75B39\"/> </marker> <marker id=\"ahg_heel_rise_test\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#5B8C6E\"/> </marker> </defs> <g font-family=\"Arial, Helvetica, sans-serif\"> <text x=\"450\" y=\"60\" font-size=\"25\" fill=\"#6B7780\" text-anchor=\"middle\" font-weight=\"normal\">Ebener Boden – einbeinig, Wiederholungen zählen</text> <line x1=\"110\" y1=\"500\" x2=\"790\" y2=\"500\" stroke=\"#E8E3DC\" stroke-width=\"16\" stroke-linecap=\"round\"/> <!-- Standbein, Ferse angehoben --> <g stroke=\"#26323C\" stroke-width=\"16\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill=\"none\"> <circle cx=\"392\" cy=\"128\" r=\"36\"/> <line x1=\"396\" y1=\"164\" x2=\"404\" y2=\"290\"/> <line x1=\"404\" y1=\"290\" x2=\"398\" y2=\"392\"/> <path d=\"M398,392 L344,438 M398,392 L452,492\"/> <line x1=\"452\" y1=\"492\" x2=\"524\" y2=\"492\"/> <!-- freies Bein, angewinkelt --> <line x1=\"404\" y1=\"290\" x2=\"470\" y2=\"352\"/> <line x1=\"470\" y1=\"352\" x2=\"438\" y2=\"418\"/> </g> <!-- Ferse frei --> <line x1=\"300\" y1=\"438\" x2=\"300\" y2=\"500\" stroke=\"#5B8C6E\" stroke-width=\"7\" marker-start=\"url(#ahg_heel_rise_test)\" marker-end=\"url(#ahg_heel_rise_test)\"/> <text x=\"282\" y=\"478\" font-size=\"25\" fill=\"#5B8C6E\" text-anchor=\"end\" font-weight=\"normal\">Ferse frei</text> <!-- Zaehler --> <circle cx=\"655\" cy=\"215\" r=\"76\" fill=\"none\" stroke=\"#C75B39\" stroke-width=\"8\"/> <text x=\"655\" y=\"228\" font-size=\"46\" fill=\"#C75B39\" text-anchor=\"middle\" font-weight=\"bold\">× N</text> <text x=\"655\" y=\"330\" font-size=\"24\" fill=\"#6B7780\" text-anchor=\"middle\" font-weight=\"normal\">zählen, bis die Höhe</text> <text x=\"655\" y=\"362\" font-size=\"24\" fill=\"#6B7780\" text-anchor=\"middle\" font-weight=\"normal\">sichtbar einbricht</text> <circle cx=\"72\" cy=\"565\" r=\"13\" fill=\"#C75B39\"/> <text x=\"100\" y=\"574\" font-size=\"26\" fill=\"#C75B39\" text-anchor=\"start\" font-weight=\"bold\">Volle Reichweite, ruhiges Tempo, ohne Schwung</text> <circle cx=\"72\" cy=\"612\" r=\"13\" fill=\"#6B7780\"/> <text x=\"100\" y=\"621\" font-size=\"26\" fill=\"#6B7780\" text-anchor=\"start\" font-weight=\"normal\">Beide Seiten – gesunde zuerst, dann die rechte</text>\n</g>\n</svg>"};
+
+/* ============================================ Übungen */
+const EX = {
+  iso1: { g:'iso', fig:'iso_hold', name:'Wadenheben halten', dose:'5 × 45 Sek.', unit:'sek',
+    how:['Beidbeinig beginnen, Ferse anheben und die Position ruhig halten','Kein Wippen, keine Bewegung','Später einbeinig, danach als Aufwärmen vor jeder Einheit nutzbar'],
+    err:'Unruhiges Halten. Wirkt bei vielen Sehnen sofort schmerzlindernd – wenn die Position wirklich still bleibt.' },
+  iso2: { g:'iso', fig:'tib_post', name:'Band-Inversion halten', dose:'5 × 30 Sek.', unit:'sek',
+    how:['Theraband seitlich außen fest verankern','Fuß gegen den Widerstand nach innen und leicht nach unten drücken','Spannung halten, Unterschenkel bleibt ruhig'],
+    err:'Das ganze Bein dreht mit. Lieber schwächeres Band und saubere Position.' },
+
+  a1: { g:'A', fig:'calf_straight', name:'Wadenheben, gestrecktes Knie', dose:'4 × 10 · Tempo 3/3', unit:'wdh',
+    how:['Vorfuß auf einer Stufe, Ferse hängt frei über der Kante','Ganz absenken – die Ferse geht unter die Stufenkante','3 Sekunden hoch, 3 Sekunden runter','Knie bleibt durchgehend gestreckt'],
+    err:'Zu schnell und nur halbe Reichweite. Der Reiz entsteht im langsamen Absenken.' },
+  a2: { g:'A', fig:'calf_bent', name:'Wadenheben, gebeugtes Knie', dose:'3 × 12 · Tempo 3/3', unit:'wdh',
+    how:['Knie etwa 30° beugen und diese Beugung konstant halten','Sonst identisch zur gestreckten Variante','Trifft den tiefliegenden Wadenmuskel (Soleus)'],
+    err:'Das Knie streckt sich unbemerkt während der Bewegung. Im Spiegel kontrollieren.' },
+  a3: { g:'A', fig:'tib_post', name:'Band-Inversion (Tibialis posterior)', dose:'3 × 15', unit:'wdh',
+    how:['Theraband seitlich außen fest verankern','Fuß gegen den Widerstand nach innen und leicht nach unten drücken','Der Unterschenkel bleibt ruhig','Betont langsam zurück in die Ausgangsposition'],
+    err:'Das ganze Bein dreht mit, statt nur den Fuß zu bewegen.' },
+  a4: { g:'A', fig:'short_foot', name:'Kurzfuß', dose:'3 × 30 Sek.', unit:'sek',
+    how:['Ferse und Ballen bleiben am Boden','Das Längsgewölbe aktiv anheben, der Fuß wird kürzer','Zehen bleiben lang und entspannt'],
+    err:'Die Zehen krallen sich ein. Dann arbeitet die falsche Muskulatur.' },
+
+  a5: { g:'A', fig:'short_foot', name:'Doming (Arch Doming)', dose:'3 × 10–15 · je 5 Sek. halten', unit:'wdh',
+    how:['Fuß flach am Boden, Ferse und Ballen bleiben liegen','Das Längsgewölbe aktiv nach oben ziehen – wie ein Crunch für den Innenfuß','Zehen bleiben lang und entspannt am Boden','5 Sekunden halten, langsam ablassen','Steigerung: sitzend → stehend → einbeinig → in leichter Kniebeuge'],
+    err:'Die Zehen krallen oder der Fuß rollt nach außen. Beides umgeht die kurzen Fußmuskeln. Fast identisch mit Kurzfuß – eine der beiden reicht.' },
+
+  b1: { g:'B', fig:'tib_ant', name:'Band-Dorsalextension (Tibialis anterior)', dose:'3 × 15', unit:'wdh',
+    how:['Sitzend, Bein gestreckt, Band vor dem Fuß fixiert','Fußspitze gegen den Widerstand anziehen','Betont langsam wieder ablassen'],
+    err:'Zu schnelles Zurückfallen. Das langsame Ablassen ist der eigentliche Reiz.' },
+  b2: { g:'B', fig:'heel_walk', name:'Fersengang', dose:'3 × 30 Sek.', unit:'sek',
+    how:['Nur auf den Fersen gehen, Fußspitzen bleiben angehoben','Aufrechte Haltung, normale Schrittlänge','Das Brennen im Schienbein ist gewollt'],
+    err:'Die Fußspitzen sinken langsam ab. Sobald das passiert: Satz beenden.' },
+  b3: { g:'B', fig:'side_plank', name:'Seitstütz mit Beinheben', dose:'3 × 12 pro Seite', unit:'wdh',
+    how:['Unterarm unter der Schulter, Hüfte oben halten','Gerade Linie von Schulter über Hüfte zum Knie','Oberes Bein langsam heben und senken'],
+    err:'Die Hüfte sackt ab, während das Bein arbeitet. Lieber weniger Wiederholungen mit stabiler Hüfte.' },
+  b4: { g:'B', fig:'monster_walk', name:'Monster Walks', dose:'3 × 15 Schritte', unit:'schritte',
+    how:['Band um die Fußgelenke, leichte Kniebeuge','Seitliche Schritte, die Bandspannung bleibt erhalten','Zehen zeigen nach vorn'],
+    err:'Die Knie fallen nach innen – genau das Muster, das die Last auf deine Sehne erhöht.' },
+
+  p1: { g:'plyo', fig:'pogo', name:'Pogo Hops', dose:'3 × 20', unit:'wdh',
+    how:['Kleine, schnelle Sprünge auf der Stelle','Knie bleiben fast gestreckt – die Arbeit macht das Sprunggelenk','Bodenkontakt so kurz wie möglich'],
+    err:'Zu hoch springen und aus dem Knie arbeiten. Höhe ist hier kein Ziel.' },
+  p2: { g:'plyo', fig:null, name:'Seilspringen', dose:'3 × 30 Sek.', unit:'sek',
+    how:['Zweite Stufe der Plyometrie-Progression','Kurze Bodenkontakte, kleine Sprunghöhe'],
+    err:'Zu früh begonnen. Erst wenn Pogo Hops über 2–3 Wochen schmerzfrei liefen.' },
+  p3: { g:'plyo', fig:'hop_single', name:'Einbeinige Hops', dose:'3 × 10 pro Seite', unit:'wdh',
+    how:['Erst beginnen, wenn Seilspringen komplett schmerzfrei läuft','Knie bleibt über der Fußspitze, kippt nicht nach innen','Weich landen, das Fußgewölbe darf nicht einsacken'],
+    err:'Zu früh begonnen. Diese Übung ist der Abschluss der Progression, nicht der Einstieg.' }
+};
+
+const GROUPS = [
+  { g:'iso',  title:'Isometrie', sub:'Hauptübungen in Phase 1, später als Aufwärmen' },
+  { g:'A',    title:'Block A – Sehne & Fuß', sub:'Dreimal pro Woche im Wechsel mit Block B. Kurzfuß und Doming sind dieselbe Übungsfamilie – eine davon genügt.' },
+  { g:'B',    title:'Block B – Schienbein & Hüfte', sub:'Im Wechsel mit Block A' },
+  { g:'plyo', title:'Plyometrie', sub:'Ab Phase 3, Reihenfolge strikt einhalten' }
+];
+
+const TYPES = {
+  kraft:      { label:'Sehnenkraft', kind:'ex', pool:['iso','A','B'] },
+  lauf:       { label:'Laufen',      kind:'run' },
+  plyo:       { label:'Plyometrie',  kind:'ex', pool:['plyo'] },
+  crossfit:   { label:'CrossFit',    kind:'session' },
+  volleyball: { label:'Volleyball',  kind:'session' }
+};
+
+const STIFF = [
+  { v:'unter15', label:'unter 15 Min.', mins:10 },
+  { v:'15bis30', label:'15–30 Min.',    mins:22 },
+  { v:'30bis45', label:'30–45 Min.',    mins:37 },
+  { v:'ueber45', label:'über 45 Min.',  mins:60 }
+];
+const UNIT_LABEL = { wdh:'Wdh.', sek:'Sek.', schritte:'Schritte' };
+
+/* ============================================ Plan */
+const RULES = [
+  ['Schmerz bis 3/10 ist erlaubt','Sehnen brauchen Last, nicht Schonung. Ein dumpfer Schmerz bis etwa 3 von 10 ist Teil des Reizes. Das ist eine Erlaubnis, keine Vorgabe – du musst keinen Schmerz erzeugen.'],
+  ['Die 24-Stunden-Regel','Am nächsten Morgen darf es nicht schlechter sein als am Vortag. Wenn doch: letzte Steigerung zurücknehmen und eine Woche auf dem alten Level bleiben.'],
+  ['Eine Variable pro Woche','Entweder länger oder schneller oder schwerer – nie zwei gleichzeitig. Sonst weißt du bei einem Rückschlag nicht, was ihn ausgelöst hat.']
+];
+
+const PHASES = [
+  { span:'Woche 1–4', title:'Beruhigen & Baseline finden',
+    goal:'Reizniveau senken und herausfinden, wo deine Schwelle wirklich liegt.',
+    parts:[
+      ['Sehnentraining – täglich, ca. 10 Min.', ['Wadenheben halten: 5 × 45 Sek.','Band-Inversion halten: 5 × 30 Sek.','Kurzfuß: 3 × 30 Sek.']],
+      ['Laufen', ['3 × pro Woche, 20–25 Min., locker','Bewusst unter der bisherigen Schwelle bleiben','Mindestens 1 Tag Pause dazwischen','Kadenz um ca. 5 % erhöhen – kürzere Schritte senken die Spitzenlast']],
+      ['CrossFit & Volleyball', ['Streichen: Box Jumps, Double Unders, Running-WODs, alle Sprünge','Behalten: Kniebeugen, Kreuzheben, Oberkörper, Rudern, Bike','Volleyball max. 1 × pro Woche, wenn am Folgemorgen keine Verschlechterung']]
+    ]},
+  { span:'Woche 5–10', title:'Heavy Slow Resistance',
+    goal:'Der eigentliche Umbaureiz: schwer, langsam, kontrolliert.',
+    parts:[
+      ['Wochenstruktur', ['Mo: Block A + Hüfte','Di: Lauf 1 locker','Mi: Block B + CrossFit','Do: Lauf 2 locker','Fr: Block A','Sa: Lauf 3 lang oder Volleyball','So: frei / Mobility']],
+      ['Lastprogression Wadenheben', ['beidbeinig → beidbeinig auf Stufe','→ einbeinig → einbeinig mit Rucksack','→ Gewicht hoch, Wdh. 12 → 8','Sobald 3 × 12 sauber im 3/3-Tempo gelingen: Gewicht erhöhen']],
+      ['Laufen', ['Ab Woche 5: eine Variable pro Woche, max. +10 %','Woche 9–10: erste Steigerungsläufe','4 × 15 Sek. zügig am Ende eines lockeren Laufs']]
+    ]},
+  { span:'Woche 11–18', title:'Kraft schwer, Tempo zurück',
+    goal:'Belastbarkeit über dein altes Niveau heben.',
+    parts:[
+      ['Sehnenkraft – 3 × pro Woche', ['Wadenheben einbeinig mit Zusatzgewicht: 4 × 6–8, Tempo 3/3','Gebeugtes Knie ebenso: 3 × 8','Band-Übungen mit stärkerem Band']],
+      ['Plyometrie – ab Woche 12, 2 × pro Woche', ['Pogo Hops beidbeinig: 3 × 20','Seilspringen: 3 × 30 Sek.','Einbeinige Hops: 3 × 10','Je 2–3 Wochen pro Stufe, Reihenfolge strikt einhalten']],
+      ['Laufen & CrossFit', ['3–4 × pro Woche, davon 1 × Tempo (z. B. 4 × 4 Min. zügig, 2 Min. Trabpause)','1 × längerer Lauf, Rest locker','Double Unders und Box Jumps zurück, sobald Seilspringen schmerzfrei läuft']]
+    ]},
+  { span:'Woche 19–26', title:'Sportspezifisch & Erhalt',
+    goal:'Volle Rückkehr – und der Übergang ins Dauerprogramm.',
+    parts:[
+      ['Sehnenkraft', ['Nur noch 2 × pro Woche, aber schwer','Ab hier kein Reha-Programm mehr, sondern Dauerprogramm','Wenn du es absetzt, sinkt die Belastbarkeit wieder']],
+      ['Laufen', ['4 × pro Woche, Intervalle und Tempoläufe frei steuerbar','Sprints erst ab Woche 22, wenn alles davor stabil war']],
+      ['Volleyball & CrossFit', ['Ohne Einschränkung','Vorausgesetzt, alle Plyometrie-Stufen sind schmerzfrei durchlaufen']]
+    ]}
+];
+
+const RUNCTRL = [
+  ['Langsam und kurz beginnen','Mit dem Tempo steigt die Spitzenlast auf die Sehne überproportional – deutlich stärker als mit der Distanz.'],
+  ['Eine Variable pro Woche','Entweder Dauer oder Tempo, Steigerung maximal 10 %. Nie beides gleichzeitig.'],
+  ['48 Stunden Anpassungszeit','Am Anfang 2–3 Tage Pause zwischen den Läufen.'],
+  ['Kadenz leicht erhöhen','Kürzere Schritte bei gleichem Tempo senken die Spitzenlast messbar.']
+];
+
+const MARKERS = [
+  ['Woche 4–6','Die Morgensteifigkeit wird kürzer','Nicht weniger Schmerz, sondern kürzere Dauer. Aus 30 Minuten werden 20, dann 10.'],
+  ['Woche 4–8','Die Kraft steigt','Anfangs noch Ansteuerung statt Gewebe – trotzdem der verlässlichste frühe Marker, weil objektiv.'],
+  ['Woche 8–12','Die Belastungsschwelle verschiebt sich','Derselbe Lauf, der vor drei Monaten Beschwerden gemacht hat, macht heute keine mehr. Ohne Logbuch siehst du das nicht.'],
+  ['fortlaufend','Die Erholung wird schneller','Eine Einheit, die dich reizt, klingt in einem Tag ab statt in dreien.']
+];
+
+const WARNINGS = [
+  'Morgenschmerz steigt über mehrere Wochen kontinuierlich an',
+  'Schwellung hinter dem Innenknöchel',
+  'Du schaffst kein einbeiniges Wadenheben mehr – oder deutlich weniger als auf der Gegenseite',
+  'Das Fußgewölbe sackt sichtbar ab, die Ferse kippt nach außen',
+  'Plötzlicher, stechender Schmerz mit Kraftverlust'
+];
+
+/* ============================================ Supplemente */
+const PRODUCTS = [
+  ['ESN Collagen Peptides','300 g · 29,90 € · 1,50 € pro Dosis','Nur vor dem Sehnenkrafttraining. 5 g TENDOFORTE plus 50 mg Vitamin C bereits enthalten.'],
+  ['vit4ever Collagen 1 kg','1000 g · ab 28 € · ca. 0,45 € pro Dosis','Vor allen anderen Einheiten. Reines Rinderkollagen Typ I & III, keine Zusatzstoffe.'],
+  ['Vitamin C, 365 × 500 mg','365 Kapseln · 9,95 € · 0,03 € pro Kapsel','Gepuffertes Calcium-Ascorbat. Nur zum vit4ever-Pulver, nie zusätzlich zu ESN.']
+];
+
+const INTAKE = [
+  ['Vor dem Sehnenkrafttraining',['15 g ESN (voller Messlöffel = 5 g TENDOFORTE)','Optional 3–5 g vit4ever dazu, um auf 15 g Kollagen zu kommen','Keine Vitamin-C-Kapsel – die 50 mg sind schon drin']],
+  ['Vor Laufen, CrossFit, Volleyball',['15 g vit4ever in Wasser','Dazu eine Kapsel Vitamin C (500 mg)','Kapsel einfach mit dem Shake schlucken']]
+];
+
+const SUPPRULES = [
+  ['Jede Dosis 45–60 Min. vor der Einheit','Die Peptide heben etwa eine Stunde nach der Einnahme die Aminosäuren im Blut. Wohin der Körper das Material einbaut, entscheidet die mechanische Belastung.'],
+  ['Maximal 2–3 Dosen pro Tag','Nach einem Reiz ist die Sehne rund 6 Stunden refraktär. Mindestens 6 Stunden Abstand zwischen den Dosen.'],
+  ['Nur eine Vitamin-C-Kapsel täglich','Zwei wären 1000 mg – die Grenze, ab der Antioxidantien Trainingsanpassungen dämpfen können.'],
+  ['Reine Ruhetage: nichts nötig','Ohne mechanische Belastung baut der Körper das Material nicht in die Sehne ein.'],
+  ['Vitamin D3 + K2 gehört nicht dazu','Ersetzt kein Vitamin C. Fettlöslich – zu einer Mahlzeit, Tageszeit egal. Erst den 25-OH-Wert messen lassen, dann dosieren.']
+];
+
+/* ============================================ State */
+let state = { entries: [], rest: [], loaded: false, error: null };
+let tab = 'log';
+let openAcc = null;
+let draft = newDraft();
+let morningDraft = {};
+let exportText = null;
+let editingId = null;
+let backupText = null;
+let importBuf = '';
+let importMsg = null;
+let restOpen = false;
+let restDraft = { date:'', pain:null, stiff:null, note:'' };
+
+function nowTime() { const d = new Date(); return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0'); }
+function today() {
+  // Bewusst lokale Datumsteile statt toISOString() – letzteres rechnet auf UTC
+  // und liefert in mitteleuropäischer Zeit nachts den Vortag.
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function newDraft() {
+  return { date: today(), time: nowTime(), type: 'kraft', ex: {},
+    run: { min:'', pace:'', hr:'', intervals:'' }, session: { min:'', hr:'', what:'' },
+    painDuring: null, effort: null, collagen: false, progressed: false, note: '' };
+}
+function fmt(iso) { const [y,m,d] = iso.split('-'); return `${+d}.${+m}.`; }
+function draftFromEntry(e) {
+  const kind = TYPES[e.type] ? TYPES[e.type].kind : 'session';
+  const d = newDraft();
+  d.date = e.date; d.time = e.time || '';
+  d.type = TYPES[e.type] ? e.type : 'crossfit';
+  d.painDuring = e.painDuring; d.effort = e.effort;
+  d.collagen = !!e.collagen; d.progressed = !!e.progressed;
+  d.note = [e.note, e.detail ? 'Alteintrag: ' + e.detail : ''].filter(Boolean).join(' · ');
+  if (kind === 'ex') d.ex = JSON.parse(JSON.stringify((e.details || {}).ex || {}));
+  else if (kind === 'run') d.run = { min:'', pace:'', hr:'', intervals:'', ...(e.details || {}) };
+  else d.session = { min:'', hr:'', what:'', ...(e.details || {}) };
+  return d;
+}
+function daysBetween(a,b) { return Math.round((new Date(b) - new Date(a)) / 86400000); }
+function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ============================================ Storage */
+function adopt(p) {
+  if (Array.isArray(p)) { state.entries = p; state.rest = []; return p.length > 0; }
+  if (p && Array.isArray(p.entries)) {
+    state.entries = p.entries;
+    state.rest = Array.isArray(p.rest) ? p.rest : [];
+    return state.entries.length > 0 || state.rest.length > 0;
+  }
+  return false;
+}
+async function load() {
+  try {
+    const r = await window.storage.get(KEY);
+    adopt(r && r.value ? JSON.parse(r.value) : null);
+  } catch (e) { state.entries = []; state.rest = []; }
+
+  if (!state.entries.length) {
+    for (const old of ['sehnenlog:v2','sehnenlog:v1']) {
+      try {
+        const r = await window.storage.get(old);
+        if (adopt(r && r.value ? JSON.parse(r.value) : null)) {
+          await window.storage.set(KEY, JSON.stringify({ entries: state.entries, rest: state.rest }));
+          break;
+        }
+      } catch (e) { /* nichts zu übernehmen */ }
+    }
+  }
+  state.loaded = true;
+  render();
+}
+async function save() {
+  try {
+    if (!window.storage || typeof window.storage.set !== 'function') throw new Error('window.storage steht in dieser Umgebung nicht zur Verfügung');
+    await window.storage.set(KEY, JSON.stringify({ entries: state.entries, rest: state.rest }));
+    state.error = null;
+  } catch (e) {
+    state.error = (e && e.message) ? String(e.message) : String(e);
+  }
+  render();
+}
+
+/* ============================================ Logik */
+function summary(e) {
+  const d = e.details || {};
+  if (e.detail) return e.detail;
+  const k = TYPES[e.type] ? TYPES[e.type].kind : null;
+  if (k === 'ex') {
+    const list = Object.entries(d.ex || {}).map(([id,v]) => {
+      const ex = EX[id]; if (!ex) return null;
+      const b = [];
+      if (v.sets) b.push(v.sets + '×');
+      if (v.reps) b.push(v.reps + ' ' + UNIT_LABEL[ex.unit]);
+      if (v.weight) b.push(v.weight + ' kg');
+      return ex.name.split('(')[0].trim() + (b.length ? ' ' + b.join(' ') : '');
+    }).filter(Boolean);
+    return list.length ? list.join(' · ') : 'keine Übungen erfasst';
+  }
+  if (k === 'run') {
+    const b = [];
+    if (d.min) b.push(d.min + ' Min.');
+    if (d.pace) b.push(d.pace);
+    if (d.hr) b.push('Ø ' + d.hr + ' bpm');
+    if (d.intervals) b.push('Intervalle: ' + d.intervals);
+    return b.length ? b.join(' · ') : 'keine Angabe';
+  }
+  if (k === 'session') {
+    const b = [];
+    if (d.min) b.push(d.min + ' Min.');
+    if (d.hr) b.push('Ø ' + d.hr + ' bpm');
+    if (d.what) b.push(d.what);
+    return b.length ? b.join(' · ') : 'keine Angabe';
+  }
+  return 'keine Angabe';
+}
+
+function collagenGap() {
+  if (!draft.collagen || !draft.time || !draft.date) return null;
+  const mine = new Date(draft.date + 'T' + draft.time);
+  if (isNaN(mine)) return null;
+  let best = null;
+  state.entries.forEach(e => {
+    if (!e.collagen || !e.time || !e.date) return;
+    const t = new Date(e.date + 'T' + e.time);
+    if (isNaN(t)) return;
+    const h = (mine - t) / 3600000;
+    if (h > 0 && h < 6 && (best === null || h < best)) best = h;
+  });
+  return best;
+}
+
+function sorted() { return [...state.entries].sort((a,b) => (a.date + (a.time||'')).localeCompare(b.date + (b.time||''))); }
+
+// Der Morgenwert gehört zum Tag, nicht zur einzelnen Einheit:
+// nach einem Tag mit zwei Einheiten gibt es genau einen Morgen danach.
+function days() {
+  const map = new Map();
+  sorted().forEach(e => {
+    if (!map.has(e.date)) map.set(e.date, { date:e.date, n:0, painDuring:null, painMorning:null,
+      stiffness:null, progressed:false, efforts:[], skipped:false, labels:[] });
+    const d = map.get(e.date);
+    d.n++;
+    d.labels.push(TYPES[e.type] ? TYPES[e.type].label : e.type);
+    if (e.painDuring != null) d.painDuring = d.painDuring == null ? e.painDuring : Math.max(d.painDuring, e.painDuring);
+    if (e.painMorning != null) { d.painMorning = e.painMorning; d.stiffness = e.stiffness; }
+    if (e.skipped) d.skipped = true;
+    if (e.progressed) d.progressed = true;
+    if (e.effort != null) d.efforts.push(e.effort);
+  });
+  return [...map.values()].sort((a,b) => a.date.localeCompare(b.date));
+}
+function pending() { return days().filter(d => d.painMorning == null && !d.skipped && daysBetween(d.date, today()) >= 1); }
+function restSorted() { return [...state.rest].sort((a,b) => a.date.localeCompare(b.date)); }
+function hasTrainingMorning(date) { return state.entries.some(e => e.date === date && e.painMorning != null); }
+
+function assess() {
+  const all = days();
+  const done = all.filter(d => d.painMorning != null);
+  if (pending().length) return { tone:'none', word:'Morgen-Check offen', kicker:'Noch keine Bewertung möglich',
+    reasons:['Ohne den Wert vom Folgemorgen fehlt der wichtigste Marker.'], todo:'Trag den Morgen-Check oben nach, dann bewerte ich die Einheit.' };
+  if (done.length < 2) return { tone:'none', word:'Noch zu wenig Daten', kicker:`${done.length} von 2 bewerteten Trainingstagen`,
+    reasons:['Ein Trainingstag gilt als vollständig, sobald am Folgetag der Morgen-Check ausgefüllt ist. Ab dem zweiten vergleiche ich die beiden Morgenwerte miteinander.'], todo:'Weiter erfassen und nichts an der Last ändern.' };
+
+  const last = done[done.length-1], prev = done[done.length-2];
+  const stiff = STIFF.find(s => s.v === last.stiffness);
+  const stiffMins = stiff ? stiff.mins : 0;
+  const delta = last.painMorning - prev.painMorning;
+  const red = [], amber = [], green = [];
+
+  if (last.painDuring > 3) red.push(`Höchster Schmerzwert an diesem Tag lag bei ${last.painDuring}/10 – über der 3/10-Grenze.`);
+  if (delta >= 2) red.push(`Morgenschmerz ist von ${prev.painMorning} auf ${last.painMorning} gestiegen.`);
+  else if (delta === 1) amber.push(`Morgenschmerz ist um einen Punkt gestiegen (${prev.painMorning} → ${last.painMorning}).`);
+  if (stiffMins > 45) red.push('Morgensteifigkeit über 45 Minuten.');
+  else if (stiffMins > 30) amber.push('Morgensteifigkeit zwischen 30 und 45 Minuten.');
+
+  const recent = done.slice(-3);
+  const calm = recent.length === 3 && recent.every(d => d.painDuring <= 3)
+    && recent.every(d => { const s = STIFF.find(x => x.v === d.stiffness); return !s || s.mins <= 30; })
+    && recent[2].painMorning <= recent[0].painMorning;
+
+  const lastProgress = [...all].reverse().find(d => d.progressed);
+  const sinceProgress = lastProgress ? daysBetween(lastProgress.date, today()) : 999;
+
+  if (calm) {
+    green.push('Die letzten drei Trainingstage waren ruhig: Schmerz während ≤ 3/10, Steifigkeit unter 30 Minuten, Schmerz am Morgen nicht gestiegen.');
+    const eff = recent.flatMap(d => d.efforts);
+    if (eff.length && Math.max(...eff) <= 6) green.push(`Der letzte Satz fühlte sich zuletzt bei höchstens ${Math.max(...eff)}/10 an – das ist zu leicht.`);
+  }
+
+  if (red.length) return { tone:'down', word:'Zurücknehmen', kicker:`Nach dem Trainingstag ${fmt(last.date)}`, reasons:red.concat(amber),
+    todo:'Auf das letzte funktionierende Level zurück, dort ein bis zwei Wochen bleiben, dann in kleineren Schritten weiter. Isometrie geht fast immer.' };
+  if (amber.length) return { tone:'hold', word:'Level halten', kicker:`Nach dem Trainingstag ${fmt(last.date)}`, reasons:amber,
+    todo:'Nichts steigern. Gleiche Last noch einmal wiederholen und beobachten, ob sich der Wert einpendelt.' };
+  if (green.length && sinceProgress < 7) return { tone:'hold', word:'Level halten', kicker:'Alles ruhig – aber die Woche ist noch nicht um',
+    reasons:green.concat([`Die letzte Steigerung war vor ${sinceProgress} ${sinceProgress===1?'Tag':'Tagen'}. Eine Variable pro Woche.`]),
+    todo:`Noch ${7-sinceProgress} ${7-sinceProgress===1?'Tag':'Tage'} auf diesem Level bleiben.` };
+  if (green.length) return { tone:'up', word:'Steigern', kicker:'Die Sehne verträgt mehr', reasons:green,
+    todo:'Beim Krafttraining zuerst das Gewicht erhöhen, nicht die Wiederholungen. Beim Laufen eine Variable um etwa 10 %. Hak beim nächsten Eintrag „Das war eine Steigerung" an.' };
+  return { tone:'hold', word:'Level halten', kicker:`Nach dem Trainingstag ${fmt(last.date)}`,
+    reasons:['Keine Warnzeichen, aber auch noch keine drei durchgehend ruhigen Trainingstage.'],
+    todo:'Gleiche Last beibehalten, bis drei Trainingstage in Folge ruhig verlaufen sind.' };
+}
+
+function redFlags() {
+  const done = days().filter(d => d.painMorning != null);
+  const recent = done.filter(d => daysBetween(d.date, today()) <= 21);
+  const out = [];
+  if (recent.filter(e => e.painMorning >= 6).length >= 3) out.push('Der Morgenschmerz lag in den letzten drei Wochen mehrfach bei 6/10 oder höher.');
+  if (recent.filter(e => e.stiffness === 'ueber45').length >= 2) out.push('Die Morgensteifigkeit lag mehrfach über 45 Minuten.');
+  if (recent.length >= 4) {
+    const f = recent.slice(0,2).reduce((s,e) => s + e.painMorning, 0) / 2;
+    const l = recent.slice(-2).reduce((s,e) => s + e.painMorning, 0) / 2;
+    if (l - f >= 2) out.push('Der Morgenschmerz steigt über die letzten Wochen kontinuierlich an.');
+  }
+  return out;
+}
+
+function buildExport() {
+  const all = sorted();
+  if (!all.length) return 'Noch keine Einträge.';
+  const a = assess();
+  const L = ['Sehnenlog – Auswertung bitte', `Stand: ${new Date().toLocaleDateString('de-DE')}`,
+    `Einträge: ${all.length}, davon ${all.filter(e => e.painMorning != null).length} mit Morgen-Check`,
+    `Aktuelle Einschätzung der App: ${a.word}`, '',
+    'Datum | Zeit | Art | Inhalt | Schmerz während | Schmerz morgens | Steifigkeit | Anstrengung | Kollagen | Steigerung'];
+  all.slice(-30).forEach(e => {
+    const s = STIFF.find(x => x.v === e.stiffness);
+    L.push([fmt(e.date), e.time || '–', TYPES[e.type] ? TYPES[e.type].label : e.type, summary(e),
+      e.painDuring != null ? e.painDuring + '/10' : '–',
+      e.painMorning != null ? e.painMorning + '/10' : 'offen',
+      s ? s.label : '–', e.effort != null ? e.effort + '/10' : '–',
+      e.collagen ? 'ja' : 'nein', e.progressed ? 'ja' : 'nein'].join(' | '));
+  });
+  const notes = all.filter(e => e.note).slice(-8);
+  if (notes.length) { L.push('', 'Notizen zur Einheit:'); notes.forEach(e => L.push(`${fmt(e.date)}: ${e.note}`)); }
+  const mnotes = all.filter(e => e.morningNote).slice(-8);
+  if (mnotes.length) { L.push('', 'Notizen zum Morgen danach:'); mnotes.forEach(e => L.push(`${fmt(e.date)}: ${e.morningNote}`)); }
+  const rest = restSorted().slice(-20);
+  if (rest.length) {
+    L.push('', 'Morgenwerte an Ruhetagen (ohne Training am Vortag):');
+    L.push('Datum | Schmerz morgens | Steifigkeit | Notiz');
+    rest.forEach(r => {
+      const st = STIFF.find(x => x.v === r.stiff);
+      L.push([fmt(r.date), r.pain + '/10', st ? st.label : '–', r.note || '–'].join(' | '));
+    });
+  }
+  return L.join('\n');
+}
+
+/* ============================================ Render-Bausteine */
+function scaleHtml(name, value, showLimit) {
+  let s = '<div class="scale">';
+  for (let i = 0; i <= 10; i++)
+    s += `<button type="button" data-scale="${name}" data-val="${i}" aria-pressed="${value===i}" aria-label="${i} von 10">${i}</button>`;
+  s += '</div>';
+  if (showLimit) s += `<div class="scale-rule"><i style="left:36.4%"></i><span style="left:36.4%">3/10 – bis hier erlaubt</span></div>`;
+  return s;
+}
+function segHtml(name, options, value) {
+  return '<div class="seg">' + options.map(o =>
+    `<button type="button" data-seg="${name}" data-val="${o.v}" aria-pressed="${value===o.v}">${esc(o.label)}</button>`).join('') + '</div>';
+}
+function num(path, val, ph) {
+  return `<input type="number" inputmode="numeric" data-path="${path}" value="${esc(val)}" placeholder="${esc(ph||'')}">`;
+}
+function acc(id, name, meta, bodyHtml) {
+  const open = openAcc === id;
+  return `<div class="acc">
+    <button type="button" data-acc="${id}" aria-expanded="${open}">
+      <span><span class="acc-name">${esc(name)}</span>${meta ? `<span class="acc-meta">${esc(meta)}</span>` : ''}</span>
+      <span class="acc-chev">${open ? '−' : '+'}</span>
+    </button>
+    ${open ? `<div class="acc-body">${bodyHtml}</div>` : ''}
+  </div>`;
+}
+function figHtml(key) { return FIGS[key] ? `<div class="fig">${FIGS[key]}</div>` : ''; }
+
+function exPickerHtml() {
+  const pool = TYPES[draft.type].pool;
+  const ids = Object.keys(EX).filter(id => pool.includes(EX[id].g));
+  let h = `<div class="field"><span class="field-label">Übungen</span><p class="hint">Antippen zum Auswählen, dann Sätze und Wiederholungen eintragen.</p>`;
+  h += '<div class="seg">' + ids.map(id =>
+    `<button type="button" data-extoggle="${id}" aria-pressed="${!!draft.ex[id]}">${esc(EX[id].name.split('(')[0].trim())}</button>`).join('') + '</div></div>';
+  const chosen = ids.filter(id => draft.ex[id]);
+  if (chosen.length) {
+    h += '<div class="field">';
+    chosen.forEach(id => {
+      const ex = EX[id], v = draft.ex[id];
+      h += `<div class="exrow">
+        <div class="exrow-top"><span class="exrow-name">${esc(ex.name)}</span><span class="exrow-dose">Ziel: ${esc(ex.dose)}</span></div>
+        <div class="exrow-in">
+          <div><span>Sätze</span>${num(`ex.${id}.sets`, v.sets, '3')}</div>
+          <div><span>${UNIT_LABEL[ex.unit]}</span>${num(`ex.${id}.reps`, v.reps, ex.unit==='sek'?'30':'12')}</div>
+          ${ex.unit === 'wdh' ? `<div><span>kg</span>${num(`ex.${id}.weight`, v.weight, '–')}</div>` : ''}
+        </div></div>`;
+    });
+    h += '</div>';
+  }
+  return h;
+}
+function runFieldsHtml() {
+  const r = draft.run;
+  return `<div class="field"><div class="grid2">
+      <div><span class="sublabel">Dauer (Min.)</span>${num('run.min', r.min, '32')}</div>
+      <div><span class="sublabel">Pace</span><input type="text" data-path="run.pace" value="${esc(r.pace)}" placeholder="5:45 min/km"></div>
+      <div><span class="sublabel">Ø Puls</span>${num('run.hr', r.hr, '148')}</div>
+    </div></div>
+    <div class="field"><label for="d-int">Intervalle</label>
+      <p class="hint">Leer lassen bei Dauerlauf.</p>
+      <input type="text" id="d-int" data-path="run.intervals" value="${esc(r.intervals)}" placeholder="z. B. 4 × 4 Min. zügig, 2 Min. Trabpause"></div>`;
+}
+function sessionFieldsHtml() {
+  const s = draft.session;
+  const ph = draft.type === 'crossfit' ? 'WOD ohne Sprünge' : 'Beach, 3 Sätze';
+  return `<div class="field"><div class="grid2">
+      <div><span class="sublabel">Dauer (Min.)</span>${num('session.min', s.min, '60')}</div>
+      <div><span class="sublabel">Ø Puls</span>${num('session.hr', s.hr, '142')}</div>
+    </div></div>
+    <div class="field"><label for="d-what">Was genau</label>
+      <input type="text" id="d-what" data-path="session.what" value="${esc(s.what)}" placeholder="${esc(ph)}"></div>`;
+}
+function sparkHtml() {
+  const done = days().filter(d => d.painMorning != null).slice(-14);
+  if (done.length < 2) return '';
+  const W = 560, H = 68, pad = 6;
+  const step = (W - pad*2) / (done.length - 1);
+  const y = v => H - pad - (v/10) * (H - pad*2);
+  const path = k => done.map((e,i) => `${i?'L':'M'}${(pad+i*step).toFixed(1)},${y(e[k]).toFixed(1)}`).join(' ');
+  const dots = done.map((e,i) => `<circle cx="${(pad+i*step).toFixed(1)}" cy="${y(e.painMorning).toFixed(1)}" r="2.6" fill="#A93B31"/>`).join('');
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Verlauf der Schmerzwerte">
+    <line x1="${pad}" y1="${y(3)}" x2="${W-pad}" y2="${y(3)}" stroke="#C6D0D1" stroke-width="1" stroke-dasharray="4 4"/>
+    <path d="${path('painDuring')}" fill="none" stroke="#5C6A6B" stroke-width="1.8"/>
+    <path d="${path('painMorning')}" fill="none" stroke="#A93B31" stroke-width="2.2"/>${dots}</svg>
+    <div class="spark-legend"><span><i style="background:#A93B31"></i>Schmerz am Morgen</span><span><i style="background:#5C6A6B"></i>Schmerz während</span></div>`;
+}
+
+/* ============================================ Tabs */
+function tabPlan() {
+  return `<div class="card">
+      <h2>Das Ziel</h2>
+      <p class="lede">Belastbarkeit größer als die Trainingslast – nicht „das MRT wird sauber".</p>
+      <p style="font-size:13.5px;margin:0;color:var(--ink-soft)">Fettige Umbauten in einer Sehne bilden sich in der Regel nicht zurück. Die Sehne baut aber um den geschädigten Bereich herum neues, tragfähiges Kollagen auf. Beschwerdefrei laufen bei unverändertem MRT-Bild ist ein normaler Erfolg.</p>
+    </div>
+
+    <div class="card">
+      <h2>Drei Regeln über allem</h2>
+      <p class="lede">Diese drei steuern jede Einheit der nächsten sechs Monate.</p>
+      ${RULES.map((r,i) => acc('rule'+i, r[0], null, `<p style="font-size:13.5px;margin:13px 0 0">${esc(r[1])}</p>`)).join('')}
+    </div>
+
+    <div class="card">
+      <h2>Die vier Phasen</h2>
+      <p class="lede">Jede baut auf der vorherigen auf.</p>
+      ${PHASES.map((p,i) => acc('ph'+i, p.title, p.span,
+        `<p style="font-size:13.5px;margin:13px 0 0">${esc(p.goal)}</p>` +
+        p.parts.map(part => `<h4>${esc(part[0])}</h4><ul>${part[1].map(x => `<li>${esc(x)}</li>`).join('')}</ul>`).join('')
+      )).join('')}
+    </div>
+
+    <div class="card">
+      <h2>Belastungsschwelle beim Laufen</h2>
+      <p class="lede">Nicht die Kilometer sind das Problem, sondern Tempo × Dauer.</p>
+      ${RUNCTRL.map(r => `<div class="kv"><b>${esc(r[0])}</b></div><p style="font-size:13px;color:var(--ink-soft);margin:-4px 0 10px">${esc(r[1])}</p>`).join('')}
+    </div>
+
+    <div class="card">
+      <h2>Woran du merkst, dass es wirkt</h2>
+      <p class="lede">Vier Zeichen – keines davon ist der Schmerz.</p>
+      ${MARKERS.map(m => `<div class="kv"><b>${esc(m[1])}</b><span>${esc(m[0])}</span></div>
+        <p style="font-size:13px;color:var(--ink-soft);margin:-4px 0 10px">${esc(m[2])}</p>`).join('')}
+      <p style="font-size:13.5px;margin:8px 0 0">Fortschritt heißt nicht „es tut weniger weh", sondern „ich vertrage mehr". Einzelne gute oder schlechte Tage und ein Kontroll-MRT sagen nichts.</p>
+    </div>
+
+    <div class="card">
+      <h2>Der Monatstest</h2>
+      <p class="lede">Einmal im Monat, immer gleich ausgeführt.</p>
+      <ul style="font-size:13.5px;padding-left:18px;margin:0">
+        <li>Einbeiniges Wadenheben auf ebenem Boden, volle Reichweite, ruhiges Tempo</li>
+        <li>Wiederholungen zählen, bis die Höhe sichtbar einbricht</li>
+        <li>Beide Seiten testen – die gesunde zuerst</li>
+        <li>Notieren: Zahl rechts, Zahl links, Datum</li>
+      </ul>
+      ${figHtml('heel_rise_test')}
+      <p style="font-size:13.5px;margin:12px 0 0"><b>Zwei Zahlen sollen sich bewegen:</b> die absolute Wiederholungszahl rechts – und die Differenz zur gesunden Seite. Schließt sich diese Lücke, arbeitet das Programm.</p>
+    </div>
+
+    <div class="flag">
+      <b>Wann du zum Arzt gehst</b>
+      ${WARNINGS.map(w => `<div>• ${esc(w)}</div>`).join('')}
+      <div style="margin-top:6px">Diese Zeichen gehören nicht in einen Trainingsplan, sondern in eine Untersuchung.</div>
+    </div>
+
+    <p class="note">Ersetzt keine ärztliche oder physiotherapeutische Beurteilung.</p>`;
+}
+
+function tabEx() {
+  return `<div class="card">
+    <h2>Übungsbibliothek</h2>
+    <p class="lede">Antippen für Zeichnung, Ausführung und den häufigsten Fehler.</p>
+    ${GROUPS.map(gr => {
+      const ids = Object.keys(EX).filter(id => EX[id].g === gr.g);
+      return `<div class="blockhead">${esc(gr.title)}</div><p class="blocksub">${esc(gr.sub)}</p>` +
+        ids.map(id => {
+          const ex = EX[id];
+          return acc(id, ex.name, ex.dose,
+            `<h4>Ausführung</h4><ul>${ex.how.map(h => `<li>${esc(h)}</li>`).join('')}</ul>
+             <div class="acc-err"><b>Häufiger Fehler:</b> ${esc(ex.err)}</div>
+             ${figHtml(ex.fig)}`);
+        }).join('');
+    }).join('')}
+  </div>`;
+}
+
+function tabSupp() {
+  return `<div class="card">
+      <h2>Was du kaufst</h2>
+      <p class="lede">Drei Produkte decken alles ab.</p>
+      ${PRODUCTS.map(p => `<div class="prod">
+        <div class="prod-name">${esc(p[0])}</div>
+        <div class="prod-price">${esc(p[1])}</div>
+        <div class="prod-role">${esc(p[2])}</div>
+      </div>`).join('')}
+      <p class="note">Der Sparhebel ist die Anzahl der ESN-Tage, nicht die Löffelgröße. ESN nur an den drei Sehnenkraft-Tagen, vit4ever an allen anderen: rund 33 € statt 59 € im Monat.</p>
+    </div>
+
+    <div class="card">
+      <h2>Einnahme im Tagesablauf</h2>
+      <p class="lede">Jede Dosis 45–60 Minuten vor der Einheit.</p>
+      ${INTAKE.map(b => `<h4 style="margin:14px 0 6px;font-size:14px;font-weight:650">${esc(b[0])}</h4>
+        <ul style="font-size:13.5px;padding-left:18px;margin:0">${b[1].map(x => `<li>${esc(x)}</li>`).join('')}</ul>`).join('')}
+    </div>
+
+    <div class="card">
+      <h2>Regeln</h2>
+      <p class="lede">Ohne Belastung passiert nichts – die Peptide allein bauen keine Sehne.</p>
+      ${SUPPRULES.map((r,i) => acc('sr'+i, r[0], null, `<p style="font-size:13.5px;margin:13px 0 0">${esc(r[1])}</p>`)).join('')}
+    </div>`;
+}
+
+function tabLog() {
+  const a = assess(), pend = pending(), flags = redFlags(), all = sorted().reverse();
+  const kind = TYPES[draft.type].kind;
+  const gap = collagenGap();
+
+  return `${flags.length ? `<div class="flag">
+      <b>Das gehört ärztlich angeschaut</b>
+      ${flags.map(f => `<div>${esc(f)}</div>`).join('')}
+      <div style="margin-top:6px">Ein Trainingsplan ist hier nicht mehr das richtige Werkzeug.</div>
+    </div>` : ''}
+
+    ${pend.length ? `<div class="card pending">
+      <h2>Morgen-Check offen</h2>
+      <p class="lede">Für den ${fmt(pend[0].date)} fehlt der Wert vom Folgemorgen${pend[0].n > 1 ? ` – dieser Tag hatte ${pend[0].n} Einheiten (${esc(pend[0].labels.join(', '))}), der Morgenwert gilt für beide` : ` (${esc(pend[0].labels[0])})`}.</p>
+      <div class="field">
+        <span class="field-label">Wie war der Schmerz heute Morgen?</span>
+        <p class="hint">Vor dem Aufstehen, in den ersten Minuten.</p>
+        ${scaleHtml('mPain', morningDraft.pain ?? null, false)}
+      </div>
+      <div class="field">
+        <span class="field-label">Wie lange war es steif?</span>
+        <p class="hint">Bis es sich beim Gehen wieder normal anfühlte.</p>
+        ${segHtml('mStiff', STIFF, morningDraft.stiff ?? null)}
+      </div>
+      <div class="field">
+        <label for="m-note">Notiz zum Morgen</label>
+        <p class="hint">Optional – wie es sich angefühlt hat, was aufgefallen ist.</p>
+        <textarea id="m-note" data-mpath="note" placeholder="z. B. „beim ersten Aufsetzen ziept es, nach ein paar Schritten weg"">${esc(morningDraft.note || '')}</textarea>
+      </div>
+      <div class="btn-row">
+        <button class="btn" data-act="saveMorning" ${morningDraft.pain == null || !morningDraft.stiff ? 'disabled' : ''}>Morgen-Check speichern</button>
+        <button class="btn quiet small" data-act="skipMorning">Vergessen – überspringen</button>
+        ${pend.length > 1 ? `<span class="hint" style="margin:0">Danach noch ${pend.length - 1} ${pend.length - 1 === 1 ? 'Tag' : 'Tage'} offen.</span>` : ''}
+      </div>
+    </div>` : ''}
+
+    ${state.error ? `<div class="flag">
+      <b>Konnte nicht gespeichert werden</b>
+      <div>Deine Daten sind in dieser Sitzung vorhanden und werden unten angezeigt – aber beim Neuladen sind sie weg. Erzeug dir jetzt eine Sicherung, damit nichts verlorengeht.</div>
+      <div style="margin-top:8px;font-family:ui-monospace,Menlo,monospace;font-size:12px;background:#fff;border-radius:5px;padding:8px 10px">${esc(state.error)}</div>
+      <div style="margin-top:8px"><button class="btn quiet small" data-act="retrySave">Speichern erneut versuchen</button></div>
+    </div>` : ''}
+
+    <div class="verdict ${a.tone}">
+      <p class="verdict-kicker">${esc(a.kicker)}</p>
+      <p class="verdict-word">${esc(a.word)}</p>
+      <ul>${a.reasons.map(r => `<li>${esc(r)}</li>`).join('')}</ul>
+      <p class="todo">${esc(a.todo)}</p>
+    </div>
+
+    <div class="card">
+      <h2>Morgen ohne Training</h2>
+      <p class="lede">Optional. Nutz das an Ruhetagen, wenn du etwas spürst – so siehst du später, wie schnell sich die Sehne erholt.</p>
+      ${restOpen ? `
+        <div class="field"><span class="sublabel">Datum</span>
+          <input type="date" value="${restDraft.date || today()}" data-rpath="date"></div>
+        ${hasTrainingMorning(restDraft.date || today()) ? '<div class="warnbox">Für diesen Tag gibt es bereits einen Morgen-Check aus einer Einheit. Ein zweiter Eintrag wäre doppelt.</div>' : ''}
+        <div class="field">
+          <span class="field-label">Schmerz heute Morgen</span>
+          ${scaleHtml('rPain', restDraft.pain, false)}
+        </div>
+        <div class="field">
+          <span class="field-label">Wie lange war es steif?</span>
+          ${segHtml('rStiff', STIFF, restDraft.stiff)}
+        </div>
+        <div class="field">
+          <label for="r-note">Notiz</label>
+          <textarea id="r-note" data-rpath="note" placeholder="Optional">${esc(restDraft.note)}</textarea>
+        </div>
+        <div class="btn-row">
+          <button class="btn" data-act="saveRest" ${restDraft.pain == null || !restDraft.stiff || hasTrainingMorning(restDraft.date || today()) ? 'disabled' : ''}>Speichern</button>
+          <button class="btn quiet" data-act="closeRest">Abbrechen</button>
+        </div>`
+      : `<button class="btn ghost" data-act="openRest">Morgen ohne Training eintragen</button>`}
+      <p class="note">Diese Einträge fließen nicht in die Bewertung ein – die vergleicht weiterhin Trainingstag mit Trainingstag. Sie landen aber im Verlauf und im Chat-Export.</p>
+    </div>
+
+    <div class="card" id="form">
+      <h2>${editingId ? 'Einheit bearbeiten' : 'Einheit erfassen'}</h2>
+      <p class="lede">${editingId ? 'Änderungen wirken sich sofort auf die Bewertung aus.' : 'Direkt nach dem Training, solange du es noch im Gefühl hast.'}</p>
+      ${editingId ? (() => {
+        const e = state.entries.find(x => x.id === editingId);
+        if (!e) return '';
+        const hasM = e.painMorning != null;
+        return `<div class="editbar">
+          <b>Du bearbeitest den Eintrag vom ${fmt(e.date)}${e.time ? ', ' + esc(e.time) + ' Uhr' : ''}.</b>
+          ${hasM ? ` Für diesen Tag ist bereits ein Morgen-Check hinterlegt (Schmerz ${e.painMorning}/10). Änderst du das Datum, wird er zurückgesetzt und neu abgefragt.` : ''}
+          ${hasM ? `<div style="margin-top:8px"><button type="button" class="btn quiet small" data-act="resetMorning">Morgen-Check dieses Tages zurücksetzen</button></div>` : ''}
+        </div>` })() : ''}
+
+      <div class="field"><div class="grid2">
+        <div><span class="sublabel">Datum</span><input type="date" value="${draft.date}" data-path="date"></div>
+        <div><span class="sublabel">Startzeit</span><input type="time" value="${draft.time}" data-path="time"></div>
+      </div>
+      <p class="hint" style="margin:7px 0 0">
+        Dein Gerät meldet: <b>${new Date().toLocaleString('de-DE', { weekday:'short', day:'numeric', month:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit' })} Uhr</b>.
+        ${draft.date !== today() ? `Der Eintrag steht auf einem anderen Tag. <button type="button" class="btn quiet small" style="padding:4px 9px;margin-left:4px" data-act="setToday">Auf heute setzen</button>` : 'Stimmt das nicht, korrigier das Datum oben – gespeichert wird, was im Feld steht.'}
+      </p></div>
+
+      <div class="field">
+        <span class="field-label">Art der Einheit</span>
+        ${segHtml('type', Object.entries(TYPES).map(([v,t]) => ({v, label:t.label})), draft.type)}
+      </div>
+
+      ${kind === 'ex' ? exPickerHtml() : kind === 'run' ? runFieldsHtml() : sessionFieldsHtml()}
+
+      <div class="field">
+        <span class="field-label">Schmerz während der Einheit</span>
+        <p class="hint">Nicht der stärkste Moment, sondern das Grundniveau.</p>
+        ${scaleHtml('painDuring', draft.painDuring, true)}
+      </div>
+
+      ${draft.type === 'kraft' ? `<div class="field">
+        <span class="field-label">Wie schwer war der letzte Satz?</span>
+        <p class="hint">Kraft, nicht Schmerz. Ein niedriger Wert spricht für mehr Gewicht – aber nur, solange der Schmerz bei 3/10 oder darunter bleibt.</p>
+        ${scaleHtml('effort', draft.effort, false)}
+        ${draft.painDuring != null && draft.painDuring > 3 && draft.effort != null && draft.effort <= 6 ? `<div class="warnbox" style="margin-top:12px"><b>Muskel leicht, Sehne laut.</b> Die Wade hat noch Reserve, das Gewebe verträgt sie aber nicht. Mehr Gewicht wäre trotz des niedrigen Anstrengungswerts falsch. Verkleinere stattdessen die Bewegungsreichweite oder stell auf Isometrie um – Halten erzeugt hohe Spannung ohne die schmerzhafte Bewegung.</div>` : ''}
+      </div>` : ''}
+
+      <label class="check"><input type="checkbox" data-path="collagen" ${draft.collagen?'checked':''}><span>Kollagen 45–60 Min. vorher genommen</span></label>
+      ${gap !== null ? `<div class="warnbox"><b>Nur ${gap.toFixed(1)} Stunden seit der letzten Dosis.</b> Nach einem Reiz ist die Sehne rund 6 Stunden refraktär – diese Dosis bringt vermutlich nichts.</div>` : ''}
+      <label class="check"><input type="checkbox" data-path="progressed" ${draft.progressed?'checked':''}><span>Das war eine Steigerung gegenüber der letzten Einheit</span></label>
+
+      <div class="field" style="margin-top:14px">
+        <label for="d-note">Notiz</label>
+        <textarea id="d-note" data-path="note" placeholder="Optional – was auffällig war">${esc(draft.note)}</textarea>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn" data-act="saveEntry" ${draft.painDuring == null ? 'disabled' : ''}>${editingId ? 'Änderungen speichern' : 'Einheit speichern'}</button>
+        ${editingId ? '<button class="btn quiet" data-act="cancelEdit">Abbrechen</button>' : ''}
+      </div>
+      ${draft.painDuring == null ? '<p class="hint" style="margin-top:8px">Der Schmerzwert fehlt noch.</p>' : ''}
+
+    </div>
+
+    ${acc('howto', 'Wie die Bewertung zustande kommt', 'Erklärung – keine Daten',
+      `<h4>Schmerz während der Einheit</h4>
+       <p style="font-size:13.5px;margin:0">Trägst du unten im Formular ein, direkt nach dem Training. Bis 3/10 ist erlaubt.</p>
+       <h4>Schmerz am Morgen und Steifigkeit</h4>
+       <p style="font-size:13.5px;margin:0">Der Morgen-Check erscheint am Folgetag automatisch als Karte ganz oben. Diese beiden Werte sind gemeint, wenn in der Bewertung von „Schmerz am Morgen" die Rede ist.</p>
+       <h4>Der Vergleich</h4>
+       <p style="font-size:13.5px;margin:0">Verglichen wird der Morgenwert des letzten Trainingstags mit dem des vorletzten. Steigt er um zwei Punkte, heißt das Zurücknehmen. Das ist die 24-Stunden-Regel in Zahlen.</p>
+       <h4>Die Rangfolge</h4>
+       <p style="font-size:13.5px;margin:0">Schmerz schlägt Anstrengung. Liegt der Schmerz über 3/10, heißt das Zurücknehmen – auch wenn sich der letzte Satz leicht angefühlt hat. Die Anstrengung wird erst zum Steuerungsmaß, wenn der Schmerz im grünen Bereich liegt.</p>`)}
+
+    <div class="card">
+      <h2>Verlauf</h2>
+      <p class="lede">${all.length ? `${all.length} ${all.length===1?'Einheit':'Einheiten'} erfasst. Die gestrichelte Linie markiert 3/10.` : 'Noch nichts erfasst.'}</p>
+      ${sparkHtml()}
+      ${(() => {
+        const merged = [
+          ...all.map(e => ({ k:'e', date:e.date, sort:e.date + (e.time||'99:99'), e })),
+          ...restSorted().map(r => ({ k:'r', date:r.date, sort:r.date + '00:00', r }))
+        ].sort((a,b) => b.sort.localeCompare(a.sort)).slice(0,25);
+        return merged.map(row => {
+          if (row.k === 'r') {
+            const rs = STIFF.find(x => x.v === row.r.stiff);
+            return `<div class="row">
+              <div class="row-main">
+                <div class="row-title" style="color:var(--ink-soft)">${fmt(row.r.date)} · Ruhetag</div>
+                <div class="row-sub">nur Morgenwert${rs ? ' · steif ' + esc(rs.label) : ''}${row.r.note ? ' · ' + esc(row.r.note) : ''}</div>
+              </div>
+              <div class="nums">
+                <div class="num miss"><b>–</b><s>währenddessen</s></div>
+                <div class="num"><b>${row.r.pain}</b><s>morgens</s></div>
+              </div>
+              <div class="rowbtns">
+                <button class="del" data-act="delRest" data-id="${row.r.id}" aria-label="Ruhetags-Eintrag vom ${fmt(row.r.date)} löschen">×</button>
+              </div>
+            </div>`;
+          }
+          const e = row.e;
+        const s = STIFF.find(x => x.v === e.stiffness);
+        return `<div class="row ${editingId === e.id ? 'editing' : ''}">
+          <div class="row-main">
+            <div class="row-title">${fmt(e.date)}${e.time ? ' · ' + esc(e.time) : ''} · ${esc(TYPES[e.type] ? TYPES[e.type].label : e.type)}</div>
+            <div class="row-sub">${esc(summary(e))}${s ? ' · steif ' + esc(s.label) : ''}${e.progressed ? ' · gesteigert' : ''}</div>
+            ${e.morningNote ? `<div class="row-sub" style="font-style:italic">Morgen: ${esc(e.morningNote)}</div>` : ''}
+          </div>
+          <div class="nums">
+            <div class="num"><b>${e.painDuring}</b><s>währenddessen</s></div>
+            <div class="num ${e.painMorning == null ? 'miss' : ''}"><b>${e.painMorning == null ? '–' : e.painMorning}</b><s>morgens</s></div>
+          </div>
+          <div class="rowbtns">
+            <button class="del" data-act="del" data-id="${e.id}" aria-label="Eintrag vom ${fmt(e.date)} löschen">×</button>
+            <button class="edit" data-act="edit" data-id="${e.id}" aria-label="Eintrag vom ${fmt(e.date)} bearbeiten">ändern</button>
+          </div>
+        </div>`;
+        }).join('');
+      })()}
+      ${!all.length && !state.rest.length ? '<p class="empty">Der erste Eintrag macht noch keine Aussage. Ab der zweiten bewerteten Einheit wird es aussagekräftig.</p>' : ''}
+    </div>
+
+    <div class="card">
+      <h2>Auswertung im Chat</h2>
+      <p class="lede">Erzeugt eine Textfassung deiner Daten, die du in den Chat kopieren kannst.</p>
+      <div class="btn-row">
+        <button class="btn ghost" data-act="export">Daten als Text erzeugen</button>
+        ${exportText ? '<button class="btn quiet small" data-act="copy">Kopieren</button>' : ''}
+        <button class="btn quiet small" data-act="reset">Alles löschen</button>
+      </div>
+      ${exportText ? `<textarea class="exportbox" readonly id="exportbox">${esc(exportText)}</textarea>` : ''}
+      <p class="note">Diese Version speichert direkt auf diesem Gerät. Die Daten verlassen es nicht und bleiben erhalten, wenn du den Browser schließt. Löschst du die Browserdaten, sind sie weg – zieh alle paar Wochen eine Sicherung.</p>
+    </div>
+
+    <div class="card">
+      <h2>Sicherung &amp; Gerätewechsel</h2>
+      <p class="lede">Erzeugt eine vollständige Kopie deiner Einträge, die du auf einem anderen Gerät wieder einspielen kannst.</p>
+      <div class="btn-row">
+        <button class="btn ghost" data-act="backup">Sicherung erzeugen</button>
+        ${backupText ? '<button class="btn quiet small" data-act="copyBackup">Kopieren</button>' : ''}
+      </div>
+      ${backupText ? `<textarea class="exportbox" readonly id="backupbox">${esc(backupText)}</textarea>` : ''}
+
+      <div class="field" style="margin-top:18px">
+        <label for="impbox">Sicherung einspielen</label>
+        <p class="hint">Text aus einer Sicherung hier einfügen. Vorhandene Einträge mit gleicher Kennung werden ersetzt, alles andere kommt dazu – nichts wird gelöscht.</p>
+        <textarea class="exportbox" id="impbox" data-ibuf placeholder="Hier den kopierten Sicherungstext einfügen">${esc(importBuf)}</textarea>
+      </div>
+      <button class="btn" data-act="restore">Einspielen</button>
+      ${importMsg ? `<p class="${importMsg.ok ? 'note' : 'err'}" style="margin-top:10px">${esc(importMsg.text)}</p>` : ''}
+      <p class="note">Das ist auch der Weg für ein zweites Gerät und für Updates: hier sichern, dort einspielen.</p>
+    </div>`;
+}
+
+/* ============================================ Render */
+const TABS = [['log','Logbuch'],['plan','Plan'],['ex','Übungen'],['supp','Supplemente']];
+
+function render() {
+  if (!state.loaded) return;
+  const body = tab === 'plan' ? tabPlan() : tab === 'ex' ? tabEx() : tab === 'supp' ? tabSupp() : tabLog();
+  document.getElementById('root').innerHTML = `<div class="wrap">
+    <div class="masthead">
+      <h1>Sehnenlog</h1>
+      <p>Plan, Übungen und Trainingstagebuch für die Tibialis-posterior-Sehne. Offline-Version, gespeichert auf diesem Gerät.</p>
+    </div>
+    <div class="tabs" role="tablist">
+      ${TABS.map(([v,l]) => `<button role="tab" data-tab="${v}" aria-selected="${tab===v}">${l}</button>`).join('')}
+    </div>
+    ${body}
+  </div>`;
+}
+
+/* ============================================ Events */
+function setPath(path, val) {
+  const p = path.split('.');
+  let o = draft;
+  for (let i = 0; i < p.length - 1; i++) o = o[p[i]];
+  o[p[p.length-1]] = val;
+}
+
+document.addEventListener('click', async (ev) => {
+  const t = ev.target.closest('[data-scale],[data-seg],[data-act],[data-tab],[data-extoggle],[data-acc]');
+  if (!t) return;
+
+  if (t.dataset.tab) { tab = t.dataset.tab; openAcc = null; window.scrollTo(0,0); return render(); }
+  if (t.dataset.acc) { openAcc = openAcc === t.dataset.acc ? null : t.dataset.acc; return render(); }
+  if (t.dataset.extoggle) {
+    const id = t.dataset.extoggle;
+    if (draft.ex[id]) delete draft.ex[id]; else draft.ex[id] = { sets:'', reps:'', weight:'' };
+    return render();
+  }
+  if (t.dataset.scale) {
+    const v = +t.dataset.val;
+    if (t.dataset.scale === 'mPain') morningDraft.pain = v;
+    else if (t.dataset.scale === 'rPain') restDraft.pain = v;
+    else draft[t.dataset.scale] = v;
+    return render();
+  }
+  if (t.dataset.seg) {
+    if (t.dataset.seg === 'mStiff') morningDraft.stiff = t.dataset.val;
+    else if (t.dataset.seg === 'rStiff') restDraft.stiff = t.dataset.val;
+    else { draft.type = t.dataset.val; draft.ex = {}; }
+    return render();
+  }
+
+  const act = t.dataset.act;
+  if (act === 'setToday') { draft.date = today(); draft.time = nowTime(); return render(); }
+  if (act === 'saveEntry') {
+    const kind = TYPES[draft.type].kind;
+    const details = kind === 'ex' ? { ex: JSON.parse(JSON.stringify(draft.ex)) }
+      : kind === 'run' ? { ...draft.run } : { ...draft.session };
+    const base = { date:draft.date, time:draft.time, type:draft.type, details,
+      painDuring:draft.painDuring, effort: draft.type === 'kraft' ? draft.effort : null,
+      collagen:draft.collagen, progressed:draft.progressed, note:draft.note.trim() };
+
+    if (editingId) {
+      const e = state.entries.find(x => x.id === editingId);
+      if (e) {
+        const moved = e.date !== base.date;
+        Object.assign(e, base);
+        if (moved) {
+          // Morgenwerte gehören zum Tag – beim Umdatieren die des Zieltags übernehmen
+          const twin = state.entries.find(x => x.id !== e.id && x.date === base.date && x.painMorning != null);
+          if (twin) { e.painMorning = twin.painMorning; e.stiffness = twin.stiffness; e.morningNote = twin.morningNote; e.skipped = twin.skipped; }
+          else { e.painMorning = null; e.stiffness = null; e.morningNote = ''; e.skipped = false; }
+        }
+      }
+      editingId = null;
+    } else {
+      state.entries.push({ id:'e'+Date.now(), ...base, painMorning:null, stiffness:null });
+    }
+    draft = newDraft(); exportText = null; await save();
+  }
+  if (act === 'edit') {
+    const e = state.entries.find(x => x.id === t.dataset.id);
+    if (e) { editingId = e.id; draft = draftFromEntry(e); render(); document.getElementById('form')?.scrollIntoView({ block:'start', behavior:'smooth' }); }
+    return;
+  }
+  if (act === 'cancelEdit') { editingId = null; draft = newDraft(); return render(); }
+  if (act === 'resetMorning') {
+    const e = state.entries.find(x => x.id === editingId);
+    if (e) state.entries.filter(x => x.date === e.date).forEach(x => {
+      x.painMorning = null; x.stiffness = null; x.morningNote = ''; x.skipped = false;
+    });
+    exportText = null; await save();
+  }
+  if (act === 'saveMorning') {
+    const p = pending()[0];
+    state.entries.filter(x => x.date === p.date).forEach(e => {
+      e.painMorning = morningDraft.pain;
+      e.stiffness = morningDraft.stiff;
+      e.morningNote = (morningDraft.note || '').trim();
+    });
+    morningDraft = {}; exportText = null; await save();
+  }
+  if (act === 'skipMorning') {
+    const p = pending()[0];
+    state.entries.filter(x => x.date === p.date).forEach(e => { e.skipped = true; });
+    morningDraft = {}; await save();
+  }
+  if (act === 'del') { if (editingId === t.dataset.id) { editingId = null; draft = newDraft(); } state.entries = state.entries.filter(x => x.id !== t.dataset.id); exportText = null; await save(); }
+  if (act === 'export') { exportText = buildExport(); render(); document.getElementById('exportbox')?.scrollIntoView({block:'nearest'}); }
+  if (act === 'copy') {
+    const box = document.getElementById('exportbox');
+    if (box) {
+      box.select();
+      try { await navigator.clipboard.writeText(box.value); } catch (e) { document.execCommand('copy'); }
+      t.textContent = 'Kopiert'; setTimeout(() => { t.textContent = 'Kopieren'; }, 1600);
+    }
+  }
+  if (act === 'retrySave') { await save(); return; }
+  if (act === 'openRest') { restOpen = true; restDraft = { date: today(), pain:null, stiff:null, note:'' }; return render(); }
+  if (act === 'closeRest') { restOpen = false; return render(); }
+  if (act === 'saveRest') {
+    state.rest.push({ id:'r'+Date.now(), date: restDraft.date || today(),
+      pain: restDraft.pain, stiff: restDraft.stiff, note: (restDraft.note||'').trim() });
+    restOpen = false; restDraft = { date:'', pain:null, stiff:null, note:'' };
+    exportText = null; await save();
+  }
+  if (act === 'delRest') { state.rest = state.rest.filter(x => x.id !== t.dataset.id); exportText = null; await save(); }
+  if (act === 'backup') {
+    backupText = JSON.stringify({ app:'sehnenlog', v:3, exported:new Date().toISOString(), entries:state.entries, rest:state.rest });
+    importMsg = null; render();
+    document.getElementById('backupbox')?.scrollIntoView({ block:'nearest' });
+    return;
+  }
+  if (act === 'copyBackup') {
+    const box = document.getElementById('backupbox');
+    if (box) {
+      box.select();
+      try { await navigator.clipboard.writeText(box.value); } catch (e) { document.execCommand('copy'); }
+      t.textContent = 'Kopiert'; setTimeout(() => { t.textContent = 'Kopieren'; }, 1600);
+    }
+    return;
+  }
+  if (act === 'restore') {
+    const box = document.getElementById('impbox');
+    const raw = (box && box.value ? box.value : importBuf) || '';
+    if (!raw.trim()) {
+      importMsg = { ok:false, text:'Das Feld ist leer. Füg zuerst den Sicherungstext ein.' };
+      return render();
+    }
+    let incoming = null;
+    try {
+      const parsed = JSON.parse(raw);
+      incoming = Array.isArray(parsed) ? parsed : parsed.entries;
+      if (parsed && Array.isArray(parsed.rest)) parsed.rest.forEach(r => {
+        if (r && r.id && !state.rest.some(x => x.id === r.id)) state.rest.push(r);
+      });
+    } catch (e) { incoming = null; }
+    if (!Array.isArray(incoming)) {
+      importMsg = { ok:false, text:'Das war kein gültiger Sicherungstext. Kopier den kompletten Inhalt aus dem oberen Feld, ohne etwas wegzulassen.' };
+      return render();
+    }
+    let neu = 0, ersetzt = 0;
+    incoming.forEach(e => {
+      if (!e || !e.id || !e.date) return;
+      const i = state.entries.findIndex(x => x.id === e.id);
+      if (i >= 0) { state.entries[i] = e; ersetzt++; } else { state.entries.push(e); neu++; }
+    });
+    importBuf = ''; exportText = null;
+    importMsg = { ok:true, text:`${neu} ${neu === 1 ? 'Eintrag' : 'Einträge'} hinzugefügt, ${ersetzt} aktualisiert. Insgesamt ${state.entries.length}.` };
+    await save();
+    return;
+  }
+  if (act === 'reset') {
+    if (!confirm('Alle Einträge löschen? Das lässt sich nicht rückgängig machen.')) return;
+    state.entries = []; state.rest = []; exportText = null; await save();
+  }
+});
+
+function onField(ev) {
+  if (ev.target.id === 'impbox') { importBuf = ev.target.value; return; }
+  const rp = ev.target.dataset.rpath;
+  if (rp) { restDraft[rp] = ev.target.value; if (rp === 'date' && ev.type === 'change') render(); return; }
+  const mp = ev.target.dataset.mpath;
+  if (mp) { morningDraft[mp] = ev.target.value; return; }
+  const p = ev.target.dataset.path;
+  if (!p) return;
+  const isCb = ev.target.type === 'checkbox';
+  setPath(p, isCb ? ev.target.checked : ev.target.value);
+  // Neu zeichnen erst, wenn das Feld fertig ist – sonst springt der Fokus beim Tippen
+  if (isCb || (ev.type === 'change' && (p === 'time' || p === 'date'))) render();
+}
+document.addEventListener('input', onField);
+document.addEventListener('change', onField);
+
+load();
+
+</script>
+</body>
+</html>
