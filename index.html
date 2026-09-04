@@ -221,6 +221,10 @@ window.storage = {
 };
 
 const KEY = 'sehnenlog:v3';
+const KEY_PREV  = 'sehnenlog:prev';   // Stand vor der letzten Änderung
+const KEY_TRASH = 'sehnenlog:trash';  // Stand vor „Alles löschen“
+const KEY_META  = 'sehnenlog:meta';   // u. a. wann zuletzt gesichert wurde
+const BACKUP_FAELLIG_TAGE = 14;
 const FIGS = {"calf_straight":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 900 640\" preserveAspectRatio=\"xMidYMid meet\"> <defs> <marker id=\"ah_calf_straight\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#C75B39\"/> </marker> <marker id=\"ahg_calf_straight\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#5B8C6E\"/> </marker> </defs> <g font-family=\"Arial, Helvetica, sans-serif\"> <rect x=\"430\" y=\"430\" width=\"420\" height=\"150\" rx=\"6\" fill=\"#E8E3DC\"/> <text x=\"640\" y=\"520\" font-size=\"24\" fill=\"#6B7780\" text-anchor=\"middle\" font-weight=\"normal\">Stufe / Treppe</text> <!-- leg, up position --> <g stroke=\"#26323C\" stroke-width=\"16\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill=\"none\"> <line x1=\"405\" y1=\"90\" x2=\"415\" y2=\"330\"/> <path d=\"M415,330 L360,395 M415,330 L470,430\"/> <line x1=\"470\" y1=\"430\" x2=\"560\" y2=\"430\"/> </g> <text x=\"405\" y=\"70\" font-size=\"24\" fill=\"#26323C\" text-anchor=\"middle\" font-weight=\"bold\">Knie gestreckt</text> <!-- ghost, down position --> <g stroke=\"#BFC6CC\" stroke-width=\"14\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill=\"none\" stroke-dasharray=\"14,11\"> <line x1=\"415\" y1=\"150\" x2=\"428\" y2=\"392\"/> <path d=\"M428,392 L370,520 M428,392 L470,432\"/> </g> <!-- range arrow --> <line x1=\"285\" y1=\"380\" x2=\"285\" y2=\"520\" stroke=\"#C75B39\" stroke-width=\"7\" marker-start=\"url(#ah_calf_straight)\" marker-end=\"url(#ah_calf_straight)\"/> <text x=\"258\" y=\"398\" font-size=\"25\" fill=\"#C75B39\" text-anchor=\"end\" font-weight=\"bold\">3 Sek. hoch</text> <text x=\"258\" y=\"512\" font-size=\"25\" fill=\"#C75B39\" text-anchor=\"end\" font-weight=\"bold\">3 Sek. runter</text> <line x1=\"330\" y1=\"430\" x2=\"430\" y2=\"430\" stroke=\"#6B7780\" stroke-width=\"3\" stroke-dasharray=\"8,8\"/> <text x=\"60\" y=\"600\" font-size=\"25\" fill=\"#6B7780\" text-anchor=\"start\" font-weight=\"normal\">Ferse unter die Stufenkante absenken – volle Bewegungsreichweite</text>\n</g>\n</svg>","calf_bent":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 900 640\" preserveAspectRatio=\"xMidYMid meet\"> <defs> <marker id=\"ah_calf_bent\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#C75B39\"/> </marker> <marker id=\"ahg_calf_bent\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#5B8C6E\"/> </marker> </defs> <g font-family=\"Arial, Helvetica, sans-serif\"> <rect x=\"430\" y=\"430\" width=\"420\" height=\"150\" rx=\"6\" fill=\"#E8E3DC\"/> <g stroke=\"#26323C\" stroke-width=\"16\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill=\"none\"> <line x1=\"330\" y1=\"90\" x2=\"360\" y2=\"250\"/> <line x1=\"360\" y1=\"250\" x2=\"415\" y2=\"330\"/> <path d=\"M415,330 L360,395 M415,330 L470,430\"/> <line x1=\"470\" y1=\"430\" x2=\"560\" y2=\"430\"/> </g> <path d=\"M300,255 A70,70 0 0,0 420,265\" fill=\"none\" stroke=\"#C75B39\" stroke-width=\"6\"/> <text x=\"292\" y=\"250\" font-size=\"27\" fill=\"#C75B39\" text-anchor=\"end\" font-weight=\"bold\">≈ 30°</text> <text x=\"330\" y=\"70\" font-size=\"24\" fill=\"#26323C\" text-anchor=\"middle\" font-weight=\"bold\">Knie gebeugt halten</text> <line x1=\"620\" y1=\"380\" x2=\"620\" y2=\"500\" stroke=\"#C75B39\" stroke-width=\"7\" marker-start=\"url(#ah_calf_bent)\" marker-end=\"url(#ah_calf_bent)\"/> <text x=\"645\" y=\"450\" font-size=\"25\" fill=\"#C75B39\" text-anchor=\"start\" font-weight=\"normal\">gleiches Tempo 3/3</text> <text x=\"60\" y=\"600\" font-size=\"25\" fill=\"#6B7780\" text-anchor=\"start\" font-weight=\"normal\">Beugung bleibt konstant – trifft den tiefen Wadenmuskel (Soleus)</text>\n</g>\n</svg>","iso_hold":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 900 640\" preserveAspectRatio=\"xMidYMid meet\"> <defs> <marker id=\"ah_iso_hold\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#C75B39\"/> </marker> <marker id=\"ahg_iso_hold\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#5B8C6E\"/> </marker> </defs> <g font-family=\"Arial, Helvetica, sans-serif\"> <line x1=\"120\" y1=\"470\" x2=\"780\" y2=\"470\" stroke=\"#E8E3DC\" stroke-width=\"16\" stroke-linecap=\"round\"/> <g stroke=\"#26323C\" stroke-width=\"16\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill=\"none\"> <line x1=\"380\" y1=\"110\" x2=\"392\" y2=\"345\"/> <path d=\"M392,345 L338,405 M392,345 L448,462\"/> <line x1=\"448\" y1=\"462\" x2=\"540\" y2=\"462\"/> </g> <line x1=\"292\" y1=\"405\" x2=\"292\" y2=\"470\" stroke=\"#5B8C6E\" stroke-width=\"7\" marker-start=\"url(#ahg_iso_hold)\" marker-end=\"url(#ahg_iso_hold)\"/> <text x=\"275\" y=\"445\" font-size=\"25\" fill=\"#5B8C6E\" text-anchor=\"end\" font-weight=\"normal\">Ferse angehoben</text> <circle cx=\"660\" cy=\"200\" r=\"72\" fill=\"none\" stroke=\"#5B8C6E\" stroke-width=\"8\"/> <text x=\"660\" y=\"195\" font-size=\"40\" fill=\"#5B8C6E\" text-anchor=\"middle\" font-weight=\"bold\">30–45</text> <text x=\"660\" y=\"232\" font-size=\"24\" fill=\"#5B8C6E\" text-anchor=\"middle\" font-weight=\"normal\">Sekunden</text> <text x=\"660\" y=\"320\" font-size=\"25\" fill=\"#6B7780\" text-anchor=\"middle\" font-weight=\"normal\">halten, nicht bewegen</text> <text x=\"60\" y=\"600\" font-size=\"25\" fill=\"#6B7780\" text-anchor=\"start\" font-weight=\"normal\">Position ruhig halten – wirkt bei vielen Sehnen sofort schmerzlindernd</text>\n</g>\n</svg>","tib_post":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 900 640\" preserveAspectRatio=\"xMidYMid meet\"> <defs> <marker id=\"ah_tib_post\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#C75B39\"/> </marker> <marker id=\"ahg_tib_post\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#5B8C6E\"/> </marker> </defs> <g font-family=\"Arial, Helvetica, sans-serif\"> <text x=\"450\" y=\"62\" font-size=\"25\" fill=\"#6B7780\" text-anchor=\"middle\" font-weight=\"normal\">Draufsicht – rechter Fuß</text> <!-- foot outline seen from above, toes up --> <path d=\"M470,150 C540,160 560,250 552,340 C546,420 530,470 490,490 C440,512 392,492 378,440 C362,378 372,250 396,190 C410,158 436,145 470,150 Z\" fill=\"#F5F2EE\" stroke=\"#26323C\" stroke-width=\"10\" stroke-linejoin=\"round\"/> <g fill=\"#26323C\"> <ellipse cx=\"410\" cy=\"140\" rx=\"19\" ry=\"24\"/> <ellipse cx=\"452\" cy=\"127\" rx=\"17\" ry=\"22\"/> <ellipse cx=\"490\" cy=\"130\" rx=\"15\" ry=\"20\"/> <ellipse cx=\"523\" cy=\"143\" rx=\"13\" ry=\"18\"/> <ellipse cx=\"551\" cy=\"163\" rx=\"12\" ry=\"16\"/> </g> <!-- band --> <path d=\"M760,300 C650,300 600,290 552,285\" stroke=\"#5B8C6E\" stroke-width=\"16\" fill=\"none\" stroke-linecap=\"round\"/> <text x=\"770\" y=\"262\" font-size=\"25\" fill=\"#5B8C6E\" text-anchor=\"start\" font-weight=\"bold\">Band fest</text> <text x=\"770\" y=\"296\" font-size=\"25\" fill=\"#5B8C6E\" text-anchor=\"start\" font-weight=\"bold\">verankert</text> <!-- movement arrow: foot pushes inward (medially) --> <path d=\"M360,300 C295,300 250,318 205,348\" stroke=\"#C75B39\" stroke-width=\"9\" fill=\"none\" marker-end=\"url(#ah_tib_post)\"/> <text x=\"60\" y=\"425\" font-size=\"26\" fill=\"#C75B39\" text-anchor=\"start\" font-weight=\"bold\">Fuß nach innen</text> <text x=\"60\" y=\"459\" font-size=\"26\" fill=\"#C75B39\" text-anchor=\"start\" font-weight=\"bold\">und leicht nach</text> <text x=\"60\" y=\"493\" font-size=\"26\" fill=\"#C75B39\" text-anchor=\"start\" font-weight=\"bold\">unten drücken</text> <text x=\"60\" y=\"600\" font-size=\"25\" fill=\"#6B7780\" text-anchor=\"start\" font-weight=\"normal\">Unterschenkel bleibt ruhig – nur der Fuß bewegt sich. Langsam zurück.</text>\n</g>\n</svg>","tib_ant":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 900 640\" preserveAspectRatio=\"xMidYMid meet\"> <defs> <marker id=\"ah_tib_ant\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#C75B39\"/> </marker> <marker id=\"ahg_tib_ant\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#5B8C6E\"/> </marker> </defs> <g font-family=\"Arial, Helvetica, sans-serif\"> <text x=\"450\" y=\"62\" font-size=\"25\" fill=\"#6B7780\" text-anchor=\"middle\" font-weight=\"normal\">Seitansicht – sitzend, Bein gestreckt</text> <!-- shin horizontal --> <line x1=\"120\" y1=\"300\" x2=\"470\" y2=\"300\" stroke=\"#26323C\" stroke-width=\"18\" stroke-linecap=\"round\"/> <!-- foot up position --> <g stroke=\"#26323C\" stroke-width=\"16\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill=\"none\"> <path d=\"M470,300 L500,220 M470,300 L505,330\"/> </g> <!-- ghost down --> <g stroke=\"#BFC6CC\" stroke-width=\"14\" stroke-linecap=\"round\" stroke-dasharray=\"13,10\" fill=\"none\"> <path d=\"M470,300 L545,368\"/> </g> <!-- band --> <path d=\"M498,236 C600,270 700,380 745,470\" stroke=\"#5B8C6E\" stroke-width=\"14\" fill=\"none\" stroke-linecap=\"round\"/> <text x=\"700\" y=\"520\" font-size=\"25\" fill=\"#5B8C6E\" text-anchor=\"middle\" font-weight=\"bold\">Band fixiert</text> <path d=\"M420,250 C430,200 460,178 495,180\" stroke=\"#C75B39\" stroke-width=\"9\" fill=\"none\" marker-end=\"url(#ah_tib_ant)\"/> <text x=\"390\" y=\"225\" font-size=\"27\" fill=\"#C75B39\" text-anchor=\"end\" font-weight=\"bold\">Fußspitze</text> <text x=\"390\" y=\"260\" font-size=\"27\" fill=\"#C75B39\" text-anchor=\"end\" font-weight=\"bold\">anziehen</text> <text x=\"60\" y=\"600\" font-size=\"25\" fill=\"#6B7780\" text-anchor=\"start\" font-weight=\"normal\">Gegen den Bandwiderstand anziehen, dann betont langsam ablassen</text>\n</g>\n</svg>","heel_walk":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 900 640\" preserveAspectRatio=\"xMidYMid meet\"> <defs> <marker id=\"ah_heel_walk\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#C75B39\"/> </marker> <marker id=\"ahg_heel_walk\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#5B8C6E\"/> </marker> </defs> <g font-family=\"Arial, Helvetica, sans-serif\"> <line x1=\"80\" y1=\"500\" x2=\"820\" y2=\"500\" stroke=\"#E8E3DC\" stroke-width=\"16\" stroke-linecap=\"round\"/> <g stroke=\"#26323C\" stroke-width=\"16\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill=\"none\"> <line x1=\"300\" y1=\"120\" x2=\"300\" y2=\"380\"/> <path d=\"M300,380 L285,495 M300,380 L370,318\"/> </g> <g stroke=\"#26323C\" stroke-width=\"16\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill=\"none\"> <line x1=\"470\" y1=\"120\" x2=\"500\" y2=\"370\"/> <path d=\"M500,370 L488,495 M500,370 L572,315\"/> </g> <circle cx=\"72\" cy=\"552\" r=\"13\" fill=\"#C75B39\"/> <text x=\"100\" y=\"561\" font-size=\"26\" fill=\"#C75B39\" text-anchor=\"start\" font-weight=\"bold\">Nur auf den Fersen gehen – Fußspitzen bleiben oben</text> <circle cx=\"72\" cy=\"604\" r=\"13\" fill=\"#6B7780\"/> <text x=\"100\" y=\"613\" font-size=\"26\" fill=\"#6B7780\" text-anchor=\"start\" font-weight=\"normal\">Schienbein brennt – das ist gewollt. 30 Sek. am Stück.</text>\n</g>\n</svg>","short_foot":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 900 640\" preserveAspectRatio=\"xMidYMid meet\"> <defs> <marker id=\"ah_short_foot\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#C75B39\"/> </marker> <marker id=\"ahg_short_foot\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#5B8C6E\"/> </marker> </defs> <g font-family=\"Arial, Helvetica, sans-serif\"> <text x=\"450\" y=\"62\" font-size=\"25\" fill=\"#6B7780\" text-anchor=\"middle\" font-weight=\"normal\">Seitansicht – Fußgewölbe aktiv anheben</text> <line x1=\"120\" y1=\"450\" x2=\"800\" y2=\"450\" stroke=\"#E8E3DC\" stroke-width=\"14\" stroke-linecap=\"round\"/> <!-- flat arch ghost --> <path d=\"M250,450 C340,450 480,450 600,450\" stroke=\"#BFC6CC\" stroke-width=\"12\" fill=\"none\" stroke-dasharray=\"13,10\"/> <text x=\"390\" y=\"512\" font-size=\"24\" fill=\"#BFC6CC\" text-anchor=\"middle\" font-weight=\"normal\">flach (vorher)</text> <!-- lifted arch --> <path d=\"M250,450 C340,368 470,368 600,450\" stroke=\"#26323C\" stroke-width=\"16\" fill=\"none\" stroke-linecap=\"round\"/> <circle cx=\"250\" cy=\"450\" r=\"14\" fill=\"#26323C\"/> <circle cx=\"600\" cy=\"450\" r=\"14\" fill=\"#26323C\"/> <text x=\"232\" y=\"430\" font-size=\"24\" fill=\"#6B7780\" text-anchor=\"end\" font-weight=\"normal\">Ferse bleibt</text> <text x=\"232\" y=\"458\" font-size=\"24\" fill=\"#6B7780\" text-anchor=\"end\" font-weight=\"normal\">am Boden</text> <text x=\"622\" y=\"430\" font-size=\"24\" fill=\"#6B7780\" text-anchor=\"start\" font-weight=\"normal\">Ballen bleibt</text> <text x=\"622\" y=\"458\" font-size=\"24\" fill=\"#6B7780\" text-anchor=\"start\" font-weight=\"normal\">am Boden</text> <line x1=\"425\" y1=\"345\" x2=\"425\" y2=\"270\" stroke=\"#C75B39\" stroke-width=\"9\" marker-end=\"url(#ah_short_foot)\"/> <text x=\"425\" y=\"240\" font-size=\"27\" fill=\"#C75B39\" text-anchor=\"middle\" font-weight=\"bold\">Gewölbe anheben</text> <text x=\"60\" y=\"600\" font-size=\"25\" fill=\"#C75B39\" text-anchor=\"start\" font-weight=\"normal\">Zehen bleiben lang und entspannt – nicht krallen!</text>\n</g>\n</svg>","side_plank":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 900 640\" preserveAspectRatio=\"xMidYMid meet\"> <defs> <marker id=\"ah_side_plank\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#C75B39\"/> </marker> <marker id=\"ahg_side_plank\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#5B8C6E\"/> </marker> </defs> <g font-family=\"Arial, Helvetica, sans-serif\"> <line x1=\"90\" y1=\"470\" x2=\"810\" y2=\"470\" stroke=\"#E8E3DC\" stroke-width=\"14\" stroke-linecap=\"round\"/> <g stroke=\"#26323C\" stroke-width=\"16\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill=\"none\"> <!-- forearm --> <line x1=\"200\" y1=\"470\" x2=\"290\" y2=\"470\"/> <line x1=\"255\" y1=\"470\" x2=\"270\" y2=\"330\"/> <!-- torso --> <line x1=\"270\" y1=\"330\" x2=\"560\" y2=\"415\"/> <circle cx=\"252\" cy=\"292\" r=\"34\"/> <!-- bottom leg --> <line x1=\"560\" y1=\"415\" x2=\"790\" y2=\"465\"/> </g> <!-- top leg raised --> <g stroke=\"#C75B39\" stroke-width=\"16\" stroke-linecap=\"round\" fill=\"none\"> <line x1=\"560\" y1=\"410\" x2=\"780\" y2=\"350\"/> </g> <path d=\"M700,430 C710,400 720,380 735,362\" stroke=\"#C75B39\" stroke-width=\"8\" fill=\"none\" marker-end=\"url(#ah_side_plank)\"/> <text x=\"660\" y=\"300\" font-size=\"26\" fill=\"#C75B39\" text-anchor=\"middle\" font-weight=\"bold\">oberes Bein heben</text> <line x1=\"270\" y1=\"345\" x2=\"555\" y2=\"428\" stroke=\"#5B8C6E\" stroke-width=\"5\" stroke-dasharray=\"12,9\"/> <text x=\"60\" y=\"575\" font-size=\"25\" fill=\"#5B8C6E\" text-anchor=\"start\" font-weight=\"normal\">Hüfte oben halten – gerade Linie Schulter–Hüfte–Knie</text>\n</g>\n</svg>","monster_walk":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 900 640\" preserveAspectRatio=\"xMidYMid meet\"> <defs> <marker id=\"ah_monster_walk\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#C75B39\"/> </marker> <marker id=\"ahg_monster_walk\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#5B8C6E\"/> </marker> </defs> <g font-family=\"Arial, Helvetica, sans-serif\"> <text x=\"450\" y=\"62\" font-size=\"25\" fill=\"#6B7780\" text-anchor=\"middle\" font-weight=\"normal\">Frontalansicht – Band um die Fußgelenke</text> <line x1=\"100\" y1=\"500\" x2=\"800\" y2=\"500\" stroke=\"#E8E3DC\" stroke-width=\"14\" stroke-linecap=\"round\"/> <g stroke=\"#26323C\" stroke-width=\"16\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill=\"none\"> <circle cx=\"450\" cy=\"150\" r=\"38\"/> <line x1=\"450\" y1=\"188\" x2=\"450\" y2=\"300\"/> <line x1=\"450\" y1=\"300\" x2=\"345\" y2=\"440\"/> <line x1=\"345\" y1=\"440\" x2=\"330\" y2=\"495\"/> <line x1=\"450\" y1=\"300\" x2=\"565\" y2=\"440\"/> <line x1=\"565\" y1=\"440\" x2=\"580\" y2=\"495\"/> </g> <path d=\"M330,470 C420,438 490,438 580,470\" stroke=\"#5B8C6E\" stroke-width=\"14\" fill=\"none\"/> <text x=\"455\" y=\"425\" font-size=\"25\" fill=\"#5B8C6E\" text-anchor=\"middle\" font-weight=\"bold\">Band</text> <line x1=\"290\" y1=\"495\" x2=\"180\" y2=\"495\" stroke=\"#C75B39\" stroke-width=\"9\" marker-end=\"url(#ah_monster_walk)\"/> <line x1=\"620\" y1=\"495\" x2=\"730\" y2=\"495\" stroke=\"#C75B39\" stroke-width=\"9\" marker-end=\"url(#ah_monster_walk)\"/> <text x=\"450\" y=\"560\" font-size=\"26\" fill=\"#C75B39\" text-anchor=\"middle\" font-weight=\"bold\">seitliche Schritte, Spannung im Band halten</text> <text x=\"60\" y=\"615\" font-size=\"25\" fill=\"#6B7780\" text-anchor=\"start\" font-weight=\"normal\">Knie nicht nach innen fallen lassen – Zehen zeigen nach vorn</text>\n</g>\n</svg>","pogo":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 900 640\" preserveAspectRatio=\"xMidYMid meet\"> <defs> <marker id=\"ah_pogo\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#C75B39\"/> </marker> <marker id=\"ahg_pogo\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#5B8C6E\"/> </marker> </defs> <g font-family=\"Arial, Helvetica, sans-serif\"> <line x1=\"100\" y1=\"500\" x2=\"800\" y2=\"500\" stroke=\"#E8E3DC\" stroke-width=\"14\" stroke-linecap=\"round\"/> <g stroke=\"#26323C\" stroke-width=\"16\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill=\"none\"> <circle cx=\"420\" cy=\"130\" r=\"36\"/> <line x1=\"420\" y1=\"166\" x2=\"425\" y2=\"300\"/> <line x1=\"425\" y1=\"300\" x2=\"410\" y2=\"420\"/> <line x1=\"410\" y1=\"420\" x2=\"415\" y2=\"470\"/> <path d=\"M415,470 L385,478 M415,470 L462,470\"/> </g> <line x1=\"415\" y1=\"470\" x2=\"415\" y2=\"500\" stroke=\"#BFC6CC\" stroke-width=\"6\" stroke-dasharray=\"8,7\"/> <line x1=\"640\" y1=\"440\" x2=\"640\" y2=\"292\" stroke=\"#C75B39\" stroke-width=\"9\" marker-start=\"url(#ah_pogo)\" marker-end=\"url(#ah_pogo)\"/> <text x=\"675\" y=\"336\" font-size=\"26\" fill=\"#C75B39\" text-anchor=\"start\" font-weight=\"bold\">kleine,</text> <text x=\"675\" y=\"370\" font-size=\"26\" fill=\"#C75B39\" text-anchor=\"start\" font-weight=\"bold\">schnelle</text> <text x=\"675\" y=\"404\" font-size=\"26\" fill=\"#C75B39\" text-anchor=\"start\" font-weight=\"bold\">Sprünge</text> <circle cx=\"72\" cy=\"552\" r=\"13\" fill=\"#5B8C6E\"/> <text x=\"100\" y=\"561\" font-size=\"26\" fill=\"#5B8C6E\" text-anchor=\"start\" font-weight=\"normal\">Knie fast gestreckt – die Arbeit macht das Sprunggelenk</text> <circle cx=\"72\" cy=\"604\" r=\"13\" fill=\"#6B7780\"/> <text x=\"100\" y=\"613\" font-size=\"26\" fill=\"#6B7780\" text-anchor=\"start\" font-weight=\"normal\">Bodenkontakt so kurz wie möglich, Ferse tippt nicht auf</text>\n</g>\n</svg>","hop_single":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 900 640\" preserveAspectRatio=\"xMidYMid meet\"> <defs> <marker id=\"ah_hop_single\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#C75B39\"/> </marker> <marker id=\"ahg_hop_single\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#5B8C6E\"/> </marker> </defs> <g font-family=\"Arial, Helvetica, sans-serif\"> <line x1=\"100\" y1=\"510\" x2=\"800\" y2=\"510\" stroke=\"#E8E3DC\" stroke-width=\"14\" stroke-linecap=\"round\"/> <g stroke=\"#26323C\" stroke-width=\"16\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill=\"none\"> <circle cx=\"410\" cy=\"120\" r=\"36\"/> <line x1=\"410\" y1=\"156\" x2=\"418\" y2=\"290\"/> <line x1=\"418\" y1=\"290\" x2=\"408\" y2=\"410\"/> <line x1=\"408\" y1=\"410\" x2=\"414\" y2=\"478\"/> <path d=\"M414,478 L386,486 M414,478 L460,478\"/> <!-- other leg lifted, bent --> <line x1=\"418\" y1=\"290\" x2=\"500\" y2=\"360\"/> <line x1=\"500\" y1=\"360\" x2=\"470\" y2=\"425\"/> </g> <path d=\"M300,430 C280,370 290,320 330,285\" stroke=\"#C75B39\" stroke-width=\"9\" fill=\"none\" marker-end=\"url(#ah_hop_single)\"/> <text x=\"280\" y=\"470\" font-size=\"27\" fill=\"#C75B39\" text-anchor=\"end\" font-weight=\"bold\">einbeinig</text> <text x=\"280\" y=\"505\" font-size=\"27\" fill=\"#C75B39\" text-anchor=\"end\" font-weight=\"bold\">abdrücken</text> <circle cx=\"602\" cy=\"252\" r=\"12\" fill=\"#5B8C6E\"/> <text x=\"628\" y=\"261\" font-size=\"23\" fill=\"#5B8C6E\" text-anchor=\"start\" font-weight=\"normal\">Knie über Fußspitze</text> <circle cx=\"602\" cy=\"306\" r=\"12\" fill=\"#5B8C6E\"/> <text x=\"628\" y=\"315\" font-size=\"23\" fill=\"#5B8C6E\" text-anchor=\"start\" font-weight=\"normal\">weich landen</text> <circle cx=\"602\" cy=\"360\" r=\"12\" fill=\"#5B8C6E\"/> <text x=\"628\" y=\"369\" font-size=\"23\" fill=\"#5B8C6E\" text-anchor=\"start\" font-weight=\"normal\">Gewölbe stabil halten</text> <text x=\"60\" y=\"605\" font-size=\"25\" fill=\"#6B7780\" text-anchor=\"start\" font-weight=\"normal\">Erst wenn Seilspringen schmerzfrei läuft</text>\n</g>\n</svg>","heel_rise_test":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 900 640\" preserveAspectRatio=\"xMidYMid meet\"> <defs> <marker id=\"ah_heel_rise_test\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#C75B39\"/> </marker> <marker id=\"ahg_heel_rise_test\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#5B8C6E\"/> </marker> </defs> <g font-family=\"Arial, Helvetica, sans-serif\"> <text x=\"450\" y=\"60\" font-size=\"25\" fill=\"#6B7780\" text-anchor=\"middle\" font-weight=\"normal\">Ebener Boden – einbeinig, Wiederholungen zählen</text> <line x1=\"110\" y1=\"500\" x2=\"790\" y2=\"500\" stroke=\"#E8E3DC\" stroke-width=\"16\" stroke-linecap=\"round\"/> <!-- Standbein, Ferse angehoben --> <g stroke=\"#26323C\" stroke-width=\"16\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill=\"none\"> <circle cx=\"392\" cy=\"128\" r=\"36\"/> <line x1=\"396\" y1=\"164\" x2=\"404\" y2=\"290\"/> <line x1=\"404\" y1=\"290\" x2=\"398\" y2=\"392\"/> <path d=\"M398,392 L344,438 M398,392 L452,492\"/> <line x1=\"452\" y1=\"492\" x2=\"524\" y2=\"492\"/> <!-- freies Bein, angewinkelt --> <line x1=\"404\" y1=\"290\" x2=\"470\" y2=\"352\"/> <line x1=\"470\" y1=\"352\" x2=\"438\" y2=\"418\"/> </g> <!-- Ferse frei --> <line x1=\"300\" y1=\"438\" x2=\"300\" y2=\"500\" stroke=\"#5B8C6E\" stroke-width=\"7\" marker-start=\"url(#ahg_heel_rise_test)\" marker-end=\"url(#ahg_heel_rise_test)\"/> <text x=\"282\" y=\"478\" font-size=\"25\" fill=\"#5B8C6E\" text-anchor=\"end\" font-weight=\"normal\">Ferse frei</text> <!-- Zaehler --> <circle cx=\"655\" cy=\"215\" r=\"76\" fill=\"none\" stroke=\"#C75B39\" stroke-width=\"8\"/> <text x=\"655\" y=\"228\" font-size=\"46\" fill=\"#C75B39\" text-anchor=\"middle\" font-weight=\"bold\">× N</text> <text x=\"655\" y=\"330\" font-size=\"24\" fill=\"#6B7780\" text-anchor=\"middle\" font-weight=\"normal\">zählen, bis die Höhe</text> <text x=\"655\" y=\"362\" font-size=\"24\" fill=\"#6B7780\" text-anchor=\"middle\" font-weight=\"normal\">sichtbar einbricht</text> <circle cx=\"72\" cy=\"565\" r=\"13\" fill=\"#C75B39\"/> <text x=\"100\" y=\"574\" font-size=\"26\" fill=\"#C75B39\" text-anchor=\"start\" font-weight=\"bold\">Volle Reichweite, ruhiges Tempo, ohne Schwung</text> <circle cx=\"72\" cy=\"612\" r=\"13\" fill=\"#6B7780\"/> <text x=\"100\" y=\"621\" font-size=\"26\" fill=\"#6B7780\" text-anchor=\"start\" font-weight=\"normal\">Beide Seiten – gesunde zuerst, dann die rechte</text>\n</g>\n</svg>"};
 
 /* ============================================ Übungen */
@@ -377,7 +381,8 @@ const SUPPRULES = [
 ];
 
 /* ============================================ State */
-let state = { entries: [], rest: [], loaded: false, error: null, dataNote: null };
+let state = { entries: [], rest: [], loaded: false, error: null, dataNote: null,
+  persist: null, snapPrev: null, snapTrash: null, meta: { lastBackup: null } };
 let tab = 'log';
 let openAcc = null;
 let draft = newDraft();
@@ -403,6 +408,12 @@ function newDraft() {
     painDuring: null, effort: null, collagen: false, progressed: false, note: '' };
 }
 function fmt(iso) { const [y,m,d] = iso.split('-'); return `${+d}.${+m}.`; }
+function fmtWhen(iso) {
+  const d = new Date(iso);
+  if (isNaN(d)) return '–';
+  return d.toLocaleDateString('de-DE', { day:'numeric', month:'numeric' })
+       + ' um ' + d.toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit' });
+}
 function draftFromEntry(e) {
   const kind = TYPES[e.type] ? TYPES[e.type].kind : 'session';
   const d = newDraft();
@@ -448,6 +459,62 @@ function adopt(p) {
   noteDropped(e.dropped + r.dropped);
   return state.entries.length > 0 || state.rest.length > 0;
 }
+function packState() { return { entries: state.entries, rest: state.rest }; }
+
+// Rueckfallebenen. Duerfen nie das eigentliche Speichern gefaehrden – darum
+// schluckt hier alles seine Fehler und liefert im Zweifel null.
+async function writeSnapshot(key, payload) {
+  try { await window.storage.set(key, JSON.stringify({ at: new Date().toISOString(), payload })); }
+  catch (e) { /* Rueckfallebene ist Kuer, nicht Pflicht */ }
+}
+async function readSnapshot(key) {
+  try {
+    const r = await window.storage.get(key);
+    if (!r || !r.value) return null;
+    const s = JSON.parse(r.value);
+    if (!s || !s.at || !s.payload) return null;
+    const e = keepValid(s.payload.entries, validEntry);
+    const t = keepValid(s.payload.rest, validRest);
+    if (!e.ok.length && !t.ok.length) return null;
+    return { at: s.at, entries: e.ok, rest: t.ok };
+  } catch (e) { return null; }
+}
+async function dropSnapshot(key) {
+  try { await window.storage.set(key, ''); } catch (e) {}
+}
+
+async function loadMeta() {
+  try {
+    const r = await window.storage.get(KEY_META);
+    const m = r && r.value ? JSON.parse(r.value) : null;
+    state.meta = (m && typeof m === 'object') ? m : { lastBackup: null };
+  } catch (e) { state.meta = { lastBackup: null }; }
+}
+async function markBackup() {
+  state.meta.lastBackup = new Date().toISOString();
+  try { await window.storage.set(KEY_META, JSON.stringify(state.meta)); } catch (e) {}
+}
+function backupAge() {
+  if (!state.meta || !state.meta.lastBackup) return null;
+  const d = new Date(state.meta.lastBackup);
+  if (isNaN(d)) return null;
+  return Math.max(0, Math.floor((Date.now() - d.getTime()) / 86400000));
+}
+function backupFaellig() {
+  if (!state.entries.length && !state.rest.length) return false;
+  const a = backupAge();
+  return a === null || a >= BACKUP_FAELLIG_TAGE;
+}
+
+// Ohne Zusage darf der Browser den Speicher raeumen, wenn er Platz braucht.
+async function checkPersistence(fragen) {
+  if (!navigator.storage || !navigator.storage.persist) { state.persist = 'na'; return; }
+  try {
+    if (await navigator.storage.persisted()) { state.persist = true; return; }
+    state.persist = fragen ? await navigator.storage.persist() : false;
+  } catch (e) { state.persist = 'na'; }
+}
+
 async function load() {
   try {
     const r = await window.storage.get(KEY);
@@ -465,13 +532,26 @@ async function load() {
       } catch (e) { /* nichts zu übernehmen */ }
     }
   }
+  await loadMeta();
+  state.snapPrev  = await readSnapshot(KEY_PREV);
+  state.snapTrash = await readSnapshot(KEY_TRASH);
   state.loaded = true;
   render();
+  checkPersistence(true).then(render);
 }
 async function save() {
   try {
     if (!window.storage || typeof window.storage.set !== 'function') throw new Error('window.storage steht in dieser Umgebung nicht zur Verfügung');
-    await window.storage.set(KEY, JSON.stringify({ entries: state.entries, rest: state.rest }));
+    // Den Stand vor dieser Änderung als Rückfallebene behalten
+    try {
+      const before = await window.storage.get(KEY);
+      if (before && before.value) {
+        const b = JSON.parse(before.value);
+        if (b) await writeSnapshot(KEY_PREV, Array.isArray(b) ? { entries: b, rest: [] } : b);
+      }
+    } catch (e) { /* ohne Rückfallebene weiter */ }
+    await window.storage.set(KEY, JSON.stringify(packState()));
+    state.snapPrev = await readSnapshot(KEY_PREV);
     state.error = null;
   } catch (e) {
     state.error = (e && e.message) ? String(e.message) : String(e);
@@ -881,6 +961,17 @@ function tabLog() {
 
     ${state.dataNote ? `<div class="warnbox"><b>Unvollständige Daten übersprungen.</b> ${esc(state.dataNote)}</div>` : ''}
 
+    ${backupFaellig() ? `<div class="card pending">
+      <h2>Sicherung fällig</h2>
+      <p class="lede">${backupAge() === null
+        ? 'Von diesen Daten gibt es noch keine Kopie außerhalb dieses Geräts. Geht das Gerät verloren, sind sie weg.'
+        : `Die letzte Sicherung ist ${backupAge()} ${backupAge() === 1 ? 'Tag' : 'Tage'} her (${esc(fmtWhen(state.meta.lastBackup))}).`}</p>
+      <div class="btn-row">
+        <button class="btn" data-act="backupFile">Sicherung jetzt speichern</button>
+        <span class="hint" style="margin:0">Ein Tipp – die Datei landet in „Dateien“ bzw. im Download-Ordner.</span>
+      </div>
+    </div>` : ''}
+
     <div class="verdict ${a.tone}">
       <p class="verdict-kicker">${esc(a.kicker)}</p>
       <p class="verdict-word">${esc(a.word)}</p>
@@ -1038,7 +1129,6 @@ function tabLog() {
       <div class="btn-row">
         <button class="btn ghost" data-act="export">Daten als Text erzeugen</button>
         ${exportText ? '<button class="btn quiet small" data-act="copy">Kopieren</button>' : ''}
-        <button class="btn quiet small" data-act="reset">Alles löschen</button>
       </div>
       ${exportText ? `<textarea class="exportbox" readonly id="exportbox">${esc(exportText)}</textarea>` : ''}
       <p class="note">Diese Version speichert direkt auf diesem Gerät. Die Daten verlassen es nicht und bleiben erhalten, wenn du den Browser schließt. Löschst du die Browserdaten, sind sie weg – zieh alle paar Wochen eine Sicherung.</p>
@@ -1046,21 +1136,70 @@ function tabLog() {
 
     <div class="card">
       <h2>Sicherung &amp; Gerätewechsel</h2>
-      <p class="lede">Erzeugt eine vollständige Kopie deiner Einträge, die du auf einem anderen Gerät wieder einspielen kannst.</p>
+      <p class="lede">Eine vollständige Kopie deiner Einträge als Datei – unabhängig von diesem Gerät und diesem Browser.</p>
       <div class="btn-row">
-        <button class="btn ghost" data-act="backup">Sicherung erzeugen</button>
+        <button class="btn" data-act="backupFile">Als Datei sichern</button>
+        <label class="btn ghost" for="impfile" style="display:inline-block">Datei einspielen</label>
+        <input type="file" id="impfile" accept="application/json,.json" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">
+      </div>
+      <p class="note" style="margin-top:10px">${
+        backupAge() === null ? 'Noch nie gesichert.'
+        : `Zuletzt gesichert: ${esc(fmtWhen(state.meta.lastBackup))}${backupAge() === 0 ? ' (heute)' : ` – vor ${backupAge()} ${backupAge() === 1 ? 'Tag' : 'Tagen'}`}.`
+      } Beim Einspielen werden Einträge mit gleicher Kennung ersetzt, alles andere kommt dazu – nichts wird gelöscht.</p>
+      ${importMsg ? `<p class="${importMsg.ok ? 'note' : 'err'}" style="margin-top:6px">${esc(importMsg.text)}</p>` : ''}
+
+      <h4 style="margin:20px 0 6px;font-size:12px;color:var(--ink-soft);font-weight:600;letter-spacing:.04em;text-transform:uppercase">Dauerhafter Speicher</h4>
+      ${state.persist === true
+        ? '<p class="note" style="margin-top:0">Der Browser hat zugesagt, diese Daten nicht von selbst zu löschen. Das schützt nicht davor, dass du die Browserdaten von Hand löschst – dafür sind die Sicherungen da.</p>'
+        : state.persist === false
+        ? `<p class="note" style="margin-top:0">Der Browser hat den dauerhaften Speicher <b>nicht</b> zugesagt. Er darf die Daten räumen, wenn er Platz braucht. Was hilft: die App über „Zum Home-Bildschirm“ installieren und sie regelmäßig benutzen – dann wird die Zusage meist erteilt.</p>
+           <div class="btn-row" style="margin-top:8px"><button class="btn quiet small" data-act="askPersist">Erneut anfragen</button></div>`
+        : state.persist === 'na'
+        ? '<p class="note" style="margin-top:0">Dieser Browser kennt die Anfrage nach dauerhaftem Speicher nicht. Sichere entsprechend häufiger.</p>'
+        : '<p class="note" style="margin-top:0">Wird geprüft …</p>'}
+
+      <h4 style="margin:20px 0 6px;font-size:12px;color:var(--ink-soft);font-weight:600;letter-spacing:.04em;text-transform:uppercase">Als Text statt als Datei</h4>
+      <p class="hint">Falls der Dateiweg auf deinem Gerät klemmt.</p>
+      <div class="btn-row">
+        <button class="btn quiet small" data-act="backup">Text erzeugen</button>
         ${backupText ? '<button class="btn quiet small" data-act="copyBackup">Kopieren</button>' : ''}
       </div>
       ${backupText ? `<textarea class="exportbox" readonly id="backupbox">${esc(backupText)}</textarea>` : ''}
-
-      <div class="field" style="margin-top:18px">
-        <label for="impbox">Sicherung einspielen</label>
-        <p class="hint">Text aus einer Sicherung hier einfügen. Vorhandene Einträge mit gleicher Kennung werden ersetzt, alles andere kommt dazu – nichts wird gelöscht.</p>
-        <textarea class="exportbox" id="impbox" data-ibuf placeholder="Hier den kopierten Sicherungstext einfügen">${esc(importBuf)}</textarea>
+      <div class="field" style="margin-top:14px">
+        <label for="impbox">Text einspielen</label>
+        <textarea class="exportbox" id="impbox" placeholder="Hier den kopierten Sicherungstext einfügen">${esc(importBuf)}</textarea>
       </div>
-      <button class="btn" data-act="restore">Einspielen</button>
-      ${importMsg ? `<p class="${importMsg.ok ? 'note' : 'err'}" style="margin-top:10px">${esc(importMsg.text)}</p>` : ''}
-      <p class="note">Das ist auch der Weg für ein zweites Gerät und für Updates: hier sichern, dort einspielen.</p>
+      <button class="btn quiet small" data-act="restore">Text einspielen</button>
+    </div>
+
+    <div class="card">
+      <h2>Sicherheitsnetz</h2>
+      <p class="lede">Zwischenstände auf diesem Gerät. Ersetzen keine Sicherung – aber sie fangen den Fehlgriff ab.</p>
+      ${state.snapPrev ? `<div class="row">
+        <div class="row-main">
+          <div class="row-title">Stand vor der letzten Änderung</div>
+          <div class="row-sub">${esc(fmtWhen(state.snapPrev.at))} · ${state.snapPrev.entries.length} ${state.snapPrev.entries.length === 1 ? 'Einheit' : 'Einheiten'}, ${state.snapPrev.rest.length} Ruhetage</div>
+        </div>
+        <button class="btn quiet small" data-act="restoreSnap" data-snap="prev">Zurückholen</button>
+      </div>` : ''}
+      ${state.snapTrash ? `<div class="row">
+        <div class="row-main">
+          <div class="row-title">Papierkorb – Stand vor „Alles löschen“</div>
+          <div class="row-sub">${esc(fmtWhen(state.snapTrash.at))} · ${state.snapTrash.entries.length} ${state.snapTrash.entries.length === 1 ? 'Einheit' : 'Einheiten'}, ${state.snapTrash.rest.length} Ruhetage</div>
+        </div>
+        <div class="rowbtns">
+          <button class="btn quiet small" data-act="restoreSnap" data-snap="trash">Zurückholen</button>
+          <button class="edit" data-act="emptyTrash">endgültig leeren</button>
+        </div>
+      </div>` : ''}
+      ${!state.snapPrev && !state.snapTrash ? '<p class="empty">Noch nichts aufgefangen – Zwischenstände entstehen ab der ersten Änderung.</p>' : ''}
+      <p class="note">Zurückholen ist selbst wieder umkehrbar: der jetzige Stand wird dabei zum Zwischenstand.</p>
+    </div>
+
+    <div class="card">
+      <h2>Alles löschen</h2>
+      <p class="lede">Setzt das Logbuch zurück. Der Stand wandert vorher in den Papierkorb oben.</p>
+      <button class="btn quiet small" data-act="reset">Alles löschen</button>
     </div>`;
 }
 
@@ -1104,6 +1243,79 @@ function render() {
     </div>
     ${body}
   </div>`;
+}
+
+/* ============================================ Sicherung */
+function backupPayload() {
+  return JSON.stringify({ app:'sehnenlog', v:3, exported:new Date().toISOString(),
+    entries: state.entries, rest: state.rest });
+}
+
+// Auf dem Handy ist das Teilen-Blatt der richtige Weg (dort landet OneDrive),
+// am Rechner ein normaler Download. Beides zaehlt als erfolgte Sicherung.
+async function saveBackupFile() {
+  const name = `sehnenlog-${today()}.json`;
+  const text = backupPayload();
+  try {
+    const file = new File([text], name, { type: 'application/json' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], title: 'Sehnenlog-Sicherung' });
+      await markBackup();
+      return { ok: true, text: 'Sicherung geteilt. Leg sie in OneDrive ab, dann ist sie vom Gerät unabhängig.' };
+    }
+  } catch (e) {
+    if (e && e.name === 'AbortError') return { ok: false, text: 'Abgebrochen – es wurde nichts gesichert.' };
+    // sonst faellt es unten auf den Download zurueck
+  }
+  try {
+    const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    await markBackup();
+    return { ok: true, text: `Gespeichert als ${name}. Leg die Datei in OneDrive, dann überlebt sie dieses Gerät.` };
+  } catch (e) {
+    return { ok: false, text: 'Die Datei ließ sich nicht erzeugen. Nimm den Textweg weiter unten.' };
+  }
+}
+
+// Gemeinsamer Weg fuer Textfeld und Datei.
+async function applyBackup(raw) {
+  if (!raw || !raw.trim()) {
+    importMsg = { ok:false, text:'Das Feld ist leer. Füg zuerst den Sicherungstext ein oder wähl eine Datei.' };
+    return render();
+  }
+  // Erst vollständig einlesen und prüfen, dann anwenden – sonst landen bei einem
+  // Fehlschlag halbe Daten im Speicher, während die Meldung „ungültig“ behauptet.
+  let incoming = null, incomingRest = [];
+  try {
+    const parsed = JSON.parse(raw);
+    incoming = Array.isArray(parsed) ? parsed : (parsed && parsed.entries);
+    if (parsed && Array.isArray(parsed.rest)) incomingRest = parsed.rest;
+  } catch (e) { incoming = null; }
+  if (!Array.isArray(incoming)) {
+    importMsg = { ok:false, text:'Das war keine gültige Sicherung. Nimm die komplette Datei bzw. den kompletten Text, ohne etwas wegzulassen. Es wurde nichts verändert.' };
+    return render();
+  }
+  let neu = 0, ersetzt = 0, uebersprungen = 0;
+  incoming.forEach(e => {
+    if (!validEntry(e)) { uebersprungen++; return; }
+    const i = state.entries.findIndex(x => x.id === e.id);
+    if (i >= 0) { state.entries[i] = e; ersetzt++; } else { state.entries.push(e); neu++; }
+  });
+  let neuRest = 0;
+  incomingRest.forEach(r => {
+    if (!validRest(r)) { uebersprungen++; return; }
+    if (!state.rest.some(x => x.id === r.id)) { state.rest.push(r); neuRest++; }
+  });
+  importBuf = ''; exportText = null; state.dataNote = null;
+  importMsg = { ok:true, text:
+    `${neu} ${neu === 1 ? 'Eintrag' : 'Einträge'} hinzugefügt, ${ersetzt} aktualisiert`
+    + (neuRest ? `, ${neuRest} ${neuRest === 1 ? 'Ruhetag' : 'Ruhetage'} übernommen` : '')
+    + `. Insgesamt ${state.entries.length}.`
+    + (uebersprungen ? ` ${uebersprungen} unvollständige ${uebersprungen === 1 ? 'Zeile wurde' : 'Zeilen wurden'} übersprungen.` : '') };
+  await save();
 }
 
 /* ============================================ Events */
@@ -1225,6 +1437,7 @@ document.addEventListener('click', async (ev) => {
     if (box) {
       box.select();
       try { await navigator.clipboard.writeText(box.value); } catch (e) { document.execCommand('copy'); }
+      await markBackup();
       t.textContent = 'Kopiert'; setTimeout(() => { t.textContent = 'Kopieren'; }, 1600);
     }
     return;
@@ -1232,49 +1445,63 @@ document.addEventListener('click', async (ev) => {
   if (act === 'restore') {
     const box = document.getElementById('impbox');
     const raw = (box && box.value ? box.value : importBuf) || '';
-    if (!raw.trim()) {
-      importMsg = { ok:false, text:'Das Feld ist leer. Füg zuerst den Sicherungstext ein.' };
-      return render();
-    }
-    // Erst vollständig einlesen und prüfen, dann anwenden – sonst landen bei einem
-    // Fehlschlag halbe Daten im Speicher, während die Meldung „ungültig“ behauptet.
-    let incoming = null, incomingRest = [];
-    try {
-      const parsed = JSON.parse(raw);
-      incoming = Array.isArray(parsed) ? parsed : (parsed && parsed.entries);
-      if (parsed && Array.isArray(parsed.rest)) incomingRest = parsed.rest;
-    } catch (e) { incoming = null; }
-    if (!Array.isArray(incoming)) {
-      importMsg = { ok:false, text:'Das war kein gültiger Sicherungstext. Kopier den kompletten Inhalt aus dem oberen Feld, ohne etwas wegzulassen. Es wurde nichts verändert.' };
-      return render();
-    }
-    let neu = 0, ersetzt = 0, uebersprungen = 0;
-    incoming.forEach(e => {
-      if (!validEntry(e)) { uebersprungen++; return; }
-      const i = state.entries.findIndex(x => x.id === e.id);
-      if (i >= 0) { state.entries[i] = e; ersetzt++; } else { state.entries.push(e); neu++; }
-    });
-    let neuRest = 0;
-    incomingRest.forEach(r => {
-      if (!validRest(r)) { uebersprungen++; return; }
-      if (!state.rest.some(x => x.id === r.id)) { state.rest.push(r); neuRest++; }
-    });
-    importBuf = ''; exportText = null; state.dataNote = null;
-    importMsg = { ok:true, text:
-      `${neu} ${neu === 1 ? 'Eintrag' : 'Einträge'} hinzugefügt, ${ersetzt} aktualisiert`
-      + (neuRest ? `, ${neuRest} ${neuRest === 1 ? 'Ruhetag' : 'Ruhetage'} übernommen` : '')
-      + `. Insgesamt ${state.entries.length}.`
-      + (uebersprungen ? ` ${uebersprungen} unvollständige ${uebersprungen === 1 ? 'Zeile wurde' : 'Zeilen wurden'} übersprungen.` : '') };
-    await save();
+    await applyBackup(raw);
     return;
   }
   if (act === 'reset') {
-    if (!confirm('Alle Einträge löschen? Das lässt sich nicht rückgängig machen.')) return;
-    state.entries = []; state.rest = []; exportText = null; await save();
+    if (!state.entries.length && !state.rest.length) return;
+    if (!confirm('Alle Einträge löschen?\n\nDer Stand wandert in den Papierkorb und lässt sich danach zurückholen – bis du ihn dort endgültig leerst.')) return;
+    await writeSnapshot(KEY_TRASH, packState());
+    state.entries = []; state.rest = []; exportText = null; state.dataNote = null;
+    await save();
+    state.snapTrash = await readSnapshot(KEY_TRASH);
+    return render();
+  }
+
+  if (act === 'backupFile') {
+    const r = await saveBackupFile();
+    importMsg = r;
+    return render();
+  }
+  if (act === 'restoreSnap') {
+    const snap = t.dataset.snap === 'trash' ? state.snapTrash : state.snapPrev;
+    if (!snap) return;
+    // save() legt den jetzigen Stand automatisch als Vorgänger ab – also umkehrbar
+    state.entries = snap.entries; state.rest = snap.rest;
+    exportText = null; state.dataNote = null; importMsg = null;
+    await save();
+    return render();
+  }
+  if (act === 'emptyTrash') {
+    if (!confirm('Papierkorb endgültig leeren? Der gelöschte Stand ist danach wirklich weg.')) return;
+    await dropSnapshot(KEY_TRASH);
+    state.snapTrash = null;
+    return render();
+  }
+  if (act === 'askPersist') {
+    await checkPersistence(true);
+    return render();
   }
 });
 
+async function readBackupFile(file) {
+  if (!file) return;
+  try {
+    const text = await file.text();
+    await applyBackup(text);
+  } catch (e) {
+    importMsg = { ok:false, text:'Die Datei ließ sich nicht lesen.' };
+    render();
+  }
+}
+
 function onField(ev) {
+  if (ev.target.id === 'impfile') {
+    const f = ev.target.files && ev.target.files[0];
+    ev.target.value = '';   // damit dieselbe Datei erneut gewaehlt werden kann
+    readBackupFile(f);
+    return;
+  }
   if (ev.target.id === 'impbox') { importBuf = ev.target.value; return; }
   const rp = ev.target.dataset.rpath;
   if (rp) { restDraft[rp] = ev.target.value; if (rp === 'date' && ev.type === 'change') render(); return; }
