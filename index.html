@@ -374,7 +374,7 @@ const SUPPRULES = [
 ];
 
 /* ============================================ State */
-let state = { entries: [], rest: [], loaded: false, error: null };
+let state = { entries: [], rest: [], loaded: false, error: null, dataNote: null };
 let tab = 'log';
 let openAcc = null;
 let draft = newDraft();
@@ -417,14 +417,33 @@ function daysBetween(a,b) { return Math.round((new Date(b) - new Date(a)) / 8640
 function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 /* ============================================ Storage */
+// Ohne Kennung und Datum lässt sich ein Datensatz weder sortieren noch anzeigen –
+// er würde beim Rendern eine Ausnahme werfen und die App unbenutzbar machen.
+// Darum an jeder Außengrenze prüfen: beim Laden und beim Einspielen.
+const isIsoDate = d => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d);
+function validEntry(e) { return !!e && typeof e === 'object' && !!e.id && isIsoDate(e.date); }
+function validRest(r)  { return !!r && typeof r === 'object' && !!r.id && isIsoDate(r.date); }
+function keepValid(list, check) {
+  const arr = Array.isArray(list) ? list : [];
+  const ok = arr.filter(check);
+  return { ok, dropped: arr.length - ok.length };
+}
+function noteDropped(n) {
+  state.dataNote = n
+    ? `${n} ${n === 1 ? 'Datensatz war' : 'Datensätze waren'} unvollständig (Kennung oder Datum fehlt) und ${n === 1 ? 'wurde' : 'wurden'} nicht übernommen. Der Rest deiner Daten ist unverändert.`
+    : null;
+}
+
 function adopt(p) {
-  if (Array.isArray(p)) { state.entries = p; state.rest = []; return p.length > 0; }
-  if (p && Array.isArray(p.entries)) {
-    state.entries = p.entries;
-    state.rest = Array.isArray(p.rest) ? p.rest : [];
-    return state.entries.length > 0 || state.rest.length > 0;
-  }
-  return false;
+  let rawEntries, rawRest;
+  if (Array.isArray(p)) { rawEntries = p; rawRest = []; }
+  else if (p && Array.isArray(p.entries)) { rawEntries = p.entries; rawRest = p.rest; }
+  else return false;
+  const e = keepValid(rawEntries, validEntry), r = keepValid(rawRest, validRest);
+  state.entries = e.ok;
+  state.rest = r.ok;
+  noteDropped(e.dropped + r.dropped);
+  return state.entries.length > 0 || state.rest.length > 0;
 }
 async function load() {
   try {
@@ -506,7 +525,7 @@ function collagenGap() {
   return best;
 }
 
-function sorted() { return [...state.entries].sort((a,b) => (a.date + (a.time||'')).localeCompare(b.date + (b.time||''))); }
+function sorted() { return [...state.entries].sort((a,b) => String(a.date + (a.time||'')).localeCompare(String(b.date + (b.time||'')))); }
 
 // Der Morgenwert gehört zum Tag, nicht zur einzelnen Einheit:
 // nach einem Tag mit zwei Einheiten gibt es genau einen Morgen danach.
@@ -527,7 +546,7 @@ function days() {
   return [...map.values()].sort((a,b) => a.date.localeCompare(b.date));
 }
 function pending() { return days().filter(d => d.painMorning == null && !d.skipped && daysBetween(d.date, today()) >= 1); }
-function restSorted() { return [...state.rest].sort((a,b) => a.date.localeCompare(b.date)); }
+function restSorted() { return [...state.rest].sort((a,b) => String(a.date).localeCompare(String(b.date))); }
 function hasTrainingMorning(date) { return state.entries.some(e => e.date === date && e.painMorning != null); }
 
 function assess() {
@@ -572,7 +591,7 @@ function assess() {
     reasons:green.concat([`Die letzte Steigerung war vor ${sinceProgress} ${sinceProgress===1?'Tag':'Tagen'}. Eine Variable pro Woche.`]),
     todo:`Noch ${7-sinceProgress} ${7-sinceProgress===1?'Tag':'Tage'} auf diesem Level bleiben.` };
   if (green.length) return { tone:'up', word:'Steigern', kicker:'Die Sehne verträgt mehr', reasons:green,
-    todo:'Beim Krafttraining zuerst das Gewicht erhöhen, nicht die Wiederholungen. Beim Laufen eine Variable um etwa 10 %. Hak beim nächsten Eintrag „Das war eine Steigerung" an.' };
+    todo:'Beim Krafttraining zuerst das Gewicht erhöhen, nicht die Wiederholungen. Beim Laufen eine Variable um etwa 10 %. Hak beim nächsten Eintrag „Das war eine Steigerung“ an.' };
   return { tone:'hold', word:'Level halten', kicker:`Nach dem Trainingstag ${fmt(last.date)}`,
     reasons:['Keine Warnzeichen, aber auch noch keine drei durchgehend ruhigen Trainingstage.'],
     todo:'Gleiche Last beibehalten, bis drei Trainingstage in Folge ruhig verlaufen sind.' };
@@ -715,7 +734,7 @@ function sparkHtml() {
 function tabPlan() {
   return `<div class="card">
       <h2>Das Ziel</h2>
-      <p class="lede">Belastbarkeit größer als die Trainingslast – nicht „das MRT wird sauber".</p>
+      <p class="lede">Belastbarkeit größer als die Trainingslast – nicht „das MRT wird sauber“.</p>
       <p style="font-size:13.5px;margin:0;color:var(--ink-soft)">Fettige Umbauten in einer Sehne bilden sich in der Regel nicht zurück. Die Sehne baut aber um den geschädigten Bereich herum neues, tragfähiges Kollagen auf. Beschwerdefrei laufen bei unverändertem MRT-Bild ist ein normaler Erfolg.</p>
     </div>
 
@@ -745,7 +764,7 @@ function tabPlan() {
       <p class="lede">Vier Zeichen – keines davon ist der Schmerz.</p>
       ${MARKERS.map(m => `<div class="kv"><b>${esc(m[1])}</b><span>${esc(m[0])}</span></div>
         <p style="font-size:13px;color:var(--ink-soft);margin:-4px 0 10px">${esc(m[2])}</p>`).join('')}
-      <p style="font-size:13.5px;margin:8px 0 0">Fortschritt heißt nicht „es tut weniger weh", sondern „ich vertrage mehr". Einzelne gute oder schlechte Tage und ein Kontroll-MRT sagen nichts.</p>
+      <p style="font-size:13.5px;margin:8px 0 0">Fortschritt heißt nicht „es tut weniger weh“, sondern „ich vertrage mehr“. Einzelne gute oder schlechte Tage und ein Kontroll-MRT sagen nichts.</p>
     </div>
 
     <div class="card">
@@ -841,7 +860,7 @@ function tabLog() {
       <div class="field">
         <label for="m-note">Notiz zum Morgen</label>
         <p class="hint">Optional – wie es sich angefühlt hat, was aufgefallen ist.</p>
-        <textarea id="m-note" data-mpath="note" placeholder="z. B. „beim ersten Aufsetzen ziept es, nach ein paar Schritten weg"">${esc(morningDraft.note || '')}</textarea>
+        <textarea id="m-note" data-mpath="note" placeholder="z. B. „beim ersten Aufsetzen ziept es, nach ein paar Schritten weg“">${esc(morningDraft.note || '')}</textarea>
       </div>
       <div class="btn-row">
         <button class="btn" data-act="saveMorning" ${morningDraft.pain == null || !morningDraft.stiff ? 'disabled' : ''}>Morgen-Check speichern</button>
@@ -856,6 +875,8 @@ function tabLog() {
       <div style="margin-top:8px;font-family:ui-monospace,Menlo,monospace;font-size:12px;background:#fff;border-radius:5px;padding:8px 10px">${esc(state.error)}</div>
       <div style="margin-top:8px"><button class="btn quiet small" data-act="retrySave">Speichern erneut versuchen</button></div>
     </div>` : ''}
+
+    ${state.dataNote ? `<div class="warnbox"><b>Unvollständige Daten übersprungen.</b> ${esc(state.dataNote)}</div>` : ''}
 
     <div class="verdict ${a.tone}">
       <p class="verdict-kicker">${esc(a.kicker)}</p>
@@ -900,7 +921,7 @@ function tabLog() {
         const hasM = e.painMorning != null;
         return `<div class="editbar">
           <b>Du bearbeitest den Eintrag vom ${fmt(e.date)}${e.time ? ', ' + esc(e.time) + ' Uhr' : ''}.</b>
-          ${hasM ? ` Für diesen Tag ist bereits ein Morgen-Check hinterlegt (Schmerz ${e.painMorning}/10). Änderst du das Datum, wird er zurückgesetzt und neu abgefragt.` : ''}
+          ${hasM ? ` Für diesen Tag ist bereits ein Morgen-Check hinterlegt (Schmerz ${esc(e.painMorning)}/10). Änderst du das Datum, wird er zurückgesetzt und neu abgefragt.` : ''}
           ${hasM ? `<div style="margin-top:8px"><button type="button" class="btn quiet small" data-act="resetMorning">Morgen-Check dieses Tages zurücksetzen</button></div>` : ''}
         </div>` })() : ''}
 
@@ -954,7 +975,7 @@ function tabLog() {
       `<h4>Schmerz während der Einheit</h4>
        <p style="font-size:13.5px;margin:0">Trägst du unten im Formular ein, direkt nach dem Training. Bis 3/10 ist erlaubt.</p>
        <h4>Schmerz am Morgen und Steifigkeit</h4>
-       <p style="font-size:13.5px;margin:0">Der Morgen-Check erscheint am Folgetag automatisch als Karte ganz oben. Diese beiden Werte sind gemeint, wenn in der Bewertung von „Schmerz am Morgen" die Rede ist.</p>
+       <p style="font-size:13.5px;margin:0">Der Morgen-Check erscheint am Folgetag automatisch als Karte ganz oben. Diese beiden Werte sind gemeint, wenn in der Bewertung von „Schmerz am Morgen“ die Rede ist.</p>
        <h4>Der Vergleich</h4>
        <p style="font-size:13.5px;margin:0">Verglichen wird der Morgenwert des letzten Trainingstags mit dem des vorletzten. Steigt er um zwei Punkte, heißt das Zurücknehmen. Das ist die 24-Stunden-Regel in Zahlen.</p>
        <h4>Die Rangfolge</h4>
@@ -979,10 +1000,10 @@ function tabLog() {
               </div>
               <div class="nums">
                 <div class="num miss"><b>–</b><s>währenddessen</s></div>
-                <div class="num"><b>${row.r.pain}</b><s>morgens</s></div>
+                <div class="num"><b>${esc(row.r.pain)}</b><s>morgens</s></div>
               </div>
               <div class="rowbtns">
-                <button class="del" data-act="delRest" data-id="${row.r.id}" aria-label="Ruhetags-Eintrag vom ${fmt(row.r.date)} löschen">×</button>
+                <button class="del" data-act="delRest" data-id="${esc(row.r.id)}" aria-label="Ruhetags-Eintrag vom ${fmt(row.r.date)} löschen">×</button>
               </div>
             </div>`;
           }
@@ -995,12 +1016,12 @@ function tabLog() {
             ${e.morningNote ? `<div class="row-sub" style="font-style:italic">Morgen: ${esc(e.morningNote)}</div>` : ''}
           </div>
           <div class="nums">
-            <div class="num"><b>${e.painDuring}</b><s>währenddessen</s></div>
-            <div class="num ${e.painMorning == null ? 'miss' : ''}"><b>${e.painMorning == null ? '–' : e.painMorning}</b><s>morgens</s></div>
+            <div class="num"><b>${esc(e.painDuring)}</b><s>währenddessen</s></div>
+            <div class="num ${e.painMorning == null ? 'miss' : ''}"><b>${e.painMorning == null ? '–' : esc(e.painMorning)}</b><s>morgens</s></div>
           </div>
           <div class="rowbtns">
-            <button class="del" data-act="del" data-id="${e.id}" aria-label="Eintrag vom ${fmt(e.date)} löschen">×</button>
-            <button class="edit" data-act="edit" data-id="${e.id}" aria-label="Eintrag vom ${fmt(e.date)} bearbeiten">ändern</button>
+            <button class="del" data-act="del" data-id="${esc(e.id)}" aria-label="Eintrag vom ${fmt(e.date)} löschen">×</button>
+            <button class="edit" data-act="edit" data-id="${esc(e.id)}" aria-label="Eintrag vom ${fmt(e.date)} bearbeiten">ändern</button>
           </div>
         </div>`;
         }).join('');
@@ -1043,9 +1064,33 @@ function tabLog() {
 /* ============================================ Render */
 const TABS = [['log','Logbuch'],['plan','Plan'],['ex','Übungen'],['supp','Supplemente']];
 
+// Notausgang: wirft ein Tab beim Aufbau, bleibt die Seite sonst auf dem alten Stand
+// stehen und ist auch nach dem Neuladen tot. Lieber die Rohdaten zum Sichern anbieten.
+function crashHtml(err) {
+  let dump;
+  try { dump = JSON.stringify({ app:'sehnenlog', v:3, exported:new Date().toISOString(), entries:state.entries, rest:state.rest }); }
+  catch (e) { dump = ''; }
+  return `<div class="flag">
+      <b>Die Ansicht konnte nicht aufgebaut werden</b>
+      <div>Deine Daten sind nicht verloren. Kopier den Text unten und leg ihn beiseite – damit kannst du nach „Alles löschen“ alles wieder einspielen.</div>
+      <div style="margin-top:8px;font-family:ui-monospace,Menlo,monospace;font-size:12px;background:#fff;border-radius:5px;padding:8px 10px">${esc(err && err.message ? err.message : String(err))}</div>
+    </div>
+    <div class="card">
+      <h2>Rohdaten sichern</h2>
+      <p class="lede">Vollständige Kopie deiner Einträge – erst sichern, dann zurücksetzen.</p>
+      ${dump ? `<textarea class="exportbox" readonly>${esc(dump)}</textarea>` : '<p class="err">Die Daten ließen sich nicht in Text umwandeln.</p>'}
+      <div class="btn-row" style="margin-top:10px"><button class="btn quiet small" data-act="reset">Alles löschen</button></div>
+    </div>`;
+}
+
 function render() {
   if (!state.loaded) return;
-  const body = tab === 'plan' ? tabPlan() : tab === 'ex' ? tabEx() : tab === 'supp' ? tabSupp() : tabLog();
+  let body;
+  try {
+    body = tab === 'plan' ? tabPlan() : tab === 'ex' ? tabEx() : tab === 'supp' ? tabSupp() : tabLog();
+  } catch (err) {
+    body = crashHtml(err);
+  }
   document.getElementById('root').innerHTML = `<div class="wrap">
     <div class="masthead">
       <h1>Sehnenlog</h1>
@@ -1188,26 +1233,35 @@ document.addEventListener('click', async (ev) => {
       importMsg = { ok:false, text:'Das Feld ist leer. Füg zuerst den Sicherungstext ein.' };
       return render();
     }
-    let incoming = null;
+    // Erst vollständig einlesen und prüfen, dann anwenden – sonst landen bei einem
+    // Fehlschlag halbe Daten im Speicher, während die Meldung „ungültig“ behauptet.
+    let incoming = null, incomingRest = [];
     try {
       const parsed = JSON.parse(raw);
-      incoming = Array.isArray(parsed) ? parsed : parsed.entries;
-      if (parsed && Array.isArray(parsed.rest)) parsed.rest.forEach(r => {
-        if (r && r.id && !state.rest.some(x => x.id === r.id)) state.rest.push(r);
-      });
+      incoming = Array.isArray(parsed) ? parsed : (parsed && parsed.entries);
+      if (parsed && Array.isArray(parsed.rest)) incomingRest = parsed.rest;
     } catch (e) { incoming = null; }
     if (!Array.isArray(incoming)) {
-      importMsg = { ok:false, text:'Das war kein gültiger Sicherungstext. Kopier den kompletten Inhalt aus dem oberen Feld, ohne etwas wegzulassen.' };
+      importMsg = { ok:false, text:'Das war kein gültiger Sicherungstext. Kopier den kompletten Inhalt aus dem oberen Feld, ohne etwas wegzulassen. Es wurde nichts verändert.' };
       return render();
     }
-    let neu = 0, ersetzt = 0;
+    let neu = 0, ersetzt = 0, uebersprungen = 0;
     incoming.forEach(e => {
-      if (!e || !e.id || !e.date) return;
+      if (!validEntry(e)) { uebersprungen++; return; }
       const i = state.entries.findIndex(x => x.id === e.id);
       if (i >= 0) { state.entries[i] = e; ersetzt++; } else { state.entries.push(e); neu++; }
     });
-    importBuf = ''; exportText = null;
-    importMsg = { ok:true, text:`${neu} ${neu === 1 ? 'Eintrag' : 'Einträge'} hinzugefügt, ${ersetzt} aktualisiert. Insgesamt ${state.entries.length}.` };
+    let neuRest = 0;
+    incomingRest.forEach(r => {
+      if (!validRest(r)) { uebersprungen++; return; }
+      if (!state.rest.some(x => x.id === r.id)) { state.rest.push(r); neuRest++; }
+    });
+    importBuf = ''; exportText = null; state.dataNote = null;
+    importMsg = { ok:true, text:
+      `${neu} ${neu === 1 ? 'Eintrag' : 'Einträge'} hinzugefügt, ${ersetzt} aktualisiert`
+      + (neuRest ? `, ${neuRest} ${neuRest === 1 ? 'Ruhetag' : 'Ruhetage'} übernommen` : '')
+      + `. Insgesamt ${state.entries.length}.`
+      + (uebersprungen ? ` ${uebersprungen} unvollständige ${uebersprungen === 1 ? 'Zeile wurde' : 'Zeilen wurden'} übersprungen.` : '') };
     await save();
     return;
   }
