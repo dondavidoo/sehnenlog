@@ -4,12 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#F1F4F5">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Sehnenlog">
 <meta name="description" content="Trainingstagebuch und Reha-Plan für die Tibialis-posterior-Sehne">
 <title>Sehnenlog</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2214%22%20fill%3D%22%2318211F%22%2F%3E%3Cpath%20d%3D%22M20%2044%20L20%2020%20M20%2032%20Q32%2020%2044%2032%22%20stroke%3D%22%235FB79A%22%20stroke-width%3D%226%22%20fill%3D%22none%22%20stroke-linecap%3D%22round%22%2F%3E%3C%2Fsvg%3E">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
 <style>
 html, body { margin: 0; padding: 0; background: #F1F4F5; }
 body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
@@ -1286,6 +1289,15 @@ function onField(ev) {
 }
 document.addEventListener('input', onField);
 document.addEventListener('change', onField);
+
+/* Offline-Cache. Nur unter http(s) moeglich – wird die Datei direkt vom Dateisystem
+   geoeffnet (file://), gibt es keinen Service Worker. Die App laeuft dann trotzdem,
+   nur eben ohne Offline-Garantie. */
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => { /* ohne Cache weiterarbeiten */ });
+  });
+}
 
 load();
 
