@@ -24,8 +24,9 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
     --up-bg: #E6F1EC; --hold-bg: #F6EEDD; --down-bg: #F7E7E5;
     --sans: ui-sans-serif, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   }
-  #root { font-family: var(--sans); color: var(--ink); background: var(--paper); line-height: 1.5;
-    -webkit-font-smoothing: antialiased; padding: 20px 14px 48px; }
+  #root { --gutter: 14px; font-family: var(--sans); color: var(--ink); background: var(--paper); line-height: 1.5;
+    -webkit-font-smoothing: antialiased; padding: 20px var(--gutter) 48px;
+    padding-left: max(var(--gutter), env(safe-area-inset-left)); padding-right: max(var(--gutter), env(safe-area-inset-right)); }
   #root * { box-sizing: border-box; }
   .boot { padding: 40px 0; text-align: center; color: var(--ink-soft); }
   .wrap { max-width: 640px; margin: 0 auto; }
@@ -235,10 +236,65 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
     text-decoration: underline; cursor: pointer; white-space: nowrap; }
   .card.sc-target { border-color: var(--act); }
 
+  /* ---------- Layout je Bildschirmbreite ---------- */
+  /* Logbuch: auf dem Handy eine Spalte in der gewohnten Reihenfolge (order),
+     auf dem Desktop links Erfassen, rechts Überblick, darunter Daten & Sicherung */
+  .log { display: flex; flex-direction: column; }
+  .log-top, .log-in, .log-out, .log-data { display: contents; }
+  .o1 { order: 1; } .o2 { order: 2; } .o3 { order: 3; } .o4 { order: 4; } .o5 { order: 5; }
+  .o6 { order: 6; } .o7 { order: 7; } .o8 { order: 8; } .o9 { order: 9; } .o10 { order: 10; }
+  .o11 { order: 11; } .o12 { order: 12; } .o13 { order: 13; } .o14 { order: 14; } .o15 { order: 15; }
+
+  @media (min-width: 700px) {
+    #root { --gutter: 24px; padding-top: 28px; }
+    .wrap { max-width: 720px; }
+  }
+  @media (min-width: 1000px) {
+    #root { --gutter: 32px; }
+    .wrap { max-width: 1160px; }
+    .masthead { margin-bottom: 18px; }
+    .log { display: grid; grid-template-columns: minmax(360px, 420px) minmax(0, 1fr);
+      grid-template-areas: "top top" "in out" "data data"; column-gap: 24px; align-items: start; }
+    .log-top, .log-in, .log-out { display: block; min-width: 0; }
+    .log-top { grid-area: top; }
+    .log-in { grid-area: in; }
+    .log-out { grid-area: out; }
+    .log-data { grid-area: data; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: auto auto 1fr;
+      column-gap: 24px; align-items: start; margin-top: 10px; padding-top: 18px; border-top: 1px solid var(--rule); }
+    .log-data .o12 { grid-column: 1; grid-row: 1; }
+    .log-data .o14 { grid-column: 1; grid-row: 2; }
+    .log-data .o15 { grid-column: 1; grid-row: 3; }
+    .log-data .o13 { grid-column: 2; grid-row: 1 / span 3; }
+    /* Andere Tabs: Karten nebeneinander */
+    .cards2 { display: grid; grid-template-columns: 1fr 1fr; column-gap: 24px; align-items: stretch; }
+    .acc-grid { display: grid; grid-template-columns: 1fr 1fr; column-gap: 10px; align-items: start; }
+    /* Geöffnete Übung über beide Spalten: Text links, Zeichnung rechts – sonst bliebe daneben ein Loch */
+    .acc-grid .acc.open { grid-column: 1 / -1; }
+    .acc-grid .acc.open .acc-body:has(> .fig) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 20px; align-items: start; }
+    .acc-grid .acc.open .acc-body:has(> .fig) > :not(.fig) { grid-column: 1; }
+    .acc-grid .acc.open .acc-body:has(> .fig) > .fig { grid-column: 2; grid-row: 1 / span 4; }
+  }
+
+  /* Handy: Tabs in einer wischbaren Zeile statt zweier Reihen */
+  @media (max-width: 560px) {
+    .tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+      margin: 0 calc(-1 * var(--gutter)) 16px; padding: 0 var(--gutter) 2px; }
+    .tabs::-webkit-scrollbar { display: none; }
+    .tabs button { flex: 0 0 auto; padding: 8px 12px; font-size: 13.5px; }
+  }
   @media (max-width: 420px) {
     .scale button { height: 38px; font-size: 13px; }
     .verdict-word { font-size: 27px; }
     .grid2 { flex-wrap: wrap; }
+  }
+  /* Kleine Handys: weniger Rand, damit die 0–10-Tasten breit genug bleiben */
+  @media (max-width: 360px) {
+    #root { --gutter: 10px; }
+    .card { padding: 14px; }
+    .verdict { padding: 16px; }
+    .scale { gap: 2px; }
+    .day-row { padding: 10px 9px; gap: 8px; }
+    .day-time { flex-basis: 46px; }
   }
   @media (prefers-reduced-motion: no-preference) {
     .btn, .seg button, .scale button, .tabs button { transition: background-color .12s ease, color .12s ease; }
@@ -834,7 +890,7 @@ function assess() {
   const all = days();
   const done = all.filter(d => d.painMorning != null);
   if (pending().length) return { tone:'none', word:'Morgen-Check offen', kicker:'Noch keine Bewertung möglich',
-    reasons:['Ohne den Wert vom Folgemorgen fehlt der wichtigste Marker.'], todo:'Trag den Morgen-Check oben nach, dann bewerte ich die Einheit.' };
+    reasons:['Ohne den Wert vom Folgemorgen fehlt der wichtigste Marker.'], todo:'Trag den fehlenden Morgenwert ein, dann bewerte ich die Einheit.' };
   if (done.length < 2) return { tone:'none', word:'Noch zu wenig Daten', kicker:`${done.length} von 2 bewerteten Trainingstagen`,
     reasons:['Ein Trainingstag gilt als vollständig, sobald am Folgetag der Morgen-Check ausgefüllt ist. Ab dem zweiten vergleiche ich die beiden Morgenwerte miteinander.'], todo:'Weiter erfassen und nichts an der Last ändern.' };
 
@@ -944,7 +1000,7 @@ function num(path, val, ph) {
 }
 function acc(id, name, meta, bodyHtml) {
   const open = openAcc === id;
-  return `<div class="acc">
+  return `<div class="acc${open ? ' open' : ''}">
     <button type="button" data-acc="${id}" aria-expanded="${open}">
       <span><span class="acc-name">${esc(name)}</span>${meta ? `<span class="acc-meta">${esc(meta)}</span>` : ''}</span>
       <span class="acc-chev">${open ? '−' : '+'}</span>
@@ -1004,11 +1060,17 @@ function sessionFieldsHtml() {
 const C_MORNING = '#2a78d6', C_DURING = '#eb6834';
 let chartState = null;   // Geometrie + Tage mit Werten – fürs Antippen, bei jedem Zeichnen neu
 
+// Breite des Platzes, den das Diagramm tatsächlich hat – auf dem Desktop steht es in einer Spalte
 function chartWidth() {
+  const box = document.getElementById('chartbox');
+  if (box && box.clientWidth) return Math.max(240, box.clientWidth);
   const root = document.getElementById('root');
   const w = root && root.clientWidth ? root.clientWidth : 390;
-  // #root: 14px Rand je Seite · .wrap: max. 640px · Karte: 18px Innenabstand + 1px Rand je Seite
-  return Math.max(260, Math.min(w - 28, 640) - 38);
+  return Math.max(240, Math.min(w - 28, 640) - 38);   // Schätzung vor dem ersten Aufbau
+}
+function chartOutOfDate() {
+  const box = document.getElementById('chartbox');
+  return !!(box && box.clientWidth && chartState && Math.max(240, box.clientWidth) !== chartState.W);
 }
 
 function chartInnerHtml() {
@@ -1087,8 +1149,7 @@ function chartInnerHtml() {
   s += `<line class="chart-cross" x1="0" x2="0" y1="${M.t}" y2="${n1(Y(0))}" stroke="#18211F" stroke-width="1" visibility="hidden"/>`
      + `<rect x="${M.l}" y="0" width="${pw}" height="${H}" fill="transparent"/>`;
 
-  const root = document.getElementById('root');
-  chartState = { W, M, pw, start, nDays, X, sel: null, rootW: root ? root.clientWidth : null,
+  chartState = { W, M, pw, start, nDays, X, sel: null,
     dataDays: [...new Set([...mIn.map(m => m.date), ...dIn.map(([day]) => day)])].sort() };
 
   const zeitraum = chartRange === 28 ? 'den letzten 4 Wochen' : chartRange === 91 ? 'den letzten 3 Monaten' : `der Zeit seit ${fmt(start)}`;
@@ -1147,7 +1208,7 @@ function chartShow(date) {
 
 /* ============================================ Tabs */
 function tabPlan() {
-  return `<div class="card">
+  return `<div class="cards2"><div class="card">
       <h2>Das Ziel</h2>
       <p class="lede">Belastbarkeit größer als die Trainingslast – nicht „das MRT wird sauber“.</p>
       <p style="font-size:13.5px;margin:0;color:var(--ink-soft)">Fettige Umbauten in einer Sehne bilden sich in der Regel nicht zurück. Die Sehne baut aber um den geschädigten Bereich herum neues, tragfähiges Kollagen auf. Beschwerdefrei laufen bei unverändertem MRT-Bild ist ein normaler Erfolg.</p>
@@ -1193,7 +1254,7 @@ function tabPlan() {
       </ul>
       ${figHtml('heel_rise_test')}
       <p style="font-size:13.5px;margin:12px 0 0"><b>Zwei Zahlen sollen sich bewegen:</b> die absolute Wiederholungszahl rechts – und die Differenz zur gesunden Seite. Schließt sich diese Lücke, arbeitet das Programm.</p>
-    </div>
+    </div></div>
 
     <div class="flag">
       <b>Wann du zum Arzt gehst</b>
@@ -1210,20 +1271,20 @@ function tabEx() {
     <p class="lede">Antippen für Zeichnung, Ausführung und den häufigsten Fehler.</p>
     ${GROUPS.map(gr => {
       const ids = Object.keys(EX).filter(id => EX[id].g === gr.g);
-      return `<div class="blockhead">${esc(gr.title)}</div><p class="blocksub">${esc(gr.sub)}</p>` +
+      return `<div class="blockhead">${esc(gr.title)}</div><p class="blocksub">${esc(gr.sub)}</p><div class="acc-grid">` +
         ids.map(id => {
           const ex = EX[id];
           return acc(id, ex.name, ex.dose,
             `<h4>Ausführung</h4><ul>${ex.how.map(h => `<li>${esc(h)}</li>`).join('')}</ul>
              <div class="acc-err"><b>Häufiger Fehler:</b> ${esc(ex.err)}</div>
              ${figHtml(ex.fig)}`);
-        }).join('');
+        }).join('') + '</div>';
     }).join('')}
   </div>`;
 }
 
 function tabSupp() {
-  return `<div class="card">
+  return `<div class="cards2"><div class="card">
       <h2>Was du kaufst</h2>
       <p class="lede">Drei Produkte decken alles ab.</p>
       ${PRODUCTS.map(p => `<div class="prod">
@@ -1245,7 +1306,7 @@ function tabSupp() {
       <h2>Regeln</h2>
       <p class="lede">Ohne Belastung passiert nichts – die Peptide allein bauen keine Sehne.</p>
       ${SUPPRULES.map((r,i) => acc('sr'+i, r[0], null, `<p style="font-size:13.5px;margin:13px 0 0">${esc(r[1])}</p>`)).join('')}
-    </div>`;
+    </div></div>`;
 }
 
 function scaleLink(sc, from) {
@@ -1263,7 +1324,7 @@ function tabScales() {
         <span><i style="background:#EAF1F3;border:1px solid #C4D7DD"></i>Zielbereich</span>
       </p>
     </div>
-    ${SCALES.map(sc => { const ziel = !!scaleJump && scaleJump.sc === sc.id; return `<div class="card${ziel ? ' sc-target' : ''}" id="sc-${sc.id}">
+    <div class="cards2">${SCALES.map(sc => { const ziel = !!scaleJump && scaleJump.sc === sc.id; return `<div class="card${ziel ? ' sc-target' : ''}" id="sc-${sc.id}">
       <h2>${esc(sc.title)}</h2>
       <p class="lede">${esc(sc.sub)}</p>
       <div class="sc-list"${sc.wide ? ' style="--sc-w:104px"' : ''}>
@@ -1274,7 +1335,7 @@ function tabScales() {
       </div>
       ${sc.rule ? `<p class="note">${esc(sc.rule)}</p>` : ''}
       ${ziel ? '<div class="btn-row" style="margin-top:12px"><button type="button" class="btn quiet small" data-act="backFromScale">← Zurück zum Eintrag</button></div>' : ''}
-    </div>`; }).join('')}`;
+    </div>`; }).join('')}</div>`;
 }
 
 // Eingabefelder für einen Morgen; p = 'm' (Karte oben) oder 'e' (im Verlauf)
@@ -1424,28 +1485,24 @@ function tabLog() {
   const kind = TYPES[draft.type].kind;
   const gap = collagenGap();
 
-  return `${flags.length ? `<div class="flag">
+  return `<div class="log">
+    <div class="log-top">
+    <div class="o1">${flags.length ? `<div class="flag">
       <b>Das gehört ärztlich angeschaut</b>
       ${flags.map(f => `<div>${esc(f)}</div>`).join('')}
       <div style="margin-top:6px">Ein Trainingsplan ist hier nicht mehr das richtige Werkzeug.</div>
-    </div>` : ''}
-
-    ${state.migrationNote ? `<div class="infobox"><b>Umgestellt.</b> ${esc(state.migrationNote)}
+    </div>` : ''}</div>
+    <div class="o2">${state.migrationNote ? `<div class="infobox"><b>Umgestellt.</b> ${esc(state.migrationNote)}
       <div style="margin-top:8px"><button type="button" class="btn quiet small" data-act="dismissMigration">Verstanden</button></div>
-    </div>` : ''}
-
-    ${mt && mt.due ? morningCardHtml(mt) : ''}
-
-    ${state.error ? `<div class="flag">
+    </div>` : ''}</div>
+    <div class="o4">${state.error ? `<div class="flag">
       <b>Konnte nicht gespeichert werden</b>
       <div>Deine Daten sind in dieser Sitzung vorhanden und werden unten angezeigt – aber beim Neuladen sind sie weg. Erzeug dir jetzt eine Sicherung, damit nichts verlorengeht.</div>
       <div style="margin-top:8px;font-family:ui-monospace,Menlo,monospace;font-size:12px;background:#fff;border-radius:5px;padding:8px 10px">${esc(state.error)}</div>
       <div style="margin-top:8px"><button class="btn quiet small" data-act="retrySave">Speichern erneut versuchen</button></div>
-    </div>` : ''}
-
-    ${state.dataNote ? `<div class="warnbox"><b>Unvollständige Daten übersprungen.</b> ${esc(state.dataNote)}</div>` : ''}
-
-    ${backupFaellig() ? `<div class="card pending">
+    </div>` : ''}</div>
+    <div class="o5">${state.dataNote ? `<div class="warnbox"><b>Unvollständige Daten übersprungen.</b> ${esc(state.dataNote)}</div>` : ''}</div>
+    <div class="o6">${backupFaellig() ? `<div class="card pending">
       <h2>Sicherung fällig</h2>
       <p class="lede">${backupAge() === null
         ? 'Von diesen Daten gibt es noch keine Kopie außerhalb dieses Geräts. Geht das Gerät verloren, sind sie weg.'
@@ -1454,18 +1511,12 @@ function tabLog() {
         <button class="btn" data-act="backupFile">Sicherung jetzt speichern</button>
         <span class="hint" style="margin:0">Ein Tipp – die Datei landet in „Dateien“ bzw. im Download-Ordner.</span>
       </div>
-    </div>` : ''}
-
-    <div class="verdict ${a.tone}">
-      <p class="verdict-kicker">${esc(a.kicker)}</p>
-      <p class="verdict-word">${esc(a.word)}</p>
-      <ul>${a.reasons.map(r => `<li>${esc(r)}</li>`).join('')}</ul>
-      <p class="todo">${esc(a.todo)}</p>
+    </div>` : ''}</div>
     </div>
-
-    ${mt && !mt.due ? morningCardHtml(mt) : ''}
-
-    <div class="card" id="form">
+    <div class="log-in">
+    <div class="o3">${mt && mt.due ? morningCardHtml(mt) : ''}</div>
+    <div class="o8">${mt && !mt.due ? morningCardHtml(mt) : ''}</div>
+    <div class="o9"><div class="card" id="form">
       <h2>${editingId ? 'Einheit bearbeiten' : 'Einheit erfassen'}</h2>
       <p class="lede">${editingId ? 'Änderungen wirken sich sofort auf die Bewertung aus.' : 'Direkt nach dem Training, solange du es noch im Gefühl hast.'}</p>
       ${editingId ? (() => {
@@ -1520,21 +1571,27 @@ function tabLog() {
       </div>
       ${draft.painDuring == null ? '<p class="hint" style="margin-top:8px">Der Schmerzwert fehlt noch.</p>' : ''}
 
-    </div>
-
-    ${acc('howto', 'Wie die Bewertung zustande kommt', 'Erklärung – keine Daten',
+    </div></div>
+    <div class="o10">${acc('howto', 'Wie die Bewertung zustande kommt', 'Erklärung – keine Daten',
       `<h4>Schmerz während der Einheit</h4>
        <p style="font-size:13.5px;margin:0">Trägst du unten im Formular ein, direkt nach dem Training. Bis 3/10 ist erlaubt.</p>
        <h4>Schmerz am Morgen und Steifigkeit der Sehne</h4>
-       <p style="font-size:13.5px;margin:0">Jeder Morgen gehört zu dem Tag, an dem du aufwachst. Nach einem Trainingstag fragt die Karte ganz oben danach, weil die Bewertung diesen Wert braucht; an anderen Tagen ist er freiwillig. Ändern oder nachtragen kannst du ihn jederzeit im Verlauf.</p>
+       <p style="font-size:13.5px;margin:0">Jeder Morgen gehört zu dem Tag, an dem du aufwachst. Nach einem Trainingstag fragt die Morgen-Karte danach, weil die Bewertung diesen Wert braucht; an anderen Tagen ist er freiwillig. Ändern oder nachtragen kannst du ihn jederzeit im Verlauf.</p>
        <h4>Der Vergleich</h4>
        <p style="font-size:13.5px;margin:0">Verglichen wird der Morgen nach dem letzten Trainingstag mit dem Morgen nach dem vorletzten. Steigt der Schmerz um zwei Punkte, heißt das Zurücknehmen. Das ist die 24-Stunden-Regel in Zahlen.</p>
        <h4>Die Rangfolge</h4>
        <p style="font-size:13.5px;margin:0">Schmerz schlägt Anstrengung. Liegt der Schmerz über 3/10, heißt das Zurücknehmen – auch wenn sich der letzte Satz leicht angefühlt hat. Die Anstrengung wird erst zum Steuerungsmaß, wenn der Schmerz im grünen Bereich liegt.</p>
        <h4>Warnzeichen</h4>
-       <p style="font-size:13.5px;margin:0">Für die rote Karte „Das gehört ärztlich angeschaut“ zählt jeder Morgen der letzten drei Wochen – auch nach Ruhetagen. Gerade in einer Trainingspause zeigt nur der Morgen, ob es schlechter wird.</p>`)}
-
-    <div class="card">
+       <p style="font-size:13.5px;margin:0">Für die rote Karte „Das gehört ärztlich angeschaut“ zählt jeder Morgen der letzten drei Wochen – auch nach Ruhetagen. Gerade in einer Trainingspause zeigt nur der Morgen, ob es schlechter wird.</p>`)}</div>
+    </div>
+    <div class="log-out">
+    <div class="o7"><div class="verdict ${a.tone}">
+      <p class="verdict-kicker">${esc(a.kicker)}</p>
+      <p class="verdict-word">${esc(a.word)}</p>
+      <ul>${a.reasons.map(r => `<li>${esc(r)}</li>`).join('')}</ul>
+      <p class="todo">${esc(a.todo)}</p>
+    </div></div>
+    <div class="o11"><div class="card">
       <h2>Verlauf</h2>
       <p class="lede">${state.entries.length || state.mornings.length
         ? `${state.entries.length} ${state.entries.length === 1 ? 'Einheit' : 'Einheiten'} und ${state.mornings.filter(m => !m.skipped).length} Morgen erfasst.`
@@ -1542,9 +1599,10 @@ function tabLog() {
       <div id="chartbox">${chartInnerHtml()}</div>
       ${historyHtml()}
       ${!state.entries.length && !state.mornings.length ? '<p class="empty">Der erste Eintrag macht noch keine Aussage. Ab dem zweiten bewerteten Trainingstag wird es aussagekräftig.</p>' : ''}
+    </div></div>
     </div>
-
-    <div class="card">
+    <div class="log-data">
+    <div class="o12"><div class="card">
       <h2>Auswertung im Chat</h2>
       <p class="lede">Erzeugt eine Textfassung deiner Daten, die du in den Chat kopieren kannst.</p>
       <div class="btn-row">
@@ -1553,9 +1611,8 @@ function tabLog() {
       </div>
       ${exportText ? `<textarea class="exportbox" readonly id="exportbox">${esc(exportText)}</textarea>` : ''}
       <p class="note">Diese Version speichert direkt auf diesem Gerät. Die Daten verlassen es nicht und bleiben erhalten, wenn du den Browser schließt. Löschst du die Browserdaten, sind sie weg – zieh alle paar Wochen eine Sicherung.</p>
-    </div>
-
-    <div class="card">
+    </div></div>
+    <div class="o13"><div class="card">
       <h2>Sicherung &amp; Gerätewechsel</h2>
       <p class="lede">Eine vollständige Kopie deiner Einträge als Datei – unabhängig von diesem Gerät und diesem Browser.</p>
       <div class="btn-row">
@@ -1591,9 +1648,8 @@ function tabLog() {
         <textarea class="exportbox" id="impbox" placeholder="Hier den kopierten Sicherungstext einfügen">${esc(importBuf)}</textarea>
       </div>
       <button class="btn quiet small" data-act="restore">Text einspielen</button>
-    </div>
-
-    <div class="card">
+    </div></div>
+    <div class="o14"><div class="card">
       <h2>Sicherheitsnetz</h2>
       <p class="lede">Zwischenstände auf diesem Gerät. Ersetzen keine Sicherung – aber sie fangen den Fehlgriff ab.</p>
       ${state.snapPrev ? `<div class="row">
@@ -1615,13 +1671,14 @@ function tabLog() {
       </div>` : ''}
       ${!state.snapPrev && !state.snapTrash ? '<p class="empty">Noch nichts aufgefangen – Zwischenstände entstehen ab der ersten Änderung.</p>' : ''}
       <p class="note">Zurückholen ist selbst wieder umkehrbar: der jetzige Stand wird dabei zum Zwischenstand.</p>
-    </div>
-
-    <div class="card">
+    </div></div>
+    <div class="o15"><div class="card">
       <h2>Alles löschen</h2>
-      <p class="lede">Setzt das Logbuch zurück. Der Stand wandert vorher in den Papierkorb oben.</p>
+      <p class="lede">Setzt das Logbuch zurück. Der Stand wandert vorher in den Papierkorb im Sicherheitsnetz.</p>
       <button class="btn quiet small" data-act="reset">Alles löschen</button>
-    </div>`;
+    </div></div>
+    </div>
+  </div>`;
 }
 
 /* ============================================ Render */
@@ -1648,6 +1705,7 @@ function crashHtml(err) {
 
 function render() {
   if (!state.loaded) return;
+  const tabScroll = document.querySelector('.tabs')?.scrollLeft || 0;
   let body;
   try {
     body = tab === 'plan' ? tabPlan() : tab === 'ex' ? tabEx() : tab === 'supp' ? tabSupp() : tab === 'scale' ? tabScales() : tabLog();
@@ -1665,8 +1723,18 @@ function render() {
     ${body}
   </div>`;
   // Das Diagramm rechnet in echten Pixeln – hat sich die Breite beim Aufbau verschoben, neu zeichnen
-  const root = document.getElementById('root');
-  if (tab === 'log' && chartState && root.clientWidth !== chartState.rootW) updateChart();
+  if (tab === 'log' && chartOutOfDate()) updateChart();
+  // Auf dem Handy ist die Tab-Leiste wischbar: Position halten und den aktiven Tab sichtbar machen
+  const strip = document.querySelector('.tabs');
+  if (strip && strip.scrollWidth > strip.clientWidth) {
+    strip.scrollLeft = tabScroll;
+    const act = strip.querySelector('[aria-selected="true"]');
+    if (act) {
+      const s = strip.getBoundingClientRect(), r = act.getBoundingClientRect();
+      if (r.left < s.left) strip.scrollLeft -= s.left - r.left + 12;
+      else if (r.right > s.right) strip.scrollLeft += r.right - s.right + 12;
+    }
+  }
 }
 
 /* ============================================ Sicherung */
@@ -2011,8 +2079,7 @@ let resizeTimer = null;
 window.addEventListener('resize', () => {
   clearTimeout(resizeTimer);
   resizeTimer = setTimeout(() => {
-    const root = document.getElementById('root');
-    if (root && chartState && root.clientWidth !== chartState.rootW) updateChart();
+    if (chartOutOfDate()) updateChart();
   }, 150);
 });
 
