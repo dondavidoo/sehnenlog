@@ -3,7 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#F1F4F5">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#F1F4F5" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#121716" media="(prefers-color-scheme: dark)">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -14,16 +16,38 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
 <style>
-html, body { margin: 0; padding: 0; background: #F1F4F5; }
+html, body { margin: 0; padding: 0; background: var(--paper); }
 body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
 
   :root {
+    color-scheme: light;
     --paper: #F1F4F5; --card: #FFFFFF; --ink: #18211F; --ink-soft: #5C6A6B;
-    --rule: #D2DBDC; --rule-soft: #E5EBEC; --act: #1D5B6E;
-    --up: #2E7D5B; --down: #A93B31;
+    --rule: #D2DBDC; --rule-soft: #E5EBEC; --rule-strong: #849192; --placeholder: #6E7778;
+    --act: #1D5B6E; --act-hover: #17495A; --act-ink: #1D5B6E; --on-act: #FFFFFF; --on-ink: #FFFFFF;
+    --up: #2E7D5B; --up-ink: #276B4E; --down: #A93B31; --hold-ink: #84590C;
     --up-bg: #E6F1EC; --hold-bg: #F6EEDD; --down-bg: #F7E7E5;
+    --up-border: #BFDACE; --hold-border: #E3D2AE; --down-border: #E8C4C0;
+    --surface-1: #FAFCFC; --surface-2: #F7F9F9; --surface-3: #EDF1F2; --surface-3h: #E2E9EA;
+    --tint: #EAF1F3; --tint-border: #C4D7DD;
+    --chart-grid: #E5EBEC; --chart-axis: #C9D3D4; --chart-limit: #8C9899; --c-morning: #2a78d6; --c-during: #eb6834;
     --sans: ui-sans-serif, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   }
+  /* Dunkel: eigene Stufen derselben Töne – gedämpft, nicht schwarz. Zeichnungen bleiben auf Weiß. */
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --paper: #121716; --card: #1B2221; --ink: #E6ECEA; --ink-soft: #9FACAD;
+      --rule: #3A4645; --rule-soft: #2A3332; --rule-strong: #6B7A7A; --placeholder: #7F8C8D;
+      --act: #2F7A90; --act-hover: #3A8DA5; --act-ink: #7FC0D2; --on-act: #FFFFFF; --on-ink: #121716;
+      --up: #7AC7A2; --up-ink: #7AC7A2; --down: #E0857A; --hold-ink: #E0B35A;
+      --up-bg: #1E3A2E; --hold-bg: #3A3120; --down-bg: #3E2422;
+      --up-border: #2F5A45; --hold-border: #5A4A25; --down-border: #5E3330;
+      --surface-1: #1F2726; --surface-2: #222B2A; --surface-3: #2A3433; --surface-3h: #33403E;
+      --tint: #1E2F35; --tint-border: #2F4A54;
+      --chart-grid: #2A3332; --chart-axis: #3A4645; --chart-limit: #7B8A8B; --c-morning: #5FA0E8; --c-during: #F08A5B;
+    }
+  }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   #root { --gutter: 14px; font-family: var(--sans); color: var(--ink); background: var(--paper); line-height: 1.5;
     -webkit-font-smoothing: antialiased; padding: 20px var(--gutter) 48px;
     padding-left: max(var(--gutter), env(safe-area-inset-left)); padding-right: max(var(--gutter), env(safe-area-inset-right)); }
@@ -36,23 +60,25 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
   .masthead p { margin: 4px 0 0; font-size: 13.5px; color: var(--ink-soft); }
 
   .tabs { display: flex; gap: 5px; margin-bottom: 16px; flex-wrap: wrap; }
-  .tabs button { font-family: inherit; font-size: 14px; font-weight: 600; padding: 9px 14px;
-    border-radius: 7px; border: 1px solid var(--rule); background: #fff; color: var(--ink-soft); cursor: pointer; }
-  .tabs button[aria-selected="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
+  .tabs button { font-family: inherit; font-size: 14px; font-weight: 600; padding: 9px 14px; min-height: 40px;
+    border-radius: 7px; border: 1px solid var(--rule); background: var(--card); color: var(--ink-soft); cursor: pointer; }
+  .tabs button[aria-selected="true"] { background: var(--ink); border-color: var(--ink); color: var(--on-ink); }
+  /* Wischbare Leiste: rechts ausblenden, solange noch etwas folgt */
+  .tabs.scrollable:not(.at-end) { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); }
 
   .card { background: var(--card); border: 1px solid var(--rule-soft); border-radius: 10px; padding: 18px; margin-bottom: 14px; }
   .card h2 { margin: 0 0 4px; font-size: 16px; font-weight: 650; letter-spacing: -0.01em; }
   .card .lede { margin: 0 0 14px; font-size: 13.5px; color: var(--ink-soft); }
 
   .verdict { border: 1px solid var(--rule); border-radius: 10px; padding: 20px; margin-bottom: 14px; }
-  .verdict.up { background: var(--up-bg); border-color: #BFDACE; }
-  .verdict.hold { background: var(--hold-bg); border-color: #E3D2AE; }
-  .verdict.down { background: var(--down-bg); border-color: #E8C4C0; }
+  .verdict.up { background: var(--up-bg); border-color: var(--up-border); }
+  .verdict.hold { background: var(--hold-bg); border-color: var(--hold-border); }
+  .verdict.down { background: var(--down-bg); border-color: var(--down-border); }
   .verdict.none { background: var(--card); }
   .verdict-kicker { font-size: 13px; color: var(--ink-soft); margin: 0 0 6px; }
   .verdict-word { margin: 0; font-size: 32px; font-weight: 680; letter-spacing: -0.03em; line-height: 1.1; }
   .verdict.up .verdict-word { color: var(--up); }
-  .verdict.hold .verdict-word { color: #9A6B12; }
+  .verdict.hold .verdict-word { color: var(--hold-ink); }
   .verdict.down .verdict-word { color: var(--down); }
   .verdict ul { margin: 12px 0 0; padding-left: 18px; font-size: 14px; }
   .verdict li { margin-bottom: 5px; }
@@ -62,25 +88,26 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
   .field > label, .field-label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 3px; }
   .hint { font-size: 12.5px; color: var(--ink-soft); margin: 0 0 8px; }
 
-  .scale { display: flex; gap: 3px; }
-  .scale button { flex: 1; min-width: 0; height: 42px; font-family: inherit; font-size: 14px;
-    font-variant-numeric: tabular-nums; color: var(--ink); background: #EDF1F2;
+  .scale { display: grid; grid-template-columns: repeat(11, 1fr); gap: 3px; }
+  .scale button { min-width: 0; height: 42px; font-family: inherit; font-size: 14px;
+    font-variant-numeric: tabular-nums; color: var(--ink); background: var(--surface-3);
     border: 1px solid transparent; border-radius: 5px; cursor: pointer; padding: 0; }
-  .scale button:hover { background: #E2E9EA; }
-  .scale button[aria-pressed="true"] { background: var(--ink); color: #fff; font-weight: 650; }
-  .scale-rule { position: relative; height: 17px; margin-top: 4px; font-size: 11.5px; color: var(--ink-soft); }
-  .scale-rule span { position: absolute; top: 0; transform: translateX(-50%); white-space: nowrap; }
-  .scale-rule i { position: absolute; top: -4px; width: 1px; height: 6px; background: var(--ink-soft); }
+  .scale button:hover { background: var(--surface-3h); }
+  .scale button[aria-pressed="true"] { background: var(--ink); color: var(--on-ink); font-weight: 650; }
+  .scale button.ok { box-shadow: inset 0 -3px 0 var(--up); }
+  .scale button.ok[aria-pressed="true"] { box-shadow: none; }
+  .scale-note { font-size: 12px; color: var(--ink-soft); margin: 5px 0 0; }
 
   .seg { display: flex; flex-wrap: wrap; gap: 6px; }
-  .seg button { font-family: inherit; font-size: 13.5px; padding: 8px 13px; border-radius: 6px;
-    border: 1px solid var(--rule); background: #fff; color: var(--ink); cursor: pointer; }
+  .seg button { font-family: inherit; font-size: 13.5px; padding: 8px 13px; min-height: 36px; border-radius: 6px;
+    border: 1px solid var(--rule); background: var(--card); color: var(--ink); cursor: pointer; }
   .seg button:hover { border-color: var(--act); }
-  .seg button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #fff; font-weight: 600; }
+  .seg button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--on-ink); font-weight: 600; }
 
   input[type="text"], input[type="date"], input[type="time"], input[type="number"], textarea {
     width: 100%; font-family: inherit; font-size: 16px; color: var(--ink);   /* unter 16px zoomt iOS beim Fokussieren */
-    padding: 9px 11px; border: 1px solid var(--rule); border-radius: 6px; background: #fff; }
+    padding: 9px 11px; border: 1px solid var(--rule-strong); border-radius: 6px; background: var(--card); }
+  input::placeholder, textarea::placeholder { color: var(--placeholder); opacity: 1; }
   input[type="number"] { -moz-appearance: textfield; }
   textarea { resize: vertical; min-height: 58px; }
   input:focus, textarea:focus, button:focus-visible { outline: 2px solid var(--act); outline-offset: 1px; }
@@ -89,31 +116,31 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
   .grid2 > div { flex: 1; min-width: 0; }
   .sublabel { font-size: 12.5px; color: var(--ink-soft); margin-bottom: 3px; display: block; }
 
-  .exrow { background: #F7F9F9; border: 1px solid var(--rule-soft); border-radius: 7px; padding: 10px 11px; margin-bottom: 8px; }
+  .exrow { background: var(--surface-2); border: 1px solid var(--rule-soft); border-radius: 7px; padding: 10px 11px; margin-bottom: 8px; }
   .exrow-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 7px; }
   .exrow-name { font-size: 14px; font-weight: 600; }
   .exrow-dose { font-size: 11.5px; color: var(--ink-soft); white-space: nowrap; }
   .exrow-in { display: flex; gap: 7px; }
   .exrow-in > div { flex: 1; min-width: 0; }
   .exrow-in input { padding: 7px 6px; font-size: 16px; text-align: center; }
-  .exrow-in span { font-size: 11px; color: var(--ink-soft); display: block; text-align: center; margin-bottom: 2px; }
+  .exrow-in label { font-size: 12.5px; color: var(--ink-soft); display: block; text-align: center; margin-bottom: 2px; }
 
   .check { display: flex; align-items: flex-start; gap: 9px; font-size: 14px; cursor: pointer; margin-bottom: 10px; }
   .check input { margin-top: 3px; width: 16px; height: 16px; accent-color: var(--act); }
 
   .btn { font-family: inherit; font-size: 15px; font-weight: 600; padding: 11px 18px; border-radius: 7px;
-    border: 1px solid var(--act); background: var(--act); color: #fff; cursor: pointer; }
-  .btn:hover { background: #17495A; }
-  .btn.ghost { background: #fff; color: var(--act); }
-  .btn.quiet { background: #fff; color: var(--ink-soft); border-color: var(--rule); font-weight: 500; }
+    border: 1px solid var(--act); background: var(--act); color: var(--on-act); cursor: pointer; }
+  .btn:hover { background: var(--act-hover); }
+  .btn.ghost { background: var(--card); color: var(--act-ink); }
+  .btn.quiet { background: var(--card); color: var(--ink-soft); border-color: var(--rule); font-weight: 500; }
   .btn.small { font-size: 13.5px; padding: 8px 13px; }
   .btn[disabled] { opacity: .45; cursor: default; }
   .btn-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 
   .pending { border-left: 3px solid var(--act); }
-  .warnbox { background: var(--hold-bg); border: 1px solid #E3D2AE; border-radius: 7px;
+  .warnbox { background: var(--hold-bg); border: 1px solid var(--hold-border); border-radius: 7px;
     padding: 10px 12px; font-size: 13px; margin: -2px 0 12px; }
-  .warnbox b { color: #9A6B12; }
+  .warnbox b { color: var(--hold-ink); }
 
   .row { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--rule-soft); }
   .row:last-child { border-bottom: 0; }
@@ -127,26 +154,25 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
   .edit { background: none; border: 0; cursor: pointer; color: var(--ink-soft); font-size: 13px;
     padding: 6px 8px; min-height: 32px; font-family: inherit; text-decoration: underline; }
   .edit:hover { color: var(--act); }
-  .row.editing { background: #EAF1F3; border-radius: 6px; }
-  .editbar { background: #EAF1F3; border: 1px solid #C4D7DD; border-radius: 7px;
+  .editbar { background: var(--tint); border: 1px solid var(--tint-border); border-radius: 7px;
     padding: 10px 12px; font-size: 13px; margin-bottom: 14px; }
-  .editbar b { color: var(--act); }
+  .editbar b { color: var(--act-ink); }
   .empty { font-size: 14px; color: var(--ink-soft); padding: 6px 0 2px; }
 
   /* Diagramm */
   .chart-head { display: flex; justify-content: space-between; align-items: center; gap: 8px 12px; flex-wrap: wrap; margin: 2px 0 8px; }
   .chart-title { font-size: 13px; font-weight: 600; color: var(--ink-soft); }
-  .chart-range button { padding: 5px 10px; font-size: 12.5px; }
+  .chart-range button { padding: 6px 12px; min-height: 32px; font-size: 12.5px; }
   .chart-wrap { position: relative; }
   .chart-svg { display: block; width: 100%; height: auto; touch-action: pan-y; -webkit-tap-highlight-color: transparent; }
   .chart-svg:focus { outline: none; }
   .chart-svg:focus-visible { outline: 2px solid var(--act); outline-offset: 2px; }
   .chart-axis { font-size: 11px; fill: var(--ink-soft); font-variant-numeric: tabular-nums; }
   .chart-label { font-size: 11.5px; font-weight: 600; fill: var(--ink); }
-  .chart-halo { paint-order: stroke; stroke: #fff; stroke-width: 3px; stroke-linejoin: round; }
-  .chart-tip { position: absolute; top: 0; left: 0; background: #fff; border: 1px solid var(--rule); border-radius: 6px;
+  .chart-halo { paint-order: stroke; stroke: var(--card); stroke-width: 3px; stroke-linejoin: round; }
+  .chart-tip { position: absolute; top: 0; left: 0; background: var(--card); border: 1px solid var(--rule); border-radius: 6px;
     padding: 6px 9px; font-size: 12.5px; line-height: 1.35; box-shadow: 0 2px 8px rgba(24,33,31,.10);
-    pointer-events: none; white-space: nowrap; }
+    pointer-events: none; max-width: 230px; }
   .chart-tip-date { font-weight: 600; margin-bottom: 3px; }
   .chart-tip-row { display: flex; align-items: center; gap: 6px; color: var(--ink-soft); }
   .chart-tip-row i { display: inline-block; width: 12px; height: 2px; border-radius: 1px; }
@@ -157,12 +183,12 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
   /* Verlauf: eine Karte pro Tag */
   .day { border: 1px solid var(--rule-soft); border-radius: 8px; margin-top: 12px; overflow: hidden; }
   .day-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px;
-    padding: 8px 12px; background: #F7F9F9; border-bottom: 1px solid var(--rule-soft); }
+    padding: 8px 12px; background: var(--surface-2); border-bottom: 1px solid var(--rule-soft); }
   .day-date { font-size: 14px; font-weight: 650; }
   .day-tag { font-size: 12px; color: var(--ink-soft); white-space: nowrap; }
   .day-row { display: flex; gap: 10px; padding: 10px 12px; align-items: flex-start; }
   .day-row + .day-row { border-top: 1px solid var(--rule-soft); }
-  .day-row.editing { background: #EAF1F3; }
+  .day-row.editing { background: var(--tint); }
   .day-time { flex: 0 0 50px; font-size: 13px; color: var(--ink-soft); font-variant-numeric: tabular-nums; padding-top: 1px; }
   .day-main { flex: 1; min-width: 0; }
   .day-title { font-size: 14px; font-weight: 600; }
@@ -177,9 +203,9 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
   .when { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; font-size: 14px; }
   .flash { margin: 0 0 12px; font-size: 13.5px; font-weight: 600; color: var(--up); }
   .type-pick button { font-weight: 600; }
-  .infobox { background: #EAF1F3; border: 1px solid #C4D7DD; border-radius: 8px; padding: 12px 14px; font-size: 13.5px; margin-bottom: 14px; }
+  .infobox { background: var(--tint); border: 1px solid var(--tint-border); border-radius: 8px; padding: 12px 14px; font-size: 13.5px; margin-bottom: 14px; }
 
-  .flag { background: var(--down-bg); border: 1px solid #E8C4C0; border-radius: 8px;
+  .flag { background: var(--down-bg); border: 1px solid var(--down-border); border-radius: 8px;
     padding: 14px 16px; font-size: 14px; margin-bottom: 14px; }
   .flag b { display: block; margin-bottom: 4px; color: var(--down); }
 
@@ -194,20 +220,20 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
   .blockhead:first-child { margin-top: 0; }
   .blocksub { font-size: 12.5px; color: var(--ink-soft); margin: 0 0 10px; }
   .acc { border: 1px solid var(--rule-soft); border-radius: 8px; margin-bottom: 8px; overflow: hidden; }
-  .acc > button { width: 100%; text-align: left; font-family: inherit; cursor: pointer; background: #fff;
+  .acc > button { width: 100%; text-align: left; font-family: inherit; cursor: pointer; background: var(--card);
     border: 0; padding: 13px 14px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
-  .acc > button:hover { background: #F7F9F9; }
+  .acc > button:hover { background: var(--surface-2); }
   .acc-name { font-size: 14.5px; font-weight: 600; display: block; }
-  .acc-meta { font-size: 12px; color: var(--act); font-weight: 600; margin-top: 2px; display: block; }
-  .acc-chev { color: var(--rule); font-size: 15px; flex-shrink: 0; }
-  .acc-body { padding: 0 14px 14px; border-top: 1px solid var(--rule-soft); background: #FAFCFC; }
-  .acc-body h4 { margin: 13px 0 5px; font-size: 12px; color: var(--ink-soft); font-weight: 600;
+  .acc-meta { font-size: 12px; color: var(--act-ink); font-weight: 600; margin-top: 2px; display: block; }
+  .acc-chev { color: var(--ink-soft); font-size: 15px; flex-shrink: 0; }
+  .acc-body { padding: 0 14px 14px; border-top: 1px solid var(--rule-soft); background: var(--surface-1); }
+  .acc-body h3, .kicker { margin: 13px 0 5px; font-size: 12px; color: var(--ink-soft); font-weight: 600;
     letter-spacing: .04em; text-transform: uppercase; }
   .acc-body ul { margin: 0; padding-left: 17px; font-size: 13.5px; }
   .acc-body li { margin-bottom: 4px; }
   .acc-err { background: var(--down-bg); border-radius: 6px; padding: 9px 11px; font-size: 13px; margin-top: 11px; }
   .acc-err b { color: var(--down); }
-  .fig { background: #fff; border: 1px solid var(--rule-soft); border-radius: 7px;
+  .fig { background: #fff; color-scheme: light; border: 1px solid var(--rule-soft); border-radius: 7px;   /* Zeichnungen sind für Weiß gezeichnet */
     padding: 8px; margin-top: 12px; }
   .fig svg { width: 100%; height: auto; display: block; }
 
@@ -215,11 +241,11 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
     border-bottom: 1px solid var(--rule-soft); font-size: 13.5px; }
   .kv:last-child { border-bottom: 0; }
   .kv b { font-weight: 600; }
-  .kv span { color: var(--act); font-weight: 600; white-space: nowrap; }
+  .kv span { color: var(--act-ink); font-weight: 600; white-space: nowrap; }
 
   .prod { border: 1px solid var(--rule-soft); border-radius: 8px; padding: 13px 14px; margin-bottom: 9px; }
   .prod-name { font-size: 14.5px; font-weight: 650; }
-  .prod-price { font-size: 13px; color: var(--act); font-weight: 600; margin: 2px 0 6px; }
+  .prod-price { font-size: 13px; color: var(--act-ink); font-weight: 600; margin: 2px 0 6px; }
   .prod-role { font-size: 13px; color: var(--ink-soft); }
 
   /* Skalen */
@@ -231,12 +257,12 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
     padding: 9px 0; border-bottom: 1px solid var(--rule-soft); font-size: 14px; }
   .sc-list > .sc-row:last-child { border-bottom: 0; }
   .sc-val { text-align: center; font-size: 13px; font-weight: 650; font-variant-numeric: tabular-nums;
-    padding: 2px 6px; border-radius: 5px; background: #EDF1F2; color: var(--ink); white-space: nowrap; }
-  .sc-val.up { background: var(--up-bg); color: var(--up); }
-  .sc-val.hold { background: var(--hold-bg); color: #9A6B12; }
+    padding: 2px 6px; border-radius: 5px; background: var(--surface-3); color: var(--ink); white-space: nowrap; }
+  .sc-val.up { background: var(--up-bg); color: var(--up-ink); }
+  .sc-val.hold { background: var(--hold-bg); color: var(--hold-ink); }
   .sc-val.down { background: var(--down-bg); color: var(--down); }
-  .sc-val.act { background: #EAF1F3; color: var(--act); }
-  .sc-link { background: none; border: 0; padding: 0; font: inherit; color: var(--act);
+  .sc-val.act { background: var(--tint); color: var(--act-ink); }
+  .sc-link { background: none; border: 0; padding: 0; font: inherit; color: var(--act-ink);
     text-decoration: underline; cursor: pointer; white-space: nowrap; }
   .card.sc-target { border-color: var(--act); }
 
@@ -245,9 +271,10 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
      auf dem Desktop links Erfassen, rechts Überblick, darunter Daten & Sicherung */
   .log { display: flex; flex-direction: column; }
   .log-top, .log-in, .log-out { display: contents; }
-  .o1 { order: 1; } .o2 { order: 2; } .o3 { order: 3; } .o4 { order: 4; } .o5 { order: 5; }
-  .o6 { order: 6; } .o7 { order: 7; } .o8 { order: 8; } .o9 { order: 9; } .o10 { order: 10; }
-  .o11 { order: 11; } .o12 { order: 12; } .o13 { order: 13; } .o14 { order: 14; } .o15 { order: 15; }
+  .o1 { order: 1; } .o2 { order: 2; } .o3 { order: 3; } .o5 { order: 5; } .o7 { order: 7; } .o7b { order: 8; }
+  .o8 { order: 9; } .o9 { order: 10; } .o10 { order: 11; } .o11 { order: 12; }
+  .h3 { margin: 14px 0 6px; font-size: 14px; font-weight: 650; }
+  .kicker { margin: 20px 0 6px; }
 
   @media (min-width: 700px) {
     #root { --gutter: 24px; padding-top: 28px; }
@@ -286,8 +313,12 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
     .tabs::-webkit-scrollbar { display: none; }
     .tabs button { flex: 0 0 auto; padding: 8px 12px; font-size: 13.5px; }
   }
+  @media (max-width: 560px) {
+    /* Skala in zwei Reihen (0–5 / 6–10): Tasten 44 px hoch und ≥ 50 px breit statt 25 px */
+    .scale { grid-template-columns: repeat(6, 1fr); gap: 4px; }
+    .scale button { height: 44px; font-size: 15px; }
+  }
   @media (max-width: 420px) {
-    .scale button { height: 38px; font-size: 13px; }
     .verdict-word { font-size: 27px; }
     .grid2 { flex-wrap: wrap; }
   }
@@ -296,7 +327,6 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
     #root { --gutter: 10px; }
     .card { padding: 14px; }
     .verdict { padding: 16px; }
-    .scale { gap: 2px; }
     .day-row { padding: 10px 9px; gap: 8px; }
     .day-time { flex-basis: 46px; }
   }
@@ -308,6 +338,7 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
 </head>
 <body>
 <div id="root"><div class="boot">Wird geladen…</div></div>
+<div id="live" class="sr-only" aria-live="polite"></div>
 <script type="module">
 
 
@@ -319,6 +350,10 @@ try { localStorage.setItem(LOCAL_PREFIX + 'probe', '1'); localStorage.removeItem
 catch (e) { lsOk = false; }
 
 window.storage = {
+  async remove(k) {
+    const key = LOCAL_PREFIX + k;
+    if (lsOk) localStorage.removeItem(key); else delete memFallback[key];
+  },
   async get(k) {
     const key = LOCAL_PREFIX + k;
     const v = lsOk ? localStorage.getItem(key) : (key in memFallback ? memFallback[key] : null);
@@ -753,7 +788,7 @@ async function readSnapshot(key) {
   } catch (e) { return null; }
 }
 async function dropSnapshot(key) {
-  try { await window.storage.set(key, ''); } catch (e) {}
+  try { await window.storage.remove(key); } catch (e) {}
 }
 
 async function loadMeta() {
@@ -775,6 +810,10 @@ function backupAge() {
 }
 function backupFaellig() {
   if (!state.entries.length && !state.mornings.length) return false;
+  // Erst erinnern, wenn es etwas zu verlieren gibt: eine Woche Daten oder zehn Datensätze
+  const dates = dayList(), oldest = dates[dates.length - 1];
+  const genug = state.entries.length + state.mornings.length >= 10 || (oldest && daysBetween(oldest, today()) >= 7);
+  if (!genug) return false;
   const a = backupAge();
   return a === null || a >= BACKUP_FAELLIG_TAGE;
 }
@@ -820,11 +859,11 @@ async function load() {
   render();
   checkPersistence(true).then(render);
 }
-async function save() {
+async function save(opts) {
   try {
     if (!window.storage || typeof window.storage.set !== 'function') throw new Error('window.storage steht in dieser Umgebung nicht zur Verfügung');
     // Den Stand vor dieser Änderung als Rückfallebene behalten
-    try {
+    if (!(opts && opts.skipPrev)) try {
       const before = await window.storage.get(KEY);
       if (before && before.value) {
         const b = JSON.parse(before.value);
@@ -932,10 +971,12 @@ function pending() { return days().filter(d => d.painMorning == null && !d.skipp
 function assess() {
   const all = days();
   const done = all.filter(d => d.painMorning != null);
-  if (pending().length) return { tone:'none', word:'Morgen-Check offen', kicker:'Noch keine Bewertung möglich',
-    reasons:['Ohne den Wert vom Folgemorgen fehlt der wichtigste Marker.'], todo:'Trag den fehlenden Morgenwert ein, dann bewerte ich die Einheit.' };
+  // Nur ein frisch offener Morgen (bis drei Tage) hält das Urteil an. Ältere bleiben
+  // unbewertet und stehen in „Noch offene Morgen“ – sie blockieren aber nichts mehr.
+  if (pending().some(d => daysBetween(d.morningDate, today()) <= 3)) return { tone:'none', word:'Morgen-Check offen', kicker:'Noch keine Bewertung möglich',
+    reasons:['Ohne den Wert vom Folgemorgen fehlt der wichtigste Marker.'], todo:'Trag den fehlenden Morgenwert ein oder überspring ihn – dann bewertet die App die Einheit.' };
   if (done.length < 2) return { tone:'none', word:'Noch zu wenig Daten', kicker:`${done.length} von 2 bewerteten Trainingstagen`,
-    reasons:['Ein Trainingstag gilt als vollständig, sobald am Folgetag der Morgen-Check ausgefüllt ist. Ab dem zweiten vergleiche ich die beiden Morgenwerte miteinander.'], todo:'Weiter erfassen und nichts an der Last ändern.' };
+    reasons:['Ein Trainingstag gilt als vollständig, sobald am Folgetag der Morgen-Check ausgefüllt ist. Ab dem zweiten vergleicht die App die beiden Morgenwerte.'], todo:'Weiter erfassen und nichts an der Last ändern.' };
 
   const last = done[done.length-1], prev = done[done.length-2];
   const stiff = STIFF.find(s => s.v === last.stiffness);
@@ -1026,23 +1067,24 @@ function buildExport() {
 }
 
 /* ============================================ Render-Bausteine */
-function scaleHtml(name, value, showLimit) {
-  let s = '<div class="scale">';
+function scaleHtml(name, value, showLimit, label) {
+  let s = `<div class="scale" role="group" aria-label="${esc(label || name)}">`;
   for (let i = 0; i <= 10; i++)
-    s += `<button type="button" data-scale="${name}" data-val="${i}" aria-pressed="${value===i}" aria-label="${i} von 10">${i}</button>`;
+    s += `<button type="button" class="${showLimit && i <= 3 ? 'ok' : ''}" data-scale="${name}" data-val="${i}" aria-pressed="${value===i}" aria-label="${i} von 10">${i}</button>`;
   s += '</div>';
-  if (showLimit) s += `<div class="scale-rule"><i style="left:36.4%"></i><span style="left:36.4%">3/10 – bis hier erlaubt</span></div>`;
+  if (showLimit) s += '<p class="scale-note">0 bis 3 sind erlaubt – darüber heißt es Zurücknehmen.</p>';
   return s;
 }
-function segHtml(name, options, value) {
-  return '<div class="seg">' + options.map(o =>
+function segHtml(name, options, value, label) {
+  return `<div class="seg" role="group" aria-label="${esc(label || name)}">` + options.map(o =>
     `<button type="button" data-seg="${name}" data-val="${o.v}" aria-pressed="${value===o.v}">${esc(o.label)}</button>`).join('') + '</div>';
 }
 function num(path, val, ph, decimal) {
   // Dezimalwerte (kg) als Textfeld mit Dezimaltastatur: type="number" verwirft „12,5“ je nach Browser
+  const id = 'f-' + path.replace(/\./g, '-');
   return decimal
-    ? `<input type="text" inputmode="decimal" data-path="${path}" value="${esc(val)}" placeholder="${esc(ph||'')}">`
-    : `<input type="number" inputmode="numeric" min="0" data-path="${path}" value="${esc(val)}" placeholder="${esc(ph||'')}">`;
+    ? `<input type="text" id="${id}" inputmode="decimal" data-path="${path}" value="${esc(val)}" placeholder="${esc(ph||'')}">`
+    : `<input type="number" id="${id}" inputmode="numeric" min="0" data-path="${path}" value="${esc(val)}" placeholder="${esc(ph||'')}">`;
 }
 function acc(id, name, meta, bodyHtml) {
   const open = openAcc === id;
@@ -1070,9 +1112,9 @@ function exPickerHtml() {
       h += `<div class="exrow">
         <div class="exrow-top"><span class="exrow-name">${esc(ex.name)}</span><span class="exrow-dose">Ziel: ${esc(ex.dose)}</span></div>
         <div class="exrow-in">
-          <div><span>Sätze</span>${num(`ex.${id}.sets`, v.sets, '3')}</div>
-          <div><span>${UNIT_LABEL[ex.unit]}</span>${num(`ex.${id}.reps`, v.reps, ex.unit==='sek'?'30':'12')}</div>
-          ${ex.unit === 'wdh' ? `<div><span>kg</span>${num(`ex.${id}.weight`, v.weight, '12,5', true)}</div>` : ''}
+          <div><label for="f-ex-${id}-sets">Sätze</label>${num(`ex.${id}.sets`, v.sets, '3')}</div>
+          <div><label for="f-ex-${id}-reps">${UNIT_LABEL[ex.unit]}</label>${num(`ex.${id}.reps`, v.reps, ex.unit==='sek'?'30':'12')}</div>
+          ${ex.unit === 'wdh' ? `<div><label for="f-ex-${id}-weight">kg</label>${num(`ex.${id}.weight`, v.weight, '12,5', true)}</div>` : ''}
         </div></div>`;
     });
     h += '</div>';
@@ -1082,9 +1124,9 @@ function exPickerHtml() {
 function runFieldsHtml() {
   const r = draft.run;
   return `<div class="field"><div class="grid2">
-      <div><span class="sublabel">Dauer (Min.)</span>${num('run.min', r.min, '32')}</div>
-      <div><span class="sublabel">Pace</span><input type="text" data-path="run.pace" value="${esc(r.pace)}" placeholder="5:45 min/km"></div>
-      <div><span class="sublabel">Ø Puls</span>${num('run.hr', r.hr, '148')}</div>
+      <div><label class="sublabel" for="f-run-min">Dauer (Min.)</label>${num('run.min', r.min, '32')}</div>
+      <div><label class="sublabel" for="f-run-pace">Pace</label><input type="text" id="f-run-pace" data-path="run.pace" value="${esc(r.pace)}" placeholder="5:45 min/km"></div>
+      <div><label class="sublabel" for="f-run-hr">Ø Puls</label>${num('run.hr', r.hr, '148')}</div>
     </div></div>
     <div class="field"><label for="d-int">Intervalle</label>
       <p class="hint">Leer lassen bei Dauerlauf.</p>
@@ -1094,8 +1136,8 @@ function sessionFieldsHtml() {
   const s = draft.session;
   const ph = draft.type === 'crossfit' ? 'WOD ohne Sprünge' : 'Beach, 3 Sätze';
   return `<div class="field"><div class="grid2">
-      <div><span class="sublabel">Dauer (Min.)</span>${num('session.min', s.min, '60')}</div>
-      <div><span class="sublabel">Ø Puls</span>${num('session.hr', s.hr, '142')}</div>
+      <div><label class="sublabel" for="f-session-min">Dauer (Min.)</label>${num('session.min', s.min, '60')}</div>
+      <div><label class="sublabel" for="f-session-hr">Ø Puls</label>${num('session.hr', s.hr, '142')}</div>
     </div></div>
     <div class="field"><label for="d-what">Was genau</label>
       <input type="text" id="d-what" data-path="session.what" value="${esc(s.what)}" placeholder="${esc(ph)}"></div>`;
@@ -1103,7 +1145,7 @@ function sessionFieldsHtml() {
 /* ============================================ Diagramm */
 // Zwei Reihen, eine Achse (beides Schmerz 0–10). Farben aus einer auf Farbenblindheit
 // geprüften Palette – Rot bleibt in der App dem „Zurücknehmen“ vorbehalten.
-const C_MORNING = '#2a78d6', C_DURING = '#eb6834';
+const C_MORNING = 'var(--c-morning)', C_DURING = 'var(--c-during)';   // Tokens: passen sich dem Dark Mode an
 let chartState = null;   // Geometrie + Tage mit Werten – fürs Antippen, bei jedem Zeichnen neu
 
 // Breite des Platzes, den das Diagramm tatsächlich hat – auf dem Desktop steht es in einer Spalte
@@ -1148,11 +1190,11 @@ function chartInnerHtml() {
   // Y-Achse: Raster als feine, durchgezogene Linien
   let s = '';
   for (let v = 0; v <= 10; v += 2) {
-    s += `<line x1="${M.l}" x2="${W - M.r}" y1="${n1(Y(v))}" y2="${n1(Y(v))}" stroke="${v ? '#E5EBEC' : '#C9D3D4'}" stroke-width="1"/>`
+    s += `<line x1="${M.l}" x2="${W - M.r}" y1="${n1(Y(v))}" y2="${n1(Y(v))}" style="stroke:var(${v ? '--chart-grid' : '--chart-axis'})" stroke-width="1"/>`
        + `<text x="${M.l - 7}" y="${n1(Y(v) + 3.5)}" text-anchor="end" class="chart-axis">${v}</text>`;
   }
   // Die Grenze ist eine Schwelle, kein Raster – deshalb gestrichelt und beschriftet
-  s += `<line x1="${M.l}" x2="${W - M.r}" y1="${n1(Y(3))}" y2="${n1(Y(3))}" stroke="#8C9899" stroke-width="1" stroke-dasharray="4 3"/>`
+  s += `<line x1="${M.l}" x2="${W - M.r}" y1="${n1(Y(3))}" y2="${n1(Y(3))}" style="stroke:var(--chart-limit)" stroke-width="1" stroke-dasharray="4 3"/>`
      + `<text x="${M.l + 4}" y="${n1(Y(3) - 5)}" class="chart-axis chart-halo">Grenze 3</text>`;
 
   // X-Achse: Montage als Raster, Abstand passend zur verfügbaren Breite
@@ -1162,27 +1204,33 @@ function chartInnerHtml() {
   while (new Date(tick + 'T12:00:00Z').getUTCDay() !== 1) tick = addDays(tick, 1);
   for (; tick <= t; tick = addDays(tick, step)) {
     const x = X(tick, 0.5);
-    s += `<line x1="${n1(x)}" x2="${n1(x)}" y1="${n1(Y(0))}" y2="${n1(Y(0) + 4)}" stroke="#C9D3D4" stroke-width="1"/>`
+    s += `<line x1="${n1(x)}" x2="${n1(x)}" y1="${n1(Y(0))}" y2="${n1(Y(0) + 4)}" style="stroke:var(--chart-axis)" stroke-width="1"/>`
        + `<text x="${n1(Math.min(Math.max(x, M.l + 12), W - M.r - 12))}" y="${H - 7}" text-anchor="middle" class="chart-axis">${fmt(tick)}</text>`;
     lastX = x;
   }
   if (W - M.r - lastX > 52) s += `<text x="${W - M.r}" y="${H - 7}" text-anchor="end" class="chart-axis">heute</text>`;
 
-  // Morgen: Linie nur zwischen aufeinanderfolgenden Tagen – eine Lücke bleibt eine Lücke
+  // Beide Marker in der Tagesmitte: Morgen als Punkt, Training als Ring darum (gleicher Wert =
+  // Ring um den Punkt). Die Größe hängt an der Spaltenbreite; bei „3 Monate“/„alles“ auf dem
+  // Handy werden Punkte zur Linie und Ringe zu Strichen, sonst verschmilzt alles zu einem Band.
+  const cell = pw / nDays;
+  const tier = cell >= 8 ? 'dots' : cell >= 5 ? 'small' : 'dense';
+  const rM = tier === 'dots' ? Math.min(4, cell * 0.3) : 2, rD = tier === 'dots' ? rM + 2 : 3.2;
   let path = '', prev = null;
   mIn.forEach(m => {
-    path += `${prev && daysBetween(prev, m.date) === 1 ? 'L' : 'M'}${n1(X(m.date, 0.3))},${n1(Y(m.pain))} `;
+    path += `${prev && daysBetween(prev, m.date) === 1 ? 'L' : 'M'}${n1(X(m.date, 0.5))},${n1(Y(m.pain))} `;
     prev = m.date;
   });
-  if (path) s += `<path d="${path.trim()}" fill="none" stroke="${C_MORNING}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
-  s += mIn.map(m => `<circle cx="${n1(X(m.date, 0.3))}" cy="${n1(Y(m.pain))}" r="4" fill="${C_MORNING}" stroke="#fff" stroke-width="2"/>`).join('');
-  // Während: einzelne Ringe – zwischen zwei Trainingstagen gibt es keinen Verlauf
-  s += dIn.map(([day, v]) => `<circle cx="${n1(X(day, 0.7))}" cy="${n1(Y(v))}" r="4.5" fill="none" stroke="${C_DURING}" stroke-width="2"/>`).join('');
+  if (path) s += `<path d="${path.trim()}" fill="none" style="stroke:${C_MORNING}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+  if (tier !== 'dense') s += mIn.map(m => `<circle cx="${n1(X(m.date, 0.5))}" cy="${n1(Y(m.pain))}" r="${n1(rM)}" style="fill:${C_MORNING};stroke:var(--card)" stroke-width="${tier === 'dots' ? 2 : 1.5}"/>`).join('');
+  s += dIn.map(([day, v]) => tier === 'dense'
+    ? `<line x1="${n1(X(day, 0.5))}" x2="${n1(X(day, 0.5))}" y1="${n1(Y(v) - 4)}" y2="${n1(Y(v) + 4)}" style="stroke:${C_DURING}" stroke-width="2" stroke-linecap="round"/>`
+    : `<circle cx="${n1(X(day, 0.5))}" cy="${n1(Y(v))}" r="${n1(rD)}" fill="none" style="stroke:${C_DURING}" stroke-width="2"/>`).join('');
 
   // Namen am jeweils letzten Punkt – außer sie kämen sich ins Gehege, dann tragen Legende und Antippen
   const lm = mIn[mIn.length - 1], ld = dIn[dIn.length - 1];
-  const pM = lm && { x: X(lm.date, 0.3), y: Y(lm.pain), text: 'Morgen' };
-  const pD = ld && { x: X(ld[0], 0.7), y: Y(ld[1]), text: 'während' };
+  const pM = lm && { x: X(lm.date, 0.5), y: Y(lm.pain), text: 'Morgen' };
+  const pD = ld && { x: X(ld[0], 0.5), y: Y(ld[1]), text: 'während' };
   const eng = pM && pD && Math.abs(pM.x - pD.x) < 64 && Math.abs(pM.y - pD.y) < 16;
   if (!eng) [pM, pD].filter(Boolean).forEach(q => {
     const links = q.x - M.l > 64;
@@ -1192,7 +1240,7 @@ function chartInnerHtml() {
 
   if (!mIn.length && !dIn.length) s += `<text x="${n1(M.l + pw / 2)}" y="${n1(M.t + ph / 2)}" text-anchor="middle" class="chart-axis">Keine Werte in diesem Zeitraum</text>`;
 
-  s += `<line class="chart-cross" x1="0" x2="0" y1="${M.t}" y2="${n1(Y(0))}" stroke="#18211F" stroke-width="1" visibility="hidden"/>`
+  s += `<line class="chart-cross" x1="0" x2="0" y1="${M.t}" y2="${n1(Y(0))}" style="stroke:var(--ink)" stroke-width="1" visibility="hidden"/>`
      + `<rect x="${M.l}" y="0" width="${pw}" height="${H}" fill="transparent"/>`;
 
   chartState = { W, M, pw, start, nDays, X, sel: null,
@@ -1210,14 +1258,17 @@ function chartInnerHtml() {
       <div class="chart-tip" hidden></div>
     </div>
     <div class="chart-legend">
-      <span><svg width="22" height="10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" stroke="${C_MORNING}" stroke-width="2"/><circle cx="11" cy="5" r="3.5" fill="${C_MORNING}" stroke="#fff" stroke-width="1.5"/></svg>Schmerz am Morgen</span>
-      <span><svg width="12" height="12" aria-hidden="true"><circle cx="6" cy="6" r="4.2" fill="none" stroke="${C_DURING}" stroke-width="2"/></svg>Schmerz während (höchster Wert des Tages)</span>
+      <span><svg width="22" height="10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" style="stroke:${C_MORNING}" stroke-width="2"/><circle cx="11" cy="5" r="3.5" style="fill:${C_MORNING};stroke:var(--card)" stroke-width="1.5"/></svg>Schmerz am Morgen</span>
+      <span><svg width="14" height="14" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" style="stroke:${C_DURING}" stroke-width="2"/></svg>Schmerz während (Ring um den Tag, höchster Wert)</span>
     </div>`;
 }
 
 function updateChart() {
   const box = document.getElementById('chartbox');
-  if (box) box.innerHTML = chartInnerHtml();
+  if (!box) return;
+  const focusKey = focusKeyOf(document.activeElement);
+  box.innerHTML = chartInnerHtml();
+  focusEl(focusKey);
 }
 
 // Fadenkreuz + Werte eines Tages. Inhalt über textContent – Wert vorne und kräftig.
@@ -1235,18 +1286,22 @@ function chartShow(date) {
   head.className = 'chart-tip-date';
   head.textContent = `${weekday(date)}, ${fmt(date)}`;
   tip.append(head);
-  const m = morningOf(date);
-  [[C_MORNING, m && !m.skipped ? m.pain : null, 'Morgen'], [C_DURING, maxDuring(date), 'während']].forEach(([c, v, name]) => {
+  const m = morningOf(date), st = m && !m.skipped ? STIFF.find(x => x.v === m.stiff) : null;
+  const arten = [...new Set(entriesOf(date).map(e => TYPES[e.type] ? TYPES[e.type].label : e.type))].join(', ');
+  const rows = [[C_MORNING, m && !m.skipped ? m.pain : null, 'Morgen', st ? 'steif ' + st.label : ''],
+                [C_DURING, maxDuring(date), 'während', arten]];
+  rows.forEach(([c, v, name, extra]) => {
     const row = document.createElement('div');
     row.className = 'chart-tip-row';
     const key = document.createElement('i');
     key.style.background = c;
     const val = document.createElement('b');
     val.textContent = v == null ? '–' : String(v);
-    row.append(key, val, document.createTextNode(name));
+    row.append(key, val, document.createTextNode(name + (extra ? ' · ' + extra : '')));
     tip.append(row);
   });
   tip.hidden = false;
+  announce(`${weekday(date)}, ${fmt(date)}: ` + rows.map(([, v, name]) => `${name} ${v == null ? 'kein Wert' : v}`).join(', '));
   const w = svg.getBoundingClientRect().width;
   const px = x * (w / chartState.W);
   tip.style.left = Math.min(Math.max(px - tip.offsetWidth / 2, 0), Math.max(0, w - tip.offsetWidth)) + 'px';
@@ -1271,7 +1326,7 @@ function tabPlan() {
       <p class="lede">Jede baut auf der vorherigen auf.</p>
       ${PHASES.map((p,i) => acc('ph'+i, p.title, p.span,
         `<p style="font-size:13.5px;margin:13px 0 0">${esc(p.goal)}</p>` +
-        p.parts.map(part => `<h4>${esc(part[0])}</h4><ul>${part[1].map(x => `<li>${esc(x)}</li>`).join('')}</ul>`).join('')
+        p.parts.map(part => `<h3>${esc(part[0])}</h3><ul>${part[1].map(x => `<li>${esc(x)}</li>`).join('')}</ul>`).join('')
       )).join('')}
     </div>
 
@@ -1321,7 +1376,7 @@ function tabEx() {
         ids.map(id => {
           const ex = EX[id];
           return acc(id, ex.name, ex.dose,
-            `<h4>Ausführung</h4><ul>${ex.how.map(h => `<li>${esc(h)}</li>`).join('')}</ul>
+            `<h3>Ausführung</h3><ul>${ex.how.map(h => `<li>${esc(h)}</li>`).join('')}</ul>
              <div class="acc-err"><b>Häufiger Fehler:</b> ${esc(ex.err)}</div>
              ${figHtml(ex.fig)}`);
         }).join('') + '</div>';
@@ -1344,7 +1399,7 @@ function tabSupp() {
     <div class="card">
       <h2>Einnahme im Tagesablauf</h2>
       <p class="lede">Jede Dosis 45–60 Minuten vor der Einheit.</p>
-      ${INTAKE.map(b => `<h4 style="margin:14px 0 6px;font-size:14px;font-weight:650">${esc(b[0])}</h4>
+      ${INTAKE.map(b => `<h3 class="h3">${esc(b[0])}</h3>
         <ul style="font-size:13.5px;padding-left:18px;margin:0">${b[1].map(x => `<li>${esc(x)}</li>`).join('')}</ul>`).join('')}
     </div>
 
@@ -1364,10 +1419,11 @@ function tabScales() {
       <h2>Was heißt welcher Wert?</h2>
       <p class="lede">Damit eine 3 heute dasselbe bedeutet wie eine 3 in acht Wochen. Die Farben zeigen, was die Bewertung aus dem Wert macht.</p>
       <p class="sc-legend">
-        <span><i style="background:var(--up-bg);border:1px solid #BFDACE"></i>erlaubt</span>
-        <span><i style="background:var(--hold-bg);border:1px solid #E3D2AE"></i>Warnstufe</span>
-        <span><i style="background:var(--down-bg);border:1px solid #E8C4C0"></i>zurücknehmen bzw. abklären</span>
-        <span><i style="background:#EAF1F3;border:1px solid #C4D7DD"></i>Zielbereich</span>
+        <span><i style="background:var(--up-bg);border:1px solid var(--up-border)"></i>erlaubt</span>
+        <span><i style="background:var(--hold-bg);border:1px solid var(--hold-border)"></i>Warnstufe</span>
+        <span><i style="background:var(--down-bg);border:1px solid var(--down-border)"></i>zurücknehmen bzw. abklären</span>
+        <span><i style="background:var(--tint);border:1px solid var(--tint-border)"></i>Zielbereich</span>
+        <span><i style="background:var(--surface-3);border:1px solid var(--rule)"></i>neutral – zählt nur im Vergleich</span>
       </p>
     </div>
     <div class="cards2">${SCALES.map(sc => { const ziel = !!scaleJump && scaleJump.sc === sc.id; return `<div class="card${ziel ? ' sc-target' : ''}" id="sc-${sc.id}">
@@ -1389,12 +1445,12 @@ function morningFieldsHtml(p, d) {
   return `<div class="field" id="f-${p}Pain">
       <span class="field-label">Schmerz</span>
       <p class="hint">In Ruhe, vor dem ersten Schritt.${scaleLink('morning', `f-${p}Pain`)}</p>
-      ${scaleHtml(p + 'Pain', d.pain ?? null, false)}
+      ${scaleHtml(p + 'Pain', d.pain ?? null, false, 'Schmerz am Morgen, 0 bis 10')}
     </div>
     <div class="field" id="f-${p}Stiff">
       <span class="field-label">Wie lange war die Sehne steif?</span>
       <p class="hint">Das steife, eingerostete Gefühl an der Sehne hinter dem Innenknöchel – gemessen, bis sich das Gehen wieder normal anfühlte.${scaleLink('stiff', `f-${p}Stiff`)}</p>
-      ${segHtml(p + 'Stiff', STIFF, d.stiff ?? null)}
+      ${segHtml(p + 'Stiff', STIFF, d.stiff ?? null, 'Wie lange war die Sehne steif?')}
     </div>
     <div class="field">
       <label for="${p}-note">Notiz zum Morgen</label>
@@ -1402,12 +1458,16 @@ function morningFieldsHtml(p, d) {
     </div>`;
 }
 
-// Welcher Morgen fehlt? Pflicht, wenn am Vortag trainiert wurde – sonst heute, freiwillig.
+// Heute Morgen: Pflicht, wenn gestern trainiert wurde – sonst freiwillig. Ältere offene
+// Morgen kommen als eigene Liste darunter, damit der heutige nie verdrängt wird.
 function morningTarget() {
-  const pend = pending();
-  if (pend.length) return { date: pend[0].morningDate, due: true, left: pend.length - 1 };
   const t = today();
-  return morningOf(t) ? null : { date: t, due: false, left: 0 };
+  if (morningOf(t)) return null;
+  return { date: t, due: hasTraining(addDays(t, -1)) };
+}
+function openMornings() {
+  const t = today();
+  return pending().map(d => d.morningDate).filter(md => md !== t).sort().reverse();
 }
 function morningCardHtml(mt) {
   const prev = addDays(mt.date, -1);
@@ -1417,25 +1477,48 @@ function morningCardHtml(mt) {
       <button class="btn ghost" data-act="openMorning">Heute Morgen eintragen</button>
     </div>`;
   const labels = entriesOf(prev).map(e => TYPES[e.type] ? TYPES[e.type].label : e.type);
-  const title = mt.date === today() ? 'Wie war es heute Morgen?' : `Wie war es am ${weekday(mt.date, 'long')}morgen, ${fmt(mt.date)}?`;
   const ok = morningDraft.pain != null && !!morningDraft.stiff;
   return `<div class="card${mt.due ? ' pending' : ''}">
-      <h2>${esc(title)}</h2>
+      <h2>Wie war es heute Morgen?</h2>
       <p class="lede">${mt.due
-        ? `Gilt für das Training vom ${esc(weekday(prev, 'long'))}, ${fmt(prev)} (${esc(labels.join(', '))}). Ohne diesen Wert kann die App die Einheit nicht bewerten.`
+        ? `Gilt für das Training von gestern, ${esc(weekday(prev, 'long'))} (${esc(labels.join(', '))}). Ohne diesen Wert kann die App die Einheit nicht bewerten.`
         : 'Freiwillig, weil gestern kein Training war.'}</p>
       ${morningFieldsHtml('m', morningDraft)}
       <div class="btn-row">
         <button class="btn" data-act="saveMorning" data-date="${mt.date}" ${ok ? '' : 'disabled'}>Speichern</button>
         ${mt.due ? `<button class="btn quiet small" data-act="skipMorning" data-date="${mt.date}">Vergessen – überspringen</button>`
                  : '<button class="btn quiet small" data-act="closeMorning">Abbrechen</button>'}
-        ${mt.left > 0 ? `<span class="hint" style="margin:0">Danach noch ${mt.left} Morgen offen.</span>` : ''}
       </div>
       ${ok ? '' : `<p class="hint" style="margin-top:8px">Es fehlt noch: ${esc(missingMorning(morningDraft))}.</p>`}
     </div>`;
 }
 function missingMorning(d) {
   return [d.pain == null ? 'der Schmerzwert' : '', d.stiff ? '' : 'die Steifigkeit'].filter(Boolean).join(' und ');
+}
+// Ältere Morgen nach Trainingstagen, die noch fehlen
+function openMorningsHtml() {
+  const list = openMornings();
+  if (!list.length) return '';
+  return `<div class="card">
+      <h2>Noch offene Morgen</h2>
+      <p class="lede">Nach diesen Trainingstagen fehlt der Morgenwert. Trag ihn nach, wenn du ihn noch weißt – sonst überspringen. Bis dahin bleiben diese Einheiten unbewertet.</p>
+      ${list.map(md => {
+        if (mEdit && mEdit.where === 'list' && mEdit.date === md) return `<div class="day-row editing">${morningEditorHtml()}</div>`;
+        const prev = addDays(md, -1);
+        const labels = entriesOf(prev).map(e => TYPES[e.type] ? TYPES[e.type].label : e.type);
+        return `<div class="day-row">
+          <span class="day-time">${esc(weekday(md))} ${fmt(md)}</span>
+          <div class="day-main">
+            <div class="day-title">Morgen nach ${esc(labels.join(', '))}</div>
+            <div class="day-sub">Training vom ${esc(weekday(prev))}, ${fmt(prev)}</div>
+          </div>
+          <div class="day-side"><div class="day-acts">
+            <button type="button" class="edit" data-act="editMorning" data-date="${md}" data-where="list">eintragen</button>
+            <button type="button" class="edit" data-act="skipMorning" data-date="${md}">überspringen</button>
+          </div></div>
+        </div>`;
+      }).join('')}
+    </div>`;
 }
 
 // Morgen ändern oder nachtragen – im Verlauf, direkt am Tag oder mit frei wählbarem Datum
@@ -1445,8 +1528,8 @@ function morningEditorHtml() {
   const ok = isIsoDate(d.date) && !zukunft && d.pain != null && !!d.stiff;
   return `<div class="m-edit">
       <div class="day-title" style="margin-bottom:10px">${frei ? 'Morgen nachtragen' : `Morgen vom ${esc(weekday(d.date))}, ${fmt(d.date)}`}</div>
-      ${frei ? `<div class="field"><span class="sublabel">Datum</span>
-          <input type="date" value="${esc(d.date)}" max="${today()}" data-epath="date"></div>
+      ${frei ? `<div class="field"><label class="sublabel" for="e-date">Datum</label>
+          <input type="date" id="e-date" value="${esc(d.date)}" max="${today()}" data-epath="date"></div>
         ${zukunft ? '<div class="warnbox">Ein Morgen in der Zukunft lässt sich nicht eintragen.</div>' : ''}
         ${!zukunft && cur && !cur.skipped ? '<div class="warnbox">Für diesen Tag gibt es schon einen Morgenwert. Er wird ersetzt.</div>' : ''}` : ''}
       ${morningFieldsHtml('e', d)}
@@ -1535,7 +1618,7 @@ function historyHtml() {
 function formClosedHtml() {
   const last = sorted().slice(-1)[0];
   return `<div class="card" id="form">
-      <h2>Einheit erfassen</h2>
+      <h2 tabindex="-1">Einheit erfassen</h2>
       ${uiFlash && uiFlash.where === 'entry' ? `<p class="${uiFlash.ok ? 'flash' : 'err'}" style="margin:0 0 12px">${esc(uiFlash.text)}</p>` : ''}
       <div class="seg type-pick">${Object.entries(TYPES).map(([v, t]) =>
         `<button type="button" data-act="openForm" data-type="${v}">${esc(t.label)}</button>`).join('')}</div>
@@ -1559,23 +1642,12 @@ function tabLog() {
       <div style="margin-top:8px"><button type="button" class="btn quiet small" data-act="dismissMigration">Verstanden</button></div>
     </div>` : ''}</div>
     <div class="o5">${state.dataNote ? `<div class="warnbox"><b>Unvollständige Daten übersprungen.</b> ${esc(state.dataNote)}</div>` : ''}</div>
-    <div class="o6">${backupFaellig() ? `<div class="card pending">
-      <h2>Sicherung fällig</h2>
-      <p class="lede">${backupAge() === null
-        ? 'Von diesen Daten gibt es noch keine Kopie außerhalb dieses Geräts. Geht das Gerät verloren, sind sie weg.'
-        : `Die letzte Sicherung ist ${backupAge()} ${backupAge() === 1 ? 'Tag' : 'Tage'} her (${esc(fmtWhen(state.meta.lastBackup))}).`}</p>
-      <div class="btn-row">
-        <button class="btn" data-act="backupFile">Sicherung jetzt speichern</button>
-        <span class="hint" style="margin:0">Ein Tipp – die Datei landet in „Dateien“ bzw. im Download-Ordner.</span>
-      </div>
-      ${uiFlash && uiFlash.where === 'backup' ? `<p class="${uiFlash.ok ? 'note' : 'err'}" style="margin-top:10px">${esc(uiFlash.text)}</p>` : ''}
-    </div>` : uiFlash && uiFlash.where === 'backup' ? `<div class="infobox">${esc(uiFlash.text)}</div>` : ''}</div>
     </div>
     <div class="log-in">
-    <div class="o3">${uiFlash && uiFlash.where === 'morning' ? `<div class="infobox">${esc(uiFlash.text)}</div>` : ''}${mt && mt.due ? morningCardHtml(mt) : ''}</div>
+    <div class="o3">${uiFlash && uiFlash.where === 'morning' ? `<div class="infobox" id="morning-flash" tabindex="-1">${esc(uiFlash.text)}</div>` : ''}${mt && mt.due ? morningCardHtml(mt) : ''}${openMorningsHtml()}</div>
     <div class="o8">${mt && !mt.due ? morningCardHtml(mt) : ''}</div>
     <div class="o9">${!formOpen && !editingId ? formClosedHtml() : `<div class="card" id="form">
-      <h2>${editingId ? 'Einheit bearbeiten' : 'Einheit erfassen'}</h2>
+      <h2 tabindex="-1">${editingId ? 'Einheit bearbeiten' : 'Einheit erfassen'}</h2>
       <p class="lede">${editingId ? 'Änderungen wirken sich sofort auf die Bewertung aus.' : 'Direkt nach dem Training, solange du es noch im Gefühl hast.'}</p>
       ${editingId ? (() => {
         const e = state.entries.find(x => x.id === editingId);
@@ -1589,14 +1661,14 @@ function tabLog() {
         <span>Heute, <b>${esc(draft.time || '–')}</b> Uhr</span>
         <button type="button" class="sc-link" data-act="editWhen">Datum oder Uhrzeit ändern</button>
       </div>` : `<div class="field"><div class="grid2">
-        <div><span class="sublabel">Datum</span><input type="date" value="${esc(draft.date)}" max="${today()}" data-path="date"></div>
-        <div><span class="sublabel">Startzeit</span><input type="time" value="${esc(draft.time)}" data-path="time"></div>
+        <div><label class="sublabel" for="d-date">Datum</label><input type="date" id="d-date" value="${esc(draft.date)}" max="${today()}" data-path="date"></div>
+        <div><label class="sublabel" for="d-time">Startzeit</label><input type="time" id="d-time" value="${esc(draft.time)}" data-path="time"></div>
       </div>
       ${draft.date !== today() ? `<p class="hint" style="margin:7px 0 0">Der Eintrag steht nicht auf heute (${esc(weekday(today()))}, ${fmt(today())}). <button type="button" class="btn quiet small" style="padding:4px 9px;margin-left:4px" data-act="setToday">Auf heute setzen</button></p>` : ''}</div>`}
 
       <div class="field">
         <span class="field-label">Art der Einheit</span>
-        ${segHtml('type', Object.entries(TYPES).map(([v,t]) => ({v, label:t.label})), draft.type)}
+        ${segHtml('type', Object.entries(TYPES).map(([v,t]) => ({v, label:t.label})), draft.type, 'Art der Einheit')}
       </div>
 
       ${kind === 'ex' ? exPickerHtml() : kind === 'run' ? runFieldsHtml() : sessionFieldsHtml()}
@@ -1604,13 +1676,13 @@ function tabLog() {
       <div class="field" id="f-painDuring">
         <span class="field-label">Schmerz während der Einheit</span>
         <p class="hint">Nicht der stärkste Moment, sondern das Grundniveau.${scaleLink('during', 'f-painDuring')}</p>
-        ${scaleHtml('painDuring', draft.painDuring, true)}
+        ${scaleHtml('painDuring', draft.painDuring, true, 'Schmerz während der Einheit, 0 bis 10')}
       </div>
 
       ${draft.type === 'kraft' ? `<div class="field" id="f-effort">
         <span class="field-label">Wie schwer war der letzte Satz?</span>
         <p class="hint">Kraft, nicht Schmerz. Ein niedriger Wert spricht für mehr Gewicht – aber nur, solange der Schmerz bei 3/10 oder darunter bleibt.${scaleLink('effort', 'f-effort')}</p>
-        ${scaleHtml('effort', draft.effort, false)}
+        ${scaleHtml('effort', draft.effort, false, 'Anstrengung des letzten Satzes, 0 bis 10')}
         ${draft.painDuring != null && draft.painDuring > 3 && draft.effort != null && draft.effort <= 6 ? `<div class="warnbox" style="margin-top:12px"><b>Muskel leicht, Sehne laut.</b> Die Wade hat noch Reserve, das Gewebe verträgt sie aber nicht. Mehr Gewicht wäre trotz des niedrigen Anstrengungswerts falsch. Verkleinere stattdessen die Bewegungsreichweite oder stell auf Isometrie um – Halten erzeugt hohe Spannung ohne die schmerzhafte Bewegung.</div>` : ''}
       </div>` : ''}
 
@@ -1631,15 +1703,15 @@ function tabLog() {
 
     </div>`}</div>
     <div class="o10">${acc('howto', 'Wie die Bewertung zustande kommt', 'Erklärung – keine Daten',
-      `<h4>Schmerz während der Einheit</h4>
+      `<h3>Schmerz während der Einheit</h3>
        <p style="font-size:13.5px;margin:0">Trägst du unten im Formular ein, direkt nach dem Training. Bis 3/10 ist erlaubt.</p>
-       <h4>Schmerz am Morgen und Steifigkeit der Sehne</h4>
+       <h3>Schmerz am Morgen und Steifigkeit der Sehne</h3>
        <p style="font-size:13.5px;margin:0">Jeder Morgen gehört zu dem Tag, an dem du aufwachst. Nach einem Trainingstag fragt die Morgen-Karte danach, weil die Bewertung diesen Wert braucht; an anderen Tagen ist er freiwillig. Ändern oder nachtragen kannst du ihn jederzeit im Verlauf.</p>
-       <h4>Der Vergleich</h4>
+       <h3>Der Vergleich</h3>
        <p style="font-size:13.5px;margin:0">Verglichen wird der Morgen nach dem letzten Trainingstag mit dem Morgen nach dem vorletzten. Steigt der Schmerz um zwei Punkte, heißt das Zurücknehmen. Das ist die 24-Stunden-Regel in Zahlen.</p>
-       <h4>Die Rangfolge</h4>
+       <h3>Die Rangfolge</h3>
        <p style="font-size:13.5px;margin:0">Schmerz schlägt Anstrengung. Liegt der Schmerz über 3/10, heißt das Zurücknehmen – auch wenn sich der letzte Satz leicht angefühlt hat. Die Anstrengung wird erst zum Steuerungsmaß, wenn der Schmerz im grünen Bereich liegt.</p>
-       <h4>Warnzeichen</h4>
+       <h3>Warnzeichen</h3>
        <p style="font-size:13.5px;margin:0">Für die rote Karte „Das gehört ärztlich angeschaut“ zählt jeder Morgen der letzten drei Wochen – auch nach Ruhetagen. Gerade in einer Trainingspause zeigt nur der Morgen, ob es schlechter wird.</p>`)}</div>
     </div>
     <div class="log-out">
@@ -1649,6 +1721,12 @@ function tabLog() {
       <ul>${a.reasons.map(r => `<li>${esc(r)}</li>`).join('')}</ul>
       <p class="todo">${esc(a.todo)}</p>
     </div></div>
+    <div class="o7b">${backupFaellig() ? `<div class="infobox"><b>Sicherung fällig.</b> ${backupAge() === null
+        ? 'Von diesen Daten gibt es noch keine Kopie außerhalb dieses Geräts.'
+        : `Die letzte ist ${backupAge()} ${backupAge() === 1 ? 'Tag' : 'Tage'} her (${esc(fmtWhen(state.meta.lastBackup))}).`}
+      <div class="btn-row" style="margin-top:8px"><button class="btn small" data-act="backupFile">Jetzt als Datei sichern</button><span class="hint" style="margin:0">Landet in „Dateien“ bzw. im Download-Ordner.</span></div>
+      ${uiFlash && uiFlash.where === 'backup' ? `<p class="${uiFlash.ok ? 'note' : 'err'}" style="margin-top:8px">${esc(uiFlash.text)}</p>` : ''}
+    </div>` : uiFlash && uiFlash.where === 'backup' ? `<div class="${uiFlash.ok ? 'infobox' : 'flag'}">${esc(uiFlash.text)}</div>` : ''}</div>
     <div class="o11"><div class="card">
       <h2>Verlauf</h2>
       <p class="lede">${state.entries.length || state.mornings.length
@@ -1681,7 +1759,7 @@ function tabData() {
       } Beim Einspielen werden Einheiten mit gleicher Kennung und Morgen mit gleichem Datum ersetzt, alles andere kommt dazu – nichts wird gelöscht. Sicherungen aus der Zeit vor der Umstellung lassen sich ebenfalls einspielen.</p>
       ${importMsg ? `<p class="${importMsg.ok ? 'note' : 'err'}" style="margin-top:6px">${esc(importMsg.text)}</p>` : ''}
 
-      <h4 style="margin:20px 0 6px;font-size:12px;color:var(--ink-soft);font-weight:600;letter-spacing:.04em;text-transform:uppercase">Dauerhafter Speicher</h4>
+      <h3 class="kicker">Dauerhafter Speicher</h3>
       ${state.persist === true
         ? '<p class="note" style="margin-top:0">Der Browser hat zugesagt, diese Daten nicht von selbst zu löschen. Das schützt nicht davor, dass du die Browserdaten von Hand löschst – dafür sind die Sicherungen da.</p>'
         : state.persist === false
@@ -1691,7 +1769,7 @@ function tabData() {
         ? '<p class="note" style="margin-top:0">Dieser Browser kennt die Anfrage nach dauerhaftem Speicher nicht. Sichere entsprechend häufiger.</p>'
         : '<p class="note" style="margin-top:0">Wird geprüft …</p>'}
 
-      <h4 style="margin:20px 0 6px;font-size:12px;color:var(--ink-soft);font-weight:600;letter-spacing:.04em;text-transform:uppercase">Als Text statt als Datei</h4>
+      <h3 class="kicker">Als Text statt als Datei</h3>
       <p class="hint">Falls der Dateiweg auf deinem Gerät klemmt.</p>
       <div class="btn-row">
         <button class="btn quiet small" data-act="backup">Text erzeugen</button>
@@ -1739,7 +1817,7 @@ function tabData() {
     </div></div>
     <div class="dg-l"><div class="card">
       <h2>Alles löschen</h2>
-      <p class="lede">Setzt das Logbuch zurück. Der Stand wandert vorher in den Papierkorb im Sicherheitsnetz.</p>
+      <p class="lede">Setzt das Logbuch zurück und entfernt ältere Kopien auf diesem Gerät. Der aktuelle Stand wandert vorher in den Papierkorb im Sicherheitsnetz.</p>
       <button class="btn quiet small" data-act="reset">Alles löschen</button>
     </div></div>
   </div>`;
@@ -1757,7 +1835,7 @@ function crashHtml(err) {
   return `<div class="flag">
       <b>Die Ansicht konnte nicht aufgebaut werden</b>
       <div>Deine Daten sind nicht verloren. Kopier den Text unten und leg ihn beiseite – damit kannst du nach „Alles löschen“ alles wieder einspielen.</div>
-      <div style="margin-top:8px;font-family:ui-monospace,Menlo,monospace;font-size:12px;background:#fff;border-radius:5px;padding:8px 10px">${esc(err && err.message ? err.message : String(err))}</div>
+      <div style="margin-top:8px;font-family:ui-monospace,Menlo,monospace;font-size:12px;background:var(--card);border-radius:5px;padding:8px 10px">${esc(err && err.message ? err.message : String(err))}</div>
     </div>
     <div class="card">
       <h2>Rohdaten sichern</h2>
@@ -1767,9 +1845,35 @@ function crashHtml(err) {
     </div>`;
 }
 
+// Fokus über den Neuaufbau retten: das aktive Element an seinen Datenattributen wiederfinden
+function focusKeyOf(el) {
+  if (!el || el === document.body || !document.getElementById('root').contains(el)) return null;
+  if (el.id) return '#' + CSS.escape(el.id);
+  if (el.classList.contains('chart-svg')) return '.chart-svg';
+  const attrs = ['data-tab','data-act','data-scale','data-seg','data-extoggle','data-acc','data-val','data-id','data-date','data-snap','data-type','data-range','data-sc','data-where','data-path','data-mpath','data-epath'];
+  const parts = attrs.filter(a => el.hasAttribute(a)).map(a => `[${a}="${CSS.escape(el.getAttribute(a))}"]`);
+  return parts.length ? parts.join('') : null;
+}
+function focusEl(sel) {
+  const el = sel && document.querySelector(sel);
+  if (el) el.focus({ preventScroll: true });
+}
+// Ansage für Hilfstechnik – die Seite wird komplett neu aufgebaut, sonst hört niemand die Rückmeldung
+function announce(text) {
+  const l = document.getElementById('live');
+  if (!l) return;
+  l.textContent = '';
+  setTimeout(() => { l.textContent = text; }, 40);
+}
+function updateTabFade(strip) {
+  strip.classList.toggle('scrollable', strip.scrollWidth > strip.clientWidth + 1);
+  strip.classList.toggle('at-end', strip.scrollLeft + strip.clientWidth >= strip.scrollWidth - 2);
+}
+
 function render() {
   if (!state.loaded) return;
   const tabScroll = document.querySelector('.tabs')?.scrollLeft || 0;
+  const focusKey = focusKeyOf(document.activeElement);
   let body;
   try {
     body = tab === 'plan' ? tabPlan() : tab === 'ex' ? tabEx() : tab === 'supp' ? tabSupp() : tab === 'scale' ? tabScales() : tab === 'data' ? tabData() : tabLog();
@@ -1777,20 +1881,20 @@ function render() {
     body = crashHtml(err);
   }
   document.getElementById('root').innerHTML = `<div class="wrap">
-    <div class="masthead">
+    <header class="masthead">
       <h1>Sehnenlog</h1>
       <p>Plan, Übungen und Trainingstagebuch für die Tibialis-posterior-Sehne. Offline-Version, gespeichert auf diesem Gerät.</p>
-    </div>
-    <div class="tabs" role="tablist">
-      ${TABS.map(([v,l]) => `<button role="tab" data-tab="${v}" aria-selected="${tab===v}">${l}</button>`).join('')}
-    </div>
+    </header>
+    <nav class="tabs" role="tablist" aria-label="Bereiche">
+      ${TABS.map(([v,l]) => `<button role="tab" id="tab-${v}" aria-controls="panel" data-tab="${v}" aria-selected="${tab===v}" tabindex="${tab===v ? 0 : -1}">${l}</button>`).join('')}
+    </nav>
     ${state.error ? `<div class="flag">
       <b>Konnte nicht gespeichert werden</b>
       <div>Deine Daten sind in dieser Sitzung vorhanden – aber beim Neuladen sind sie weg. Erzeug dir jetzt eine Sicherung, damit nichts verlorengeht.</div>
-      <div style="margin-top:8px;font-family:ui-monospace,Menlo,monospace;font-size:12px;background:#fff;border-radius:5px;padding:8px 10px">${esc(state.error)}</div>
+      <div style="margin-top:8px;font-family:ui-monospace,Menlo,monospace;font-size:12px;background:var(--card);border-radius:5px;padding:8px 10px">${esc(state.error)}</div>
       <div class="btn-row" style="margin-top:8px"><button class="btn small" data-act="backupFile">Sicherung als Datei</button><button class="btn quiet small" data-act="retrySave">Speichern erneut versuchen</button></div>
     </div>` : ''}
-    ${body}
+    <main id="panel" role="tabpanel" aria-labelledby="tab-${tab}">${body}</main>
   </div>`;
   // Das Diagramm rechnet in echten Pixeln – hat sich die Breite beim Aufbau verschoben, neu zeichnen
   if (tab === 'log' && chartOutOfDate()) updateChart();
@@ -1805,6 +1909,8 @@ function render() {
       else if (r.right > s.right) strip.scrollLeft += r.right - s.right + 12;
     }
   }
+  if (strip) updateTabFade(strip);
+  focusEl(focusKey);
 }
 
 /* ============================================ Sicherung */
@@ -1875,6 +1981,7 @@ async function applyBackup(raw) {
     `Einheiten: ${neu} neu, ${ersetzt} aktualisiert. Morgen: ${mNeu} neu, ${mErsetzt} aktualisiert. Insgesamt ${state.entries.length} ${state.entries.length === 1 ? 'Einheit' : 'Einheiten'}.`
     + (n.dropped ? ` ${n.dropped} unvollständige ${n.dropped === 1 ? 'Zeile wurde' : 'Zeilen wurden'} übersprungen.` : '')
     + (n.doppelt ? ` Bei ${n.doppelt} Morgen gab es zwei Werte – übernommen wurde der Morgen-Check, der zweite steht in der Notiz.` : '') };
+  announce(importMsg.text);
   render();
 }
 
@@ -1940,6 +2047,7 @@ document.addEventListener('click', async (ev) => {
     formOpen = true;
     render();
     document.getElementById('form')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    focusEl('#form h2');
     return;
   }
   if (act === 'saveEntry') {
@@ -1969,14 +2077,16 @@ document.addEventListener('click', async (ev) => {
     // Erst nach dem Speichern bestätigen – ein Speicherfehler zeigt sonst „Gespeichert“ neben der Fehlerkarte
     if (text === null) uiFlash = { where: 'entry', ok: false, text: 'Diese Einheit gibt es nicht mehr – die Änderung wurde nicht gespeichert.' };
     else if (!state.error) uiFlash = { where: 'entry', ok: true, text };
+    if (uiFlash) announce(uiFlash.text);
     render();
-    // Das Formular klappt zu – die Bestätigung im Blick behalten
+    // Das Formular klappt zu – die Bestätigung im Blick behalten, Fokus auf den Kartentitel
     document.getElementById('form')?.scrollIntoView({ block: 'nearest' });
+    focusEl('#form h2');
     return;
   }
   if (act === 'edit') {
     const e = state.entries.find(x => x.id === t.dataset.id);
-    if (e) { editingId = e.id; draft = draftFromEntry(e); formOpen = true; render(); document.getElementById('form')?.scrollIntoView({ block:'start', behavior:'smooth' }); }
+    if (e) { editingId = e.id; draft = draftFromEntry(e); formOpen = true; render(); document.getElementById('form')?.scrollIntoView({ block:'start', behavior:'smooth' }); focusEl('#form h2'); }
     return;
   }
   if (act === 'cancelEdit') { editingId = null; draft = newDraft(); formOpen = false; whenOpen = false; return render(); }
@@ -1989,23 +2099,25 @@ document.addEventListener('click', async (ev) => {
     morningDraft = {}; morningOpen = false; await save();
     const st = STIFF.find(x => x.v === m.stiff);
     const text = `Morgen vom ${fmt(date)} gespeichert: Schmerz ${m.pain}, Sehne steif ${st ? st.label : '–'}`;
-    if (!state.error) uiFlash = { where: 'morning', ok: true, text: text.endsWith('.') ? text : text + '.' };
-    return render();
+    if (!state.error) { uiFlash = { where: 'morning', ok: true, text: text.endsWith('.') ? text : text + '.' }; announce(uiFlash.text); }
+    render(); focusEl('#morning-flash');
+    return;
   }
   if (act === 'skipMorning') {
     const date = t.dataset.date;
     if (!isIsoDate(date)) return;
     upsertMorning(skippedMorning(date));
     morningDraft = {}; await save();
-    if (!state.error) uiFlash = { where: 'morning', ok: true, text: `Morgen vom ${fmt(date)} übersprungen – im Verlauf lässt er sich nachtragen.` };
-    return render();
+    if (!state.error) { uiFlash = { where: 'morning', ok: true, text: `Morgen vom ${fmt(date)} übersprungen – im Verlauf lässt er sich nachtragen.` }; announce(uiFlash.text); }
+    render(); focusEl('#morning-flash');
+    return;
   }
   if (act === 'openMorning') { morningOpen = true; return render(); }
   if (act === 'closeMorning') { morningOpen = false; morningDraft = {}; return render(); }
   if (act === 'editMorning') {
     const date = t.dataset.date, m = morningOf(date);
     mEdit = { date, pain: m && !m.skipped ? m.pain : null, stiff: m && !m.skipped ? m.stiff : null,
-      note: m ? m.note || '' : '', where: 'day' };
+      note: m ? m.note || '' : '', where: t.dataset.where || 'day' };
     return render();
   }
   if (act === 'addMorning') {
@@ -2017,7 +2129,9 @@ document.addEventListener('click', async (ev) => {
   if (act === 'saveMorningEdit') {
     if (!mEdit || !isIsoDate(mEdit.date) || mEdit.date > today() || mEdit.pain == null || !mEdit.stiff) return;
     upsertMorning(makeMorning(mEdit.date, mEdit.pain, mEdit.stiff, mEdit.note));
+    const gespeichert = mEdit.date;
     mEdit = null; await save();
+    announce(`Morgen vom ${fmt(gespeichert)} gespeichert.`);
   }
   if (act === 'cancelMorningEdit') { mEdit = null; return render(); }
   if (act === 'delMorning') {
@@ -2045,7 +2159,7 @@ document.addEventListener('click', async (ev) => {
     state.entries = state.entries.filter(x => x.id !== e.id);
     lastDeleted = e;
     await save();
-    if (!state.error) uiFlash = { where: 'history', ok: true, text: `Einheit vom ${fmt(e.date)} (${TYPES[e.type] ? TYPES[e.type].label : e.type}) gelöscht.` };
+    if (!state.error) { uiFlash = { where: 'history', ok: true, text: `Einheit vom ${fmt(e.date)} (${TYPES[e.type] ? TYPES[e.type].label : e.type}) gelöscht.` }; announce(uiFlash.text + ' Rückgängig ist möglich.'); }
     return render();
   }
   if (act === 'undoDel') {
@@ -2053,6 +2167,7 @@ document.addEventListener('click', async (ev) => {
     if (!state.entries.some(x => x.id === lastDeleted.id)) state.entries.push(lastDeleted);
     lastDeleted = null;
     await save();
+    announce('Einheit wiederhergestellt.');
     return;
   }
   if (act === 'export') { showExport = true; render(); document.getElementById('exportbox')?.scrollIntoView({block:'nearest'}); }
@@ -2061,7 +2176,7 @@ document.addEventListener('click', async (ev) => {
     if (box) {
       box.select();
       try { await navigator.clipboard.writeText(box.value); } catch (e) { document.execCommand('copy'); }
-      t.textContent = 'Kopiert'; setTimeout(() => { t.textContent = 'Kopieren'; }, 1600);
+      t.textContent = 'Kopiert'; announce('In die Zwischenablage kopiert.'); setTimeout(() => { t.textContent = 'Kopieren'; }, 1600);
     }
   }
   if (act === 'retrySave') { await save(); return; }
@@ -2089,19 +2204,24 @@ document.addEventListener('click', async (ev) => {
   }
   if (act === 'reset') {
     if (!state.entries.length && !state.mornings.length) return;
-    if (!confirm('Alle Einträge löschen?\n\nDer Stand wandert in den Papierkorb und lässt sich danach zurückholen – bis du ihn dort endgültig leerst.')) return;
+    if (!confirm('Alle Einträge löschen?\n\nDer Stand wandert in den Papierkorb und lässt sich danach zurückholen – bis du ihn dort endgültig leerst. Ältere Kopien auf diesem Gerät werden entfernt.')) return;
     await writeSnapshot(KEY_TRASH, packState());
     state.entries = []; state.mornings = []; mEdit = null; morningDraft = {}; state.dataNote = null;
     editingId = null; draft = newDraft(); formOpen = false; whenOpen = false; lastDeleted = null;
-    await save();
+    await save({ skipPrev: true });                                  // sonst läge das Gelöschte noch einmal im Vorgängerstand
+    await dropSnapshot(KEY_PREV);
+    for (const k of KEYS_ALT) { try { await window.storage.remove(k); } catch (e) {} }   // Kopien aus der Zeit vor der Umstellung
+    state.snapPrev = null;
     state.snapTrash = await readSnapshot(KEY_TRASH);
+    announce('Alle Einträge gelöscht. Der Stand liegt im Papierkorb.');
     return render();
   }
 
   if (act === 'backupFile') {
     const r = await saveBackupFile();
-    importMsg = r;
+    importMsg = tab === 'data' ? r : null;
     if (tab === 'log') uiFlash = { where: 'backup', ok: r.ok, text: r.text };
+    announce(r.text);
     return render();
   }
   if (act === 'restoreSnap') {
@@ -2199,6 +2319,25 @@ document.addEventListener('keydown', ev => {
   ev.preventDefault();
   chartShow(list[i]);
 });
+// Tabs: Pfeiltasten wechseln den Bereich (der gewählte Tab ist der einzige mit tabindex 0)
+document.addEventListener('keydown', ev => {
+  const b = ev.target && ev.target.closest ? ev.target.closest('.tabs [data-tab]') : null;
+  if (!b) return;
+  const i = TABS.findIndex(([v]) => v === tab);
+  let j = null;
+  if (ev.key === 'ArrowRight') j = (i + 1) % TABS.length;
+  else if (ev.key === 'ArrowLeft') j = (i - 1 + TABS.length) % TABS.length;
+  else if (ev.key === 'Home') j = 0;
+  else if (ev.key === 'End') j = TABS.length - 1;
+  if (j === null) return;
+  ev.preventDefault();
+  tab = TABS[j][0]; openAcc = null; scaleJump = null; render();
+  focusEl(`[data-tab="${tab}"]`);
+});
+document.addEventListener('scroll', ev => {
+  if (ev.target && ev.target.classList && ev.target.classList.contains('tabs')) updateTabFade(ev.target);
+}, true);
+
 // Nur bei geänderter Breite neu zeichnen – die Bildschirmtastatur ändert nur die Höhe
 let resizeTimer = null;
 window.addEventListener('resize', () => {
