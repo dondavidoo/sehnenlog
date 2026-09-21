@@ -79,7 +79,7 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
   .seg button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #fff; font-weight: 600; }
 
   input[type="text"], input[type="date"], input[type="time"], input[type="number"], textarea {
-    width: 100%; font-family: inherit; font-size: 15px; color: var(--ink);
+    width: 100%; font-family: inherit; font-size: 16px; color: var(--ink);   /* unter 16px zoomt iOS beim Fokussieren */
     padding: 9px 11px; border: 1px solid var(--rule); border-radius: 6px; background: #fff; }
   input[type="number"] { -moz-appearance: textfield; }
   textarea { resize: vertical; min-height: 58px; }
@@ -95,7 +95,7 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
   .exrow-dose { font-size: 11.5px; color: var(--ink-soft); white-space: nowrap; }
   .exrow-in { display: flex; gap: 7px; }
   .exrow-in > div { flex: 1; min-width: 0; }
-  .exrow-in input { padding: 7px 8px; font-size: 14px; text-align: center; }
+  .exrow-in input { padding: 7px 6px; font-size: 16px; text-align: center; }
   .exrow-in span { font-size: 11px; color: var(--ink-soft); display: block; text-align: center; margin-bottom: 2px; }
 
   .check { display: flex; align-items: flex-start; gap: 9px; font-size: 14px; cursor: pointer; margin-bottom: 10px; }
@@ -120,12 +120,12 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
   .row-main { flex: 1; min-width: 0; }
   .row-title { font-size: 14.5px; font-weight: 600; }
   .row-sub { font-size: 12.5px; color: var(--ink-soft); margin-top: 1px; }
-  .del { background: none; border: 0; cursor: pointer; color: var(--rule); font-size: 18px;
-    line-height: 1; padding: 4px 2px; flex-shrink: 0; font-family: inherit; }
-  .del:hover { color: var(--down); }
+  .del { background: none; border: 0; cursor: pointer; color: var(--ink-soft); font-size: 20px;
+    line-height: 1; padding: 6px 8px; min-width: 32px; min-height: 32px; border-radius: 6px; flex-shrink: 0; font-family: inherit; }
+  .del:hover { color: var(--down); background: var(--down-bg); }
   .rowbtns { display: flex; flex-direction: column; gap: 2px; flex-shrink: 0; }
-  .edit { background: none; border: 0; cursor: pointer; color: var(--ink-soft); font-size: 11.5px;
-    padding: 2px 3px; font-family: inherit; text-decoration: underline; }
+  .edit { background: none; border: 0; cursor: pointer; color: var(--ink-soft); font-size: 13px;
+    padding: 6px 8px; min-height: 32px; font-family: inherit; text-decoration: underline; }
   .edit:hover { color: var(--act); }
   .row.editing { background: #EAF1F3; border-radius: 6px; }
   .editbar { background: #EAF1F3; border: 1px solid #C4D7DD; border-radius: 7px;
@@ -185,6 +185,7 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
 
   .exportbox { width: 100%; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: 12px; line-height: 1.45; min-height: 150px; margin-top: 10px; }
+  @media (max-width: 700px) { .exportbox { font-size: 16px; } }
   .note { font-size: 12.5px; color: var(--ink-soft); margin-top: 14px; }
   .err { font-size: 13px; color: var(--down); margin-top: 8px; }
 
@@ -551,9 +552,9 @@ let openAcc = null;
 let scaleJump = null;   // { sc, from }: Sprung aus dem Formular in den Skalen-Tab und zurück
 let draft = newDraft();
 let morningDraft = {};
-let exportText = null;
+let showExport = false;   // Textfassung fürs Chat wird beim Rendern erzeugt – nie veraltet
 let editingId = null;
-let backupText = null;
+let showBackup = false;
 let importBuf = '';
 let importMsg = null;
 let morningOpen = false;   // freiwilliger Morgen: Eingabe aufgeklappt?
@@ -563,7 +564,8 @@ let histOpen = false;      // ältere Tage aufgeklappt?
 let chartRange = 28;       // 28 | 91 | 'all'
 let formOpen = false;      // „Einheit erfassen“ aufgeklappt?
 let whenOpen = false;      // Datum/Uhrzeit als Felder statt als eine Zeile?
-let uiFlash = null;        // kurze Rückmeldung { where:'entry'|'backup', ok, text } – verschwindet beim nächsten Tippen
+let uiFlash = null;        // kurze Rückmeldung { where:'entry'|'backup'|'morning'|'history', ok, text } – verschwindet beim nächsten Tippen
+let lastDeleted = null;    // zuletzt gelöschte Einheit – für „Rückgängig“ direkt nach dem Löschen
 
 function nowTime() { const d = new Date(); return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0'); }
 function today() {
@@ -624,9 +626,15 @@ function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;',
 // Ohne Kennung und Datum lässt sich ein Datensatz weder sortieren noch anzeigen –
 // er würde beim Rendern eine Ausnahme werfen und die App unbenutzbar machen.
 // Darum an jeder Außengrenze prüfen: beim Laden und beim Einspielen.
-const isIsoDate = d => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d);
-function validEntry(e) { return !!e && typeof e === 'object' && !!e.id && isIsoDate(e.date); }
-function validRest(r)  { return !!r && typeof r === 'object' && !!r.id && isIsoDate(r.date); }
+// Muster UND Kalender: „2026-13-01“ passt aufs Muster, würde aber jede Datumsrechnung werfen
+const isIsoDate = d => {
+  if (typeof d !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(d)) return false;
+  const t = new Date(d + 'T00:00:00Z');
+  return !isNaN(t) && t.toISOString().slice(0, 10) === d;
+};
+const hasId = x => (typeof x.id === 'string' && x.id.length > 0) || typeof x.id === 'number';
+function validEntry(e) { return !!e && typeof e === 'object' && hasId(e) && isIsoDate(e.date); }
+const validRest = validEntry;
 function validMorning(m) {
   return !!m && typeof m === 'object' && isIsoDate(m.date)
     && (m.skipped === true || (typeof m.pain === 'number' && m.pain >= 0 && m.pain <= 10));
@@ -644,12 +652,35 @@ function noteDropped(n) {
 
 // Ein Morgen je Kalendertag – an dem Tag, an dem du aufwachst.
 function makeMorning(date, pain, stiff, note) {
-  return { id: 'm' + date, date, pain, stiff: stiff || null, note: String(note || '').trim(), skipped: false };
+  return { id: 'm' + date, date, pain, stiff: asStiff(stiff), note: asStr(note).trim(), skipped: false };
 }
 function skippedMorning(date) { return { id: 'm' + date, date, pain: null, stiff: null, note: '', skipped: true }; }
-function stripEntry(e) {
+// Alles, was aus einer Sicherung kommt, wird hier auf die erwarteten Typen gebracht.
+// Sonst landet ein „time“ als Attribut-Injektion im Formular oder ein null in summary().
+const asStr = v => (typeof v === 'string' || typeof v === 'number') ? String(v) : '';
+const asScore = v => (typeof v === 'number' && v >= 0 && v <= 10) ? v : null;
+const asStiff = v => STIFF.some(s => s.v === v) ? v : null;
+function cleanEntry(e) {
   const c = { ...e };
   delete c.painMorning; delete c.stiffness; delete c.morningNote; delete c.skipped;
+  c.id = String(c.id);
+  c.time = /^\d{2}:\d{2}$/.test(asStr(c.time)) ? asStr(c.time) : '';
+  c.type = asStr(c.type);
+  c.note = asStr(c.note);
+  if (c.detail != null) c.detail = asStr(c.detail);
+  c.painDuring = asScore(c.painDuring);
+  c.effort = asScore(c.effort);
+  c.collagen = !!c.collagen; c.progressed = !!c.progressed;
+  const d = (c.details && typeof c.details === 'object') ? c.details : {};
+  const det = {};
+  ['min', 'pace', 'hr', 'intervals', 'what'].forEach(k => { if (k in d) det[k] = asStr(d[k]); });
+  if (d.ex && typeof d.ex === 'object') {
+    det.ex = {};
+    Object.entries(d.ex).forEach(([k, v]) => {
+      if (v && typeof v === 'object') det.ex[k] = { sets: asStr(v.sets), reps: asStr(v.reps), weight: asStr(v.weight) };
+    });
+  }
+  c.details = det;
   return c;
 }
 
@@ -677,7 +708,7 @@ function fromLegacy(rawEntries, rawRest) {
       if (extra) cur.note = [cur.note, 'zweiter Eintrag: ' + extra].filter(Boolean).join(' · ');
     } else map.set(x.date, makeMorning(x.date, x.pain, x.stiff, x.note));
   });
-  return { entries: e.ok.map(stripEntry), mornings: [...map.values()], dropped, doppelt, legacy: true };
+  return { entries: e.ok.map(cleanEntry), mornings: [...map.values()], dropped, doppelt, legacy: true };
 }
 
 // Nimmt jedes bekannte Format an (v1–v4) und liefert den aktuellen Aufbau – oder null.
@@ -688,7 +719,7 @@ function normalize(p) {
   const e = keepValid(p.entries, validEntry), m = keepValid(p.mornings, validMorning);
   const map = new Map();
   m.ok.forEach(x => map.set(x.date, x.skipped ? skippedMorning(x.date) : makeMorning(x.date, x.pain, x.stiff, x.note)));
-  return { entries: e.ok.map(stripEntry), mornings: [...map.values()], dropped: e.dropped + m.dropped, doppelt: 0, legacy: false };
+  return { entries: e.ok.map(cleanEntry), mornings: [...map.values()], dropped: e.dropped + m.dropped, doppelt: 0, legacy: false };
 }
 
 function adopt(n) {
@@ -816,7 +847,7 @@ function summary(e) {
   const k = TYPES[e.type] ? TYPES[e.type].kind : null;
   if (k === 'ex') {
     const list = Object.entries(d.ex || {}).map(([id,v]) => {
-      const ex = EX[id]; if (!ex) return null;
+      const ex = EX[id]; if (!ex || !v || typeof v !== 'object') return null;
       const b = [];
       if (v.sets) b.push(v.sets + '×');
       if (v.reps) b.push(v.reps + ' ' + UNIT_LABEL[ex.unit]);
@@ -849,6 +880,7 @@ function collagenGap() {
   if (isNaN(mine)) return null;
   let best = null;
   state.entries.forEach(e => {
+    if (e.id === editingId) return;   // die eigene Dosis ist keine zweite Dosis
     if (!e.collagen || !e.time || !e.date) return;
     const t = new Date(e.date + 'T' + e.time);
     if (isNaN(t)) return;
@@ -918,7 +950,7 @@ function assess() {
   else if (stiffMins > 30) amber.push('Die Sehne war morgens 30 bis 45 Minuten steif.');
 
   const recent = done.slice(-3);
-  const calm = recent.length === 3 && recent.every(d => d.painDuring <= 3)
+  const calm = recent.length === 3 && recent.every(d => typeof d.painDuring === 'number' && d.painDuring <= 3)
     && recent.every(d => { const s = STIFF.find(x => x.v === d.stiffness); return !s || s.mins <= 30; })
     && recent[2].painMorning <= recent[0].painMorning;
 
@@ -1006,8 +1038,11 @@ function segHtml(name, options, value) {
   return '<div class="seg">' + options.map(o =>
     `<button type="button" data-seg="${name}" data-val="${o.v}" aria-pressed="${value===o.v}">${esc(o.label)}</button>`).join('') + '</div>';
 }
-function num(path, val, ph) {
-  return `<input type="number" inputmode="numeric" data-path="${path}" value="${esc(val)}" placeholder="${esc(ph||'')}">`;
+function num(path, val, ph, decimal) {
+  // Dezimalwerte (kg) als Textfeld mit Dezimaltastatur: type="number" verwirft „12,5“ je nach Browser
+  return decimal
+    ? `<input type="text" inputmode="decimal" data-path="${path}" value="${esc(val)}" placeholder="${esc(ph||'')}">`
+    : `<input type="number" inputmode="numeric" min="0" data-path="${path}" value="${esc(val)}" placeholder="${esc(ph||'')}">`;
 }
 function acc(id, name, meta, bodyHtml) {
   const open = openAcc === id;
@@ -1037,7 +1072,7 @@ function exPickerHtml() {
         <div class="exrow-in">
           <div><span>Sätze</span>${num(`ex.${id}.sets`, v.sets, '3')}</div>
           <div><span>${UNIT_LABEL[ex.unit]}</span>${num(`ex.${id}.reps`, v.reps, ex.unit==='sek'?'30':'12')}</div>
-          ${ex.unit === 'wdh' ? `<div><span>kg</span>${num(`ex.${id}.weight`, v.weight, '–')}</div>` : ''}
+          ${ex.unit === 'wdh' ? `<div><span>kg</span>${num(`ex.${id}.weight`, v.weight, '12,5', true)}</div>` : ''}
         </div></div>`;
     });
     h += '</div>';
@@ -1396,7 +1431,11 @@ function morningCardHtml(mt) {
                  : '<button class="btn quiet small" data-act="closeMorning">Abbrechen</button>'}
         ${mt.left > 0 ? `<span class="hint" style="margin:0">Danach noch ${mt.left} Morgen offen.</span>` : ''}
       </div>
+      ${ok ? '' : `<p class="hint" style="margin-top:8px">Es fehlt noch: ${esc(missingMorning(morningDraft))}.</p>`}
     </div>`;
+}
+function missingMorning(d) {
+  return [d.pain == null ? 'der Schmerzwert' : '', d.stiff ? '' : 'die Steifigkeit'].filter(Boolean).join(' und ');
 }
 
 // Morgen ändern oder nachtragen – im Verlauf, direkt am Tag oder mit frei wählbarem Datum
@@ -1416,6 +1455,7 @@ function morningEditorHtml() {
         <button class="btn quiet small" data-act="cancelMorningEdit">Abbrechen</button>
         ${!frei && cur ? '<button type="button" class="edit" data-act="delMorning" style="margin-left:auto">Morgenwert entfernen</button>' : ''}
       </div>
+      ${ok || zukunft || !isIsoDate(d.date) ? '' : `<p class="hint" style="margin-top:8px">Es fehlt noch: ${esc(missingMorning(d))}.</p>`}
     </div>`;
 }
 
@@ -1496,7 +1536,7 @@ function formClosedHtml() {
   const last = sorted().slice(-1)[0];
   return `<div class="card" id="form">
       <h2>Einheit erfassen</h2>
-      ${uiFlash && uiFlash.where === 'entry' ? `<p class="flash">${esc(uiFlash.text)}</p>` : ''}
+      ${uiFlash && uiFlash.where === 'entry' ? `<p class="${uiFlash.ok ? 'flash' : 'err'}" style="margin:0 0 12px">${esc(uiFlash.text)}</p>` : ''}
       <div class="seg type-pick">${Object.entries(TYPES).map(([v, t]) =>
         `<button type="button" data-act="openForm" data-type="${v}">${esc(t.label)}</button>`).join('')}</div>
       ${last ? `<p class="hint" style="margin:10px 0 0">Zuletzt: ${esc(TYPES[last.type] ? TYPES[last.type].label : last.type)}, ${esc(relDay(last.date))}${last.time ? ' ' + esc(last.time) : ''}</p>` : ''}
@@ -1518,12 +1558,6 @@ function tabLog() {
     <div class="o2">${state.migrationNote ? `<div class="infobox"><b>Umgestellt.</b> ${esc(state.migrationNote)}
       <div style="margin-top:8px"><button type="button" class="btn quiet small" data-act="dismissMigration">Verstanden</button></div>
     </div>` : ''}</div>
-    <div class="o4">${state.error ? `<div class="flag">
-      <b>Konnte nicht gespeichert werden</b>
-      <div>Deine Daten sind in dieser Sitzung vorhanden und werden unten angezeigt – aber beim Neuladen sind sie weg. Erzeug dir jetzt eine Sicherung, damit nichts verlorengeht.</div>
-      <div style="margin-top:8px;font-family:ui-monospace,Menlo,monospace;font-size:12px;background:#fff;border-radius:5px;padding:8px 10px">${esc(state.error)}</div>
-      <div class="btn-row" style="margin-top:8px"><button class="btn small" data-act="backupFile">Sicherung als Datei</button><button class="btn quiet small" data-act="retrySave">Speichern erneut versuchen</button></div>
-    </div>` : ''}</div>
     <div class="o5">${state.dataNote ? `<div class="warnbox"><b>Unvollständige Daten übersprungen.</b> ${esc(state.dataNote)}</div>` : ''}</div>
     <div class="o6">${backupFaellig() ? `<div class="card pending">
       <h2>Sicherung fällig</h2>
@@ -1538,7 +1572,7 @@ function tabLog() {
     </div>` : uiFlash && uiFlash.where === 'backup' ? `<div class="infobox">${esc(uiFlash.text)}</div>` : ''}</div>
     </div>
     <div class="log-in">
-    <div class="o3">${mt && mt.due ? morningCardHtml(mt) : ''}</div>
+    <div class="o3">${uiFlash && uiFlash.where === 'morning' ? `<div class="infobox">${esc(uiFlash.text)}</div>` : ''}${mt && mt.due ? morningCardHtml(mt) : ''}</div>
     <div class="o8">${mt && !mt.due ? morningCardHtml(mt) : ''}</div>
     <div class="o9">${!formOpen && !editingId ? formClosedHtml() : `<div class="card" id="form">
       <h2>${editingId ? 'Einheit bearbeiten' : 'Einheit erfassen'}</h2>
@@ -1555,8 +1589,8 @@ function tabLog() {
         <span>Heute, <b>${esc(draft.time || '–')}</b> Uhr</span>
         <button type="button" class="sc-link" data-act="editWhen">Datum oder Uhrzeit ändern</button>
       </div>` : `<div class="field"><div class="grid2">
-        <div><span class="sublabel">Datum</span><input type="date" value="${draft.date}" data-path="date"></div>
-        <div><span class="sublabel">Startzeit</span><input type="time" value="${draft.time}" data-path="time"></div>
+        <div><span class="sublabel">Datum</span><input type="date" value="${esc(draft.date)}" max="${today()}" data-path="date"></div>
+        <div><span class="sublabel">Startzeit</span><input type="time" value="${esc(draft.time)}" data-path="time"></div>
       </div>
       ${draft.date !== today() ? `<p class="hint" style="margin:7px 0 0">Der Eintrag steht nicht auf heute (${esc(weekday(today()))}, ${fmt(today())}). <button type="button" class="btn quiet small" style="padding:4px 9px;margin-left:4px" data-act="setToday">Auf heute setzen</button></p>` : ''}</div>`}
 
@@ -1590,10 +1624,10 @@ function tabLog() {
       </div>
 
       <div class="btn-row">
-        <button class="btn" data-act="saveEntry" ${draft.painDuring == null ? 'disabled' : ''}>${editingId ? 'Änderungen speichern' : 'Einheit speichern'}</button>
+        <button class="btn" data-act="saveEntry" ${draft.painDuring == null || !isIsoDate(draft.date) ? 'disabled' : ''}>${editingId ? 'Änderungen speichern' : 'Einheit speichern'}</button>
         <button class="btn quiet" data-act="cancelEdit">Abbrechen</button>
       </div>
-      ${draft.painDuring == null ? '<p class="hint" style="margin-top:8px">Der Schmerzwert fehlt noch.</p>' : ''}
+      ${draft.painDuring == null ? '<p class="hint" style="margin-top:8px">Der Schmerzwert fehlt noch.</p>' : !isIsoDate(draft.date) ? '<p class="hint" style="margin-top:8px">Das Datum fehlt oder ist ungültig.</p>' : ''}
 
     </div>`}</div>
     <div class="o10">${acc('howto', 'Wie die Bewertung zustande kommt', 'Erklärung – keine Daten',
@@ -1620,6 +1654,7 @@ function tabLog() {
       <p class="lede">${state.entries.length || state.mornings.length
         ? `${state.entries.length} ${state.entries.length === 1 ? 'Einheit' : 'Einheiten'} und ${state.mornings.filter(m => !m.skipped).length} Morgen erfasst.`
         : 'Noch nichts erfasst.'}</p>
+      ${uiFlash && uiFlash.where === 'history' ? `<div class="infobox" style="margin:0 0 12px">${esc(uiFlash.text)}${lastDeleted ? ' <button type="button" class="sc-link" data-act="undoDel">Rückgängig</button>' : ''}</div>` : ''}
       <div id="chartbox">${chartInnerHtml()}</div>
       ${historyHtml()}
       ${!state.entries.length && !state.mornings.length ? '<p class="empty">Der erste Eintrag macht noch keine Aussage. Ab dem zweiten bewerteten Trainingstag wird es aussagekräftig.</p>' : ''}
@@ -1660,9 +1695,9 @@ function tabData() {
       <p class="hint">Falls der Dateiweg auf deinem Gerät klemmt.</p>
       <div class="btn-row">
         <button class="btn quiet small" data-act="backup">Text erzeugen</button>
-        ${backupText ? '<button class="btn quiet small" data-act="copyBackup">Kopieren</button>' : ''}
+        ${showBackup ? '<button class="btn quiet small" data-act="copyBackup">Kopieren</button>' : ''}
       </div>
-      ${backupText ? `<textarea class="exportbox" readonly id="backupbox">${esc(backupText)}</textarea>` : ''}
+      ${showBackup ? `<textarea class="exportbox" readonly id="backupbox">${esc(backupPayload())}</textarea>` : ''}
       <div class="field" style="margin-top:14px">
         <label for="impbox">Text einspielen</label>
         <textarea class="exportbox" id="impbox" placeholder="Hier den kopierten Sicherungstext einfügen">${esc(importBuf)}</textarea>
@@ -1674,9 +1709,9 @@ function tabData() {
       <p class="lede">Erzeugt eine Textfassung deiner Daten, die du in den Chat kopieren kannst.</p>
       <div class="btn-row">
         <button class="btn ghost" data-act="export">Daten als Text erzeugen</button>
-        ${exportText ? '<button class="btn quiet small" data-act="copy">Kopieren</button>' : ''}
+        ${showExport ? '<button class="btn quiet small" data-act="copy">Kopieren</button>' : ''}
       </div>
-      ${exportText ? `<textarea class="exportbox" readonly id="exportbox">${esc(exportText)}</textarea>` : ''}
+      ${showExport ? `<textarea class="exportbox" readonly id="exportbox">${esc(buildExport())}</textarea>` : ''}
       <p class="note">Diese Version speichert direkt auf diesem Gerät. Die Daten verlassen es nicht und bleiben erhalten, wenn du den Browser schließt. Löschst du die Browserdaten, sind sie weg – zieh alle paar Wochen eine Sicherung.</p>
     </div></div>
     <div class="dg-n"><div class="card">
@@ -1749,6 +1784,12 @@ function render() {
     <div class="tabs" role="tablist">
       ${TABS.map(([v,l]) => `<button role="tab" data-tab="${v}" aria-selected="${tab===v}">${l}</button>`).join('')}
     </div>
+    ${state.error ? `<div class="flag">
+      <b>Konnte nicht gespeichert werden</b>
+      <div>Deine Daten sind in dieser Sitzung vorhanden – aber beim Neuladen sind sie weg. Erzeug dir jetzt eine Sicherung, damit nichts verlorengeht.</div>
+      <div style="margin-top:8px;font-family:ui-monospace,Menlo,monospace;font-size:12px;background:#fff;border-radius:5px;padding:8px 10px">${esc(state.error)}</div>
+      <div class="btn-row" style="margin-top:8px"><button class="btn small" data-act="backupFile">Sicherung als Datei</button><button class="btn quiet small" data-act="retrySave">Speichern erneut versuchen</button></div>
+    </div>` : ''}
     ${body}
   </div>`;
   // Das Diagramm rechnet in echten Pixeln – hat sich die Breite beim Aufbau verschoben, neu zeichnen
@@ -1827,12 +1868,14 @@ async function applyBackup(raw) {
     else if (m.skipped && !cur.skipped) { /* einen echten Wert nicht durch „übersprungen“ ersetzen */ }
     else { upsertMorning(m); mErsetzt++; }
   });
-  importBuf = ''; exportText = null; state.dataNote = null; mEdit = null;
-  importMsg = { ok:true, text:
+  importBuf = ''; state.dataNote = null; mEdit = null;
+  editingId = null; draft = newDraft(); formOpen = false; whenOpen = false;
+  await save();
+  importMsg = { ok:!state.error, text: state.error ? 'Nicht gespeichert – siehe Fehlermeldung oben.' :
     `Einheiten: ${neu} neu, ${ersetzt} aktualisiert. Morgen: ${mNeu} neu, ${mErsetzt} aktualisiert. Insgesamt ${state.entries.length} ${state.entries.length === 1 ? 'Einheit' : 'Einheiten'}.`
     + (n.dropped ? ` ${n.dropped} unvollständige ${n.dropped === 1 ? 'Zeile wurde' : 'Zeilen wurden'} übersprungen.` : '')
     + (n.doppelt ? ` Bei ${n.doppelt} Morgen gab es zwei Werte – übernommen wurde der Morgen-Check, der zweite steht in der Notiz.` : '') };
-  await save();
+  render();
 }
 
 /* ============================================ Events */
@@ -1907,20 +1950,26 @@ document.addEventListener('click', async (ev) => {
       painDuring:draft.painDuring, effort: draft.type === 'kraft' ? draft.effort : null,
       collagen:draft.collagen, progressed:draft.progressed, note:draft.note.trim() };
 
+    if (base.painDuring == null || !isIsoDate(base.date)) return;   // der Knopf ist dann ohnehin gesperrt
     const art = TYPES[base.type] ? TYPES[base.type].label : base.type;
     const wann = `${relDay(base.date)}${base.time ? ' ' + base.time : ''}`;
+    let text;
     if (editingId) {
       // Morgenwerte hängen nicht mehr an der Einheit – Umdatieren ist deshalb unkritisch
       const e = state.entries.find(x => x.id === editingId);
-      if (e) Object.assign(e, base);
+      if (e) { Object.assign(e, base); text = `Änderung gespeichert: ${art}, ${wann}.`; }
+      else text = null;   // die Einheit gibt es nicht mehr (gelöscht, zurückgeholt, ersetzt)
       editingId = null;
-      uiFlash = { where: 'entry', ok: true, text: `Änderung gespeichert: ${art}, ${wann}.` };
     } else {
       state.entries.push({ id:'e'+Date.now(), ...base });
-      uiFlash = { where: 'entry', ok: true, text: `Gespeichert: ${art}, ${wann}.` };
+      text = `Gespeichert: ${art}, ${wann}.`;
     }
-    draft = newDraft(); formOpen = false; whenOpen = false; exportText = null;
+    draft = newDraft(); formOpen = false; whenOpen = false;
     await save();
+    // Erst nach dem Speichern bestätigen – ein Speicherfehler zeigt sonst „Gespeichert“ neben der Fehlerkarte
+    if (text === null) uiFlash = { where: 'entry', ok: false, text: 'Diese Einheit gibt es nicht mehr – die Änderung wurde nicht gespeichert.' };
+    else if (!state.error) uiFlash = { where: 'entry', ok: true, text };
+    render();
     // Das Formular klappt zu – die Bestätigung im Blick behalten
     document.getElementById('form')?.scrollIntoView({ block: 'nearest' });
     return;
@@ -1935,14 +1984,21 @@ document.addEventListener('click', async (ev) => {
   if (act === 'saveMorning') {
     const date = t.dataset.date;
     if (!isIsoDate(date) || morningDraft.pain == null || !morningDraft.stiff) return;
-    upsertMorning(makeMorning(date, morningDraft.pain, morningDraft.stiff, morningDraft.note));
-    morningDraft = {}; morningOpen = false; exportText = null; await save();
+    const m = makeMorning(date, morningDraft.pain, morningDraft.stiff, morningDraft.note);
+    upsertMorning(m);
+    morningDraft = {}; morningOpen = false; await save();
+    const st = STIFF.find(x => x.v === m.stiff);
+    const text = `Morgen vom ${fmt(date)} gespeichert: Schmerz ${m.pain}, Sehne steif ${st ? st.label : '–'}`;
+    if (!state.error) uiFlash = { where: 'morning', ok: true, text: text.endsWith('.') ? text : text + '.' };
+    return render();
   }
   if (act === 'skipMorning') {
     const date = t.dataset.date;
     if (!isIsoDate(date)) return;
     upsertMorning(skippedMorning(date));
     morningDraft = {}; await save();
+    if (!state.error) uiFlash = { where: 'morning', ok: true, text: `Morgen vom ${fmt(date)} übersprungen – im Verlauf lässt er sich nachtragen.` };
+    return render();
   }
   if (act === 'openMorning') { morningOpen = true; return render(); }
   if (act === 'closeMorning') { morningOpen = false; morningDraft = {}; return render(); }
@@ -1961,14 +2017,14 @@ document.addEventListener('click', async (ev) => {
   if (act === 'saveMorningEdit') {
     if (!mEdit || !isIsoDate(mEdit.date) || mEdit.date > today() || mEdit.pain == null || !mEdit.stiff) return;
     upsertMorning(makeMorning(mEdit.date, mEdit.pain, mEdit.stiff, mEdit.note));
-    mEdit = null; exportText = null; await save();
+    mEdit = null; await save();
   }
   if (act === 'cancelMorningEdit') { mEdit = null; return render(); }
   if (act === 'delMorning') {
     if (!mEdit || !confirm(`Morgenwert vom ${fmt(mEdit.date)} entfernen?`)) return;
     const date = mEdit.date;
     state.mornings = state.mornings.filter(x => x.date !== date);
-    mEdit = null; exportText = null; await save();
+    mEdit = null; await save();
   }
   if (act === 'toggleDays') {
     histOpen = !histOpen;
@@ -1982,8 +2038,24 @@ document.addEventListener('click', async (ev) => {
   if (act === 'chartRange') { chartRange = t.dataset.range === 'all' ? 'all' : +t.dataset.range; updateChart(); return; }
   if (act === 'dismissMigration') { state.migrationNote = null; return render(); }
 
-  if (act === 'del') { if (editingId === t.dataset.id) { editingId = null; draft = newDraft(); formOpen = false; } state.entries = state.entries.filter(x => x.id !== t.dataset.id); exportText = null; await save(); }
-  if (act === 'export') { exportText = buildExport(); render(); document.getElementById('exportbox')?.scrollIntoView({block:'nearest'}); }
+  if (act === 'del') {
+    const e = state.entries.find(x => x.id === t.dataset.id);
+    if (!e) return;
+    if (editingId === e.id) { editingId = null; draft = newDraft(); formOpen = false; whenOpen = false; }
+    state.entries = state.entries.filter(x => x.id !== e.id);
+    lastDeleted = e;
+    await save();
+    if (!state.error) uiFlash = { where: 'history', ok: true, text: `Einheit vom ${fmt(e.date)} (${TYPES[e.type] ? TYPES[e.type].label : e.type}) gelöscht.` };
+    return render();
+  }
+  if (act === 'undoDel') {
+    if (!lastDeleted) return;
+    if (!state.entries.some(x => x.id === lastDeleted.id)) state.entries.push(lastDeleted);
+    lastDeleted = null;
+    await save();
+    return;
+  }
+  if (act === 'export') { showExport = true; render(); document.getElementById('exportbox')?.scrollIntoView({block:'nearest'}); }
   if (act === 'copy') {
     const box = document.getElementById('exportbox');
     if (box) {
@@ -1994,7 +2066,7 @@ document.addEventListener('click', async (ev) => {
   }
   if (act === 'retrySave') { await save(); return; }
   if (act === 'backup') {
-    backupText = backupPayload();
+    showBackup = true;
     importMsg = null; render();
     document.getElementById('backupbox')?.scrollIntoView({ block:'nearest' });
     return;
@@ -2019,7 +2091,8 @@ document.addEventListener('click', async (ev) => {
     if (!state.entries.length && !state.mornings.length) return;
     if (!confirm('Alle Einträge löschen?\n\nDer Stand wandert in den Papierkorb und lässt sich danach zurückholen – bis du ihn dort endgültig leerst.')) return;
     await writeSnapshot(KEY_TRASH, packState());
-    state.entries = []; state.mornings = []; mEdit = null; morningDraft = {}; exportText = null; state.dataNote = null;
+    state.entries = []; state.mornings = []; mEdit = null; morningDraft = {}; state.dataNote = null;
+    editingId = null; draft = newDraft(); formOpen = false; whenOpen = false; lastDeleted = null;
     await save();
     state.snapTrash = await readSnapshot(KEY_TRASH);
     return render();
@@ -2035,8 +2108,10 @@ document.addEventListener('click', async (ev) => {
     const snap = t.dataset.snap === 'trash' ? state.snapTrash : state.snapPrev;
     if (!snap) return;
     // save() legt den jetzigen Stand automatisch als Vorgänger ab – also umkehrbar
-    state.entries = snap.entries; state.mornings = snap.mornings; mEdit = null;
-    exportText = null; state.dataNote = null; importMsg = null;
+    // Kopieren – sonst teilen sich Verlauf und Papierkorb dieselben Objekte und jede Änderung landet im Papierkorb
+    state.entries = JSON.parse(JSON.stringify(snap.entries)); state.mornings = JSON.parse(JSON.stringify(snap.mornings)); mEdit = null;
+    state.dataNote = null; importMsg = null;
+    editingId = null; draft = newDraft(); formOpen = false; whenOpen = false; lastDeleted = null;
     await save();
     return render();
   }
