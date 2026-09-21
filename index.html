@@ -183,6 +183,24 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
   .prod-price { font-size: 13px; color: var(--act); font-weight: 600; margin: 2px 0 6px; }
   .prod-role { font-size: 13px; color: var(--ink-soft); }
 
+  /* Skalen */
+  .sc-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12.5px; color: var(--ink-soft); margin: 0; }
+  .sc-legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .sc-legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; }
+  .sc-list { margin-top: 2px; }
+  .sc-row { display: grid; grid-template-columns: var(--sc-w, 46px) 1fr; column-gap: 12px; align-items: baseline;
+    padding: 9px 0; border-bottom: 1px solid var(--rule-soft); font-size: 14px; }
+  .sc-list > .sc-row:last-child { border-bottom: 0; }
+  .sc-val { text-align: center; font-size: 13px; font-weight: 650; font-variant-numeric: tabular-nums;
+    padding: 2px 6px; border-radius: 5px; background: #EDF1F2; color: var(--ink); white-space: nowrap; }
+  .sc-val.up { background: var(--up-bg); color: var(--up); }
+  .sc-val.hold { background: var(--hold-bg); color: #9A6B12; }
+  .sc-val.down { background: var(--down-bg); color: var(--down); }
+  .sc-val.act { background: #EAF1F3; color: var(--act); }
+  .sc-link { background: none; border: 0; padding: 0; font: inherit; color: var(--act);
+    text-decoration: underline; cursor: pointer; white-space: nowrap; }
+  .card.sc-target { border-color: var(--act); }
+
   @media (max-width: 420px) {
     .scale button { height: 38px; font-size: 13px; }
     .verdict-word { font-size: 27px; }
@@ -380,11 +398,63 @@ const SUPPRULES = [
   ['Vitamin D3 + K2 gehört nicht dazu','Ersetzt kein Vitamin C. Fettlöslich – zu einer Mahlzeit, Tageszeit egal. Erst den 25-OH-Wert messen lassen, dann dosieren.']
 ];
 
+/* ============================================ Skalen */
+// Tonwerte folgen der Bewertung in assess()/redFlags():
+// up = erlaubt, hold = Warnstufe, down = „Zurücknehmen“ bzw. ärztlich abklären, act = Zielbereich.
+const SCALES = [
+  { id:'during', title:'Schmerz während der Einheit', sub:'Das Grundniveau während der Sätze, nicht der stärkste Moment.',
+    rule:'Liegt der höchste Wert eines Trainingstags über 3, lautet die Bewertung „Zurücknehmen“.',
+    rows:[
+      ['0',    'Nichts. Du spürst Muskelarbeit, aber nichts an der Sehne.', 'up'],
+      ['1',    'Die Struktur meldet sich. Kein Schmerz – Präsenz. „Ja, das ist sie.“', 'up'],
+      ['2',    'Leicht spürbar, aber nur wenn du darauf achtest. Zwischen den Sätzen weg.', 'up'],
+      ['3',    'Deutlich spürbar bei jeder Wiederholung. Du machst normal weiter, die Ausführung bleibt unverändert. Obergrenze.', 'up'],
+      ['4',    'Präsent und leicht störend. Du denkst daran statt an die Ausführung.', 'down'],
+      ['5',    'Störend. Du weichst aus – weniger tief, auf die Außenseite, schneller.', 'down'],
+      ['6',    'Deutlicher Schmerz. Du musst dich überwinden, den Satz zu beenden.', 'down'],
+      ['7',    'Du brichst ab oder reduzierst spürbar.', 'down'],
+      ['8',    'Weitermachen ist keine Option.', 'down'],
+      ['9–10', 'Stechend, mit Kraftverlust. Sofort aufhören, ärztlich abklären.', 'down']
+    ]},
+  { id:'morning', title:'Schmerz am Morgen', sub:'In Ruhe, vor dem ersten Schritt.',
+    rule:'Verglichen wird mit dem Morgen nach dem vorletzten Trainingstag: ein Punkt mehr heißt „Level halten“, zwei Punkte mehr heißen „Zurücknehmen“.',
+    rows:[
+      ['0',  'Nichts. Fühlt sich an wie der linke Fuß.', ''],
+      ['1',  'Beim bewussten Hinspüren ist da etwas. Von selbst würdest du es nicht bemerken.', ''],
+      ['2',  'Ohne Hinspüren wahrnehmbar, aber leicht zu ignorieren. Bei Ablenkung weg.', ''],
+      ['3',  'Von selbst da und bleibt da. Dumpfes Grundrauschen an der Stelle.', ''],
+      ['4',  'Zieht deine Aufmerksamkeit wiederholt auf sich.', ''],
+      ['5',  'Unangenehm genug, dass du den Fuß bewegst oder anders legst.', ''],
+      ['6+', 'Weckt dich oder verhindert das Wiedereinschlafen. Ärztlich abklären.', 'down']
+    ]},
+  { id:'stiff', title:'Steifigkeit', sub:'Dauer, bis sich das Gehen wieder normal anfühlt.', wide:true,
+    rule:'Über 30 Minuten heißt die Bewertung „Level halten“, über 45 Minuten „Zurücknehmen“.',
+    rows:[
+      ['unter 15 Min.', 'Nach ein paar Schritten weg. Im Bad schon vergessen.', 'up'],
+      ['15–30 Min.',    'Beim Frühstück noch da, beim Losgehen nicht mehr.', 'up'],
+      ['30–45 Min.',    'Zieht sich in den Vormittag. Erste Warnstufe.', 'hold'],
+      ['über 45 Min.',  'Der halbe Vormittag. Löst „Zurücknehmen“ aus.', 'down']
+    ]},
+  { id:'effort', title:'Anstrengung des letzten Satzes', sub:'Kraft, nicht Schmerz. Wird nur bei Sehnenkraft abgefragt.',
+    rule:'Zählt erst, wenn der Schmerz bei 3 oder darunter liegt. Bleibt der letzte Satz an ruhigen Tagen bei 6 oder darunter, wertet die App das als Zeichen, dass die Last zu leicht ist.',
+    rows:[
+      ['0',   'Keine Anstrengung. Als hättest du die Bewegung nur angedeutet.', ''],
+      ['1–3', 'Aufwärmen bis leicht. Fordert dich nicht.', ''],
+      ['4–5', 'Locker bis moderat. Deutlich mehr wäre gegangen.', ''],
+      ['6',   'Fordernd, aber komfortabel. Noch 5–6 drin.', ''],
+      ['7',   'Anstrengend. Noch 3–4.', ''],
+      ['8',   'Schwer. Noch 2–3. Zielbereich ab Phase 2.', 'act'],
+      ['9',   'Sehr schwer. Genau eine weitere.', ''],
+      ['10',  'Nichts mehr drin.', '']
+    ]}
+];
+
 /* ============================================ State */
 let state = { entries: [], rest: [], loaded: false, error: null, dataNote: null,
   persist: null, snapPrev: null, snapTrash: null, meta: { lastBackup: null } };
 let tab = 'log';
 let openAcc = null;
+let scaleJump = null;   // { sc, from }: Sprung aus dem Formular in den Skalen-Tab und zurück
 let draft = newDraft();
 let morningDraft = {};
 let exportText = null;
@@ -916,6 +986,35 @@ function tabSupp() {
     </div>`;
 }
 
+function scaleLink(sc, from) {
+  return ` <button type="button" class="sc-link" data-act="gotoScale" data-sc="${sc}" data-from="${from}">Was heißt welcher Wert?</button>`;
+}
+
+function tabScales() {
+  return `<div class="card">
+      <h2>Was heißt welcher Wert?</h2>
+      <p class="lede">Damit eine 3 heute dasselbe bedeutet wie eine 3 in acht Wochen. Die Farben zeigen, was die Bewertung aus dem Wert macht.</p>
+      <p class="sc-legend">
+        <span><i style="background:var(--up-bg);border:1px solid #BFDACE"></i>erlaubt</span>
+        <span><i style="background:var(--hold-bg);border:1px solid #E3D2AE"></i>Warnstufe</span>
+        <span><i style="background:var(--down-bg);border:1px solid #E8C4C0"></i>zurücknehmen bzw. abklären</span>
+        <span><i style="background:#EAF1F3;border:1px solid #C4D7DD"></i>Zielbereich</span>
+      </p>
+    </div>
+    ${SCALES.map(sc => { const ziel = !!scaleJump && scaleJump.sc === sc.id; return `<div class="card${ziel ? ' sc-target' : ''}" id="sc-${sc.id}">
+      <h2>${esc(sc.title)}</h2>
+      <p class="lede">${esc(sc.sub)}</p>
+      <div class="sc-list"${sc.wide ? ' style="--sc-w:104px"' : ''}>
+        ${sc.rows.map(([v, text, tone]) => `<div class="sc-row">
+          <span class="sc-val ${tone}">${esc(v)}</span>
+          <span>${esc(text)}</span>
+        </div>`).join('')}
+      </div>
+      ${sc.rule ? `<p class="note">${esc(sc.rule)}</p>` : ''}
+      ${ziel ? '<div class="btn-row" style="margin-top:12px"><button type="button" class="btn quiet small" data-act="backFromScale">← Zurück zum Eintrag</button></div>' : ''}
+    </div>`; }).join('')}`;
+}
+
 function tabLog() {
   const a = assess(), pend = pending(), flags = redFlags(), all = sorted().reverse();
   const kind = TYPES[draft.type].kind;
@@ -930,14 +1029,14 @@ function tabLog() {
     ${pend.length ? `<div class="card pending">
       <h2>Morgen-Check offen</h2>
       <p class="lede">Für den ${fmt(pend[0].date)} fehlt der Wert vom Folgemorgen${pend[0].n > 1 ? ` – dieser Tag hatte ${pend[0].n} Einheiten (${esc(pend[0].labels.join(', '))}), der Morgenwert gilt für beide` : ` (${esc(pend[0].labels[0])})`}.</p>
-      <div class="field">
+      <div class="field" id="f-mPain">
         <span class="field-label">Wie war der Schmerz heute Morgen?</span>
-        <p class="hint">Vor dem Aufstehen, in den ersten Minuten.</p>
+        <p class="hint">Vor dem Aufstehen, in den ersten Minuten.${scaleLink('morning', 'f-mPain')}</p>
         ${scaleHtml('mPain', morningDraft.pain ?? null, false)}
       </div>
-      <div class="field">
+      <div class="field" id="f-mStiff">
         <span class="field-label">Wie lange war es steif?</span>
-        <p class="hint">Bis es sich beim Gehen wieder normal anfühlte.</p>
+        <p class="hint">Bis es sich beim Gehen wieder normal anfühlte.${scaleLink('stiff', 'f-mStiff')}</p>
         ${segHtml('mStiff', STIFF, morningDraft.stiff ?? null)}
       </div>
       <div class="field">
@@ -986,12 +1085,14 @@ function tabLog() {
         <div class="field"><span class="sublabel">Datum</span>
           <input type="date" value="${restDraft.date || today()}" data-rpath="date"></div>
         ${hasTrainingMorning(restDraft.date || today()) ? '<div class="warnbox">Für diesen Tag gibt es bereits einen Morgen-Check aus einer Einheit. Ein zweiter Eintrag wäre doppelt.</div>' : ''}
-        <div class="field">
+        <div class="field" id="f-rPain">
           <span class="field-label">Schmerz heute Morgen</span>
+          <p class="hint">${scaleLink('morning', 'f-rPain')}</p>
           ${scaleHtml('rPain', restDraft.pain, false)}
         </div>
-        <div class="field">
+        <div class="field" id="f-rStiff">
           <span class="field-label">Wie lange war es steif?</span>
+          <p class="hint">${scaleLink('stiff', 'f-rStiff')}</p>
           ${segHtml('rStiff', STIFF, restDraft.stiff)}
         </div>
         <div class="field">
@@ -1035,15 +1136,15 @@ function tabLog() {
 
       ${kind === 'ex' ? exPickerHtml() : kind === 'run' ? runFieldsHtml() : sessionFieldsHtml()}
 
-      <div class="field">
+      <div class="field" id="f-painDuring">
         <span class="field-label">Schmerz während der Einheit</span>
-        <p class="hint">Nicht der stärkste Moment, sondern das Grundniveau.</p>
+        <p class="hint">Nicht der stärkste Moment, sondern das Grundniveau.${scaleLink('during', 'f-painDuring')}</p>
         ${scaleHtml('painDuring', draft.painDuring, true)}
       </div>
 
-      ${draft.type === 'kraft' ? `<div class="field">
+      ${draft.type === 'kraft' ? `<div class="field" id="f-effort">
         <span class="field-label">Wie schwer war der letzte Satz?</span>
-        <p class="hint">Kraft, nicht Schmerz. Ein niedriger Wert spricht für mehr Gewicht – aber nur, solange der Schmerz bei 3/10 oder darunter bleibt.</p>
+        <p class="hint">Kraft, nicht Schmerz. Ein niedriger Wert spricht für mehr Gewicht – aber nur, solange der Schmerz bei 3/10 oder darunter bleibt.${scaleLink('effort', 'f-effort')}</p>
         ${scaleHtml('effort', draft.effort, false)}
         ${draft.painDuring != null && draft.painDuring > 3 && draft.effort != null && draft.effort <= 6 ? `<div class="warnbox" style="margin-top:12px"><b>Muskel leicht, Sehne laut.</b> Die Wade hat noch Reserve, das Gewebe verträgt sie aber nicht. Mehr Gewicht wäre trotz des niedrigen Anstrengungswerts falsch. Verkleinere stattdessen die Bewegungsreichweite oder stell auf Isometrie um – Halten erzeugt hohe Spannung ohne die schmerzhafte Bewegung.</div>` : ''}
       </div>` : ''}
@@ -1204,7 +1305,7 @@ function tabLog() {
 }
 
 /* ============================================ Render */
-const TABS = [['log','Logbuch'],['plan','Plan'],['ex','Übungen'],['supp','Supplemente']];
+const TABS = [['log','Logbuch'],['scale','Skalen'],['plan','Plan'],['ex','Übungen'],['supp','Supplemente']];
 
 // Notausgang: wirft ein Tab beim Aufbau, bleibt die Seite sonst auf dem alten Stand
 // stehen und ist auch nach dem Neuladen tot. Lieber die Rohdaten zum Sichern anbieten.
@@ -1229,7 +1330,7 @@ function render() {
   if (!state.loaded) return;
   let body;
   try {
-    body = tab === 'plan' ? tabPlan() : tab === 'ex' ? tabEx() : tab === 'supp' ? tabSupp() : tabLog();
+    body = tab === 'plan' ? tabPlan() : tab === 'ex' ? tabEx() : tab === 'supp' ? tabSupp() : tab === 'scale' ? tabScales() : tabLog();
   } catch (err) {
     body = crashHtml(err);
   }
@@ -1330,7 +1431,7 @@ document.addEventListener('click', async (ev) => {
   const t = ev.target.closest('[data-scale],[data-seg],[data-act],[data-tab],[data-extoggle],[data-acc]');
   if (!t) return;
 
-  if (t.dataset.tab) { tab = t.dataset.tab; openAcc = null; window.scrollTo(0,0); return render(); }
+  if (t.dataset.tab) { tab = t.dataset.tab; openAcc = null; scaleJump = null; window.scrollTo(0,0); return render(); }
   if (t.dataset.acc) { openAcc = openAcc === t.dataset.acc ? null : t.dataset.acc; return render(); }
   if (t.dataset.extoggle) {
     const id = t.dataset.extoggle;
@@ -1352,6 +1453,22 @@ document.addEventListener('click', async (ev) => {
   }
 
   const act = t.dataset.act;
+  if (act === 'gotoScale') {
+    const sc = t.dataset.sc, from = t.dataset.from;
+    scaleJump = { sc, from };
+    tab = 'scale'; openAcc = null;
+    render();
+    document.getElementById('sc-' + sc)?.scrollIntoView({ block:'start' });
+    return;
+  }
+  if (act === 'backFromScale') {
+    const from = scaleJump && scaleJump.from;
+    scaleJump = null; tab = 'log';
+    render();
+    const el = from && document.getElementById(from);
+    if (el) el.scrollIntoView({ block:'center' }); else window.scrollTo(0,0);
+    return;
+  }
   if (act === 'setToday') { draft.date = today(); draft.time = nowTime(); return render(); }
   if (act === 'saveEntry') {
     const kind = TYPES[draft.type].kind;
