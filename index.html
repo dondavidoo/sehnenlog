@@ -499,7 +499,8 @@ let importBuf = '';
 let importMsg = null;
 let morningOpen = false;   // freiwilliger Morgen: Eingabe aufgeklappt?
 let mEdit = null;          // { date, pain, stiff, note, where:'day'|'free' } – Morgen im Verlauf ändern oder nachtragen
-let histDays = 14;         // so viele Tage zeigt der Verlauf
+const HIST_KURZ = 3;       // so viele Tage zeigt der Verlauf zugeklappt
+let histOpen = false;      // ältere Tage aufgeklappt?
 let chartRange = 28;       // 28 | 91 | 'all'
 
 function nowTime() { const d = new Date(); return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0'); }
@@ -1409,9 +1410,10 @@ function dayCardHtml(date) {
 }
 
 function historyHtml() {
-  const dates = dayList(), mehr = dates.length - histDays;
-  return dates.slice(0, histDays).map(dayCardHtml).join('')
-    + (mehr > 0 ? `<div class="btn-row" style="margin-top:12px"><button type="button" class="btn quiet small" data-act="moreDays">Ältere Tage anzeigen (${mehr})</button></div>` : '')
+  const dates = dayList(), mehr = dates.length - HIST_KURZ;
+  return (histOpen ? dates : dates.slice(0, HIST_KURZ)).map(dayCardHtml).join('')
+    + (mehr > 0 ? `<div class="btn-row" style="margin-top:12px"><button type="button" class="btn quiet small" data-act="toggleDays" aria-expanded="${histOpen}">${
+        histOpen ? 'Ältere Tage einklappen' : `Ältere Tage anzeigen (${mehr})`}</button></div>` : '')
     + (mEdit && mEdit.where === 'free'
         ? `<div class="day"><div class="day-row editing">${morningEditorHtml()}</div></div>`
         : '<p class="note"><button type="button" class="sc-link" data-act="addMorning">Morgen für einen anderen Tag nachtragen</button></p>');
@@ -1851,7 +1853,15 @@ document.addEventListener('click', async (ev) => {
     state.mornings = state.mornings.filter(x => x.date !== date);
     mEdit = null; exportText = null; await save();
   }
-  if (act === 'moreDays') { histDays += 14; return render(); }
+  if (act === 'toggleDays') {
+    histOpen = !histOpen;
+    // Ein offener Morgen-Editor in einem jetzt verborgenen Tag würde unsichtbar weiterlaufen
+    if (!histOpen && mEdit && mEdit.where === 'day' && !dayList().slice(0, HIST_KURZ).includes(mEdit.date)) mEdit = null;
+    render();
+    // Beim Einklappen schrumpft die Seite – den Knopf im Blick behalten statt irgendwo weiter unten zu landen
+    if (!histOpen) document.querySelector('[data-act="toggleDays"]')?.scrollIntoView({ block: 'center' });
+    return;
+  }
   if (act === 'chartRange') { chartRange = t.dataset.range === 'all' ? 'all' : +t.dataset.range; updateChart(); return; }
   if (act === 'dismissMigration') { state.migrationNote = null; return render(); }
 
