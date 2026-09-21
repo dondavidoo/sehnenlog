@@ -63,8 +63,6 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
   .tabs button { font-family: inherit; font-size: 14px; font-weight: 600; padding: 9px 14px; min-height: 40px;
     border-radius: 7px; border: 1px solid var(--rule); background: var(--card); color: var(--ink-soft); cursor: pointer; }
   .tabs button[aria-selected="true"] { background: var(--ink); border-color: var(--ink); color: var(--on-ink); }
-  /* Wischbare Leiste: rechts ausblenden, solange noch etwas folgt */
-  .tabs.scrollable:not(.at-end) { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); }
 
   .card { background: var(--card); border: 1px solid var(--rule-soft); border-radius: 10px; padding: 18px; margin-bottom: 14px; }
   .card h2 { margin: 0 0 4px; font-size: 16px; font-weight: 650; letter-spacing: -0.01em; }
@@ -124,6 +122,17 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
   .exrow-in > div { flex: 1; min-width: 0; }
   .exrow-in input { padding: 7px 6px; font-size: 16px; text-align: center; }
   .exrow-in label { font-size: 12.5px; color: var(--ink-soft); display: block; text-align: center; margin-bottom: 2px; }
+  .exblock { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin: 12px 0 6px; }
+  .exblock:first-of-type { margin-top: 0; }
+  .exblock-name { font-size: 12.5px; font-weight: 600; color: var(--ink-soft); }
+  .exblock .sc-link, .exrow-last .sc-link { font-size: 12.5px; }
+  .exrow-last { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 10px; font-size: 12px; color: var(--ink-soft); margin-top: 7px; }
+  /* Monatstest-Tabelle */
+  .ttab { width: 100%; border-collapse: collapse; font-size: 13.5px; margin-top: 12px; font-variant-numeric: tabular-nums; }
+  .ttab th, .ttab td { text-align: right; padding: 6px 4px; border-bottom: 1px solid var(--rule-soft); }
+  .ttab th { font-size: 12px; font-weight: 600; color: var(--ink-soft); }
+  .ttab th:first-child, .ttab td:first-child { text-align: left; }
+  .ttab tr:last-child td { border-bottom: 0; }
 
   .check { display: flex; align-items: flex-start; gap: 9px; font-size: 14px; cursor: pointer; margin-bottom: 10px; }
   .check input { margin-top: 3px; width: 16px; height: 16px; accent-color: var(--act); }
@@ -147,9 +156,6 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
   .row-main { flex: 1; min-width: 0; }
   .row-title { font-size: 14.5px; font-weight: 600; }
   .row-sub { font-size: 12.5px; color: var(--ink-soft); margin-top: 1px; }
-  .del { background: none; border: 0; cursor: pointer; color: var(--ink-soft); font-size: 20px;
-    line-height: 1; padding: 6px 8px; min-width: 32px; min-height: 32px; border-radius: 6px; flex-shrink: 0; font-family: inherit; }
-  .del:hover { color: var(--down); background: var(--down-bg); }
   .rowbtns { display: flex; flex-direction: column; gap: 2px; flex-shrink: 0; }
   .edit { background: none; border: 0; cursor: pointer; color: var(--ink-soft); font-size: 13px;
     padding: 6px 8px; min-height: 32px; font-family: inherit; text-decoration: underline; }
@@ -231,6 +237,8 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
     letter-spacing: .04em; text-transform: uppercase; }
   .acc-body ul { margin: 0; padding-left: 17px; font-size: 13.5px; }
   .acc-body li { margin-bottom: 4px; }
+  .acc.due { border-left: 3px solid var(--act); }
+  .acc.due .acc-meta { color: var(--hold-ink); }
   .acc-err { background: var(--down-bg); border-radius: 6px; padding: 9px 11px; font-size: 13px; margin-top: 11px; }
   .acc-err b { color: var(--down); }
   .fig { background: #fff; color-scheme: light; border: 1px solid var(--rule-soft); border-radius: 7px;   /* Zeichnungen sind für Weiß gezeichnet */
@@ -268,7 +276,7 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
 
   /* ---------- Layout je Bildschirmbreite ---------- */
   /* Logbuch: auf dem Handy eine Spalte in der gewohnten Reihenfolge (order),
-     auf dem Desktop links Erfassen, rechts Überblick, darunter Daten & Sicherung */
+     auf dem Desktop links Erfassen, rechts Urteil und Verlauf */
   .log { display: flex; flex-direction: column; }
   .log-top, .log-in, .log-out { display: contents; }
   .o1 { order: 1; } .o2 { order: 2; } .o3 { order: 3; } .o5 { order: 5; } .o7 { order: 7; } .o7b { order: 8; }
@@ -306,12 +314,10 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
     .acc-grid .acc.open .acc-body:has(> .fig) > .fig { grid-column: 2; grid-row: 1 / span 4; }
   }
 
-  /* Handy: Tabs in einer wischbaren Zeile statt zweier Reihen */
+  /* Handy: alle sechs Bereiche auf einen Blick – zwei Reihen à drei, nichts zum Wischen */
   @media (max-width: 560px) {
-    .tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch;
-      margin: 0 calc(-1 * var(--gutter)) 16px; padding: 0 var(--gutter) 2px; }
-    .tabs::-webkit-scrollbar { display: none; }
-    .tabs button { flex: 0 0 auto; padding: 8px 12px; font-size: 13.5px; }
+    .tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+    .tabs button { padding: 8px 6px; font-size: 13.5px; }
   }
   @media (max-width: 560px) {
     /* Skala in zwei Reihen (0–5 / 6–10): Tasten 44 px hoch und ≥ 50 px breit statt 25 px */
@@ -339,6 +345,43 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
 <body>
 <div id="root"><div class="boot">Wird geladen…</div></div>
 <div id="live" class="sr-only" aria-live="polite"></div>
+<!-- Zeichnungen der Übungen: als Vorlagen im Dokument, damit der Code lesbar bleibt -->
+<template id="fig-calf_straight"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 640" preserveAspectRatio="xMidYMid meet"> <defs> <marker id="ah_calf_straight" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"> <path d="M0,0 L6,3 L0,6 z" fill="#C75B39"/> </marker> <marker id="ahg_calf_straight" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"> <path d="M0,0 L6,3 L0,6 z" fill="#5B8C6E"/> </marker> </defs> <g font-family="Arial, Helvetica, sans-serif"> <rect x="430" y="430" width="420" height="150" rx="6" fill="#E8E3DC"/> <text x="640" y="520" font-size="24" fill="#6B7780" text-anchor="middle" font-weight="normal">Stufe / Treppe</text> <!-- leg, up position --> <g stroke="#26323C" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" fill="none"> <line x1="405" y1="90" x2="415" y2="330"/> <path d="M415,330 L360,395 M415,330 L470,430"/> <line x1="470" y1="430" x2="560" y2="430"/> </g> <text x="405" y="70" font-size="24" fill="#26323C" text-anchor="middle" font-weight="bold">Knie gestreckt</text> <!-- ghost, down position --> <g stroke="#BFC6CC" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" fill="none" stroke-dasharray="14,11"> <line x1="415" y1="150" x2="428" y2="392"/> <path d="M428,392 L370,520 M428,392 L470,432"/> </g> <!-- range arrow --> <line x1="285" y1="380" x2="285" y2="520" stroke="#C75B39" stroke-width="7" marker-start="url(#ah_calf_straight)" marker-end="url(#ah_calf_straight)"/> <text x="258" y="398" font-size="25" fill="#C75B39" text-anchor="end" font-weight="bold">3 Sek. hoch</text> <text x="258" y="512" font-size="25" fill="#C75B39" text-anchor="end" font-weight="bold">3 Sek. runter</text> <line x1="330" y1="430" x2="430" y2="430" stroke="#6B7780" stroke-width="3" stroke-dasharray="8,8"/> <text x="60" y="600" font-size="25" fill="#6B7780" text-anchor="start" font-weight="normal">Ferse unter die Stufenkante absenken – volle Bewegungsreichweite</text>
+</g>
+</svg></template>
+<template id="fig-calf_bent"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 640" preserveAspectRatio="xMidYMid meet"> <defs> <marker id="ah_calf_bent" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"> <path d="M0,0 L6,3 L0,6 z" fill="#C75B39"/> </marker> <marker id="ahg_calf_bent" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"> <path d="M0,0 L6,3 L0,6 z" fill="#5B8C6E"/> </marker> </defs> <g font-family="Arial, Helvetica, sans-serif"> <rect x="430" y="430" width="420" height="150" rx="6" fill="#E8E3DC"/> <g stroke="#26323C" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" fill="none"> <line x1="330" y1="90" x2="360" y2="250"/> <line x1="360" y1="250" x2="415" y2="330"/> <path d="M415,330 L360,395 M415,330 L470,430"/> <line x1="470" y1="430" x2="560" y2="430"/> </g> <path d="M300,255 A70,70 0 0,0 420,265" fill="none" stroke="#C75B39" stroke-width="6"/> <text x="292" y="250" font-size="27" fill="#C75B39" text-anchor="end" font-weight="bold">≈ 30°</text> <text x="330" y="70" font-size="24" fill="#26323C" text-anchor="middle" font-weight="bold">Knie gebeugt halten</text> <line x1="620" y1="380" x2="620" y2="500" stroke="#C75B39" stroke-width="7" marker-start="url(#ah_calf_bent)" marker-end="url(#ah_calf_bent)"/> <text x="645" y="450" font-size="25" fill="#C75B39" text-anchor="start" font-weight="normal">gleiches Tempo 3/3</text> <text x="60" y="600" font-size="25" fill="#6B7780" text-anchor="start" font-weight="normal">Beugung bleibt konstant – trifft den tiefen Wadenmuskel (Soleus)</text>
+</g>
+</svg></template>
+<template id="fig-iso_hold"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 640" preserveAspectRatio="xMidYMid meet"> <defs> <marker id="ah_iso_hold" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"> <path d="M0,0 L6,3 L0,6 z" fill="#C75B39"/> </marker> <marker id="ahg_iso_hold" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"> <path d="M0,0 L6,3 L0,6 z" fill="#5B8C6E"/> </marker> </defs> <g font-family="Arial, Helvetica, sans-serif"> <line x1="120" y1="470" x2="780" y2="470" stroke="#E8E3DC" stroke-width="16" stroke-linecap="round"/> <g stroke="#26323C" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" fill="none"> <line x1="380" y1="110" x2="392" y2="345"/> <path d="M392,345 L338,405 M392,345 L448,462"/> <line x1="448" y1="462" x2="540" y2="462"/> </g> <line x1="292" y1="405" x2="292" y2="470" stroke="#5B8C6E" stroke-width="7" marker-start="url(#ahg_iso_hold)" marker-end="url(#ahg_iso_hold)"/> <text x="275" y="445" font-size="25" fill="#5B8C6E" text-anchor="end" font-weight="normal">Ferse angehoben</text> <circle cx="660" cy="200" r="72" fill="none" stroke="#5B8C6E" stroke-width="8"/> <text x="660" y="195" font-size="40" fill="#5B8C6E" text-anchor="middle" font-weight="bold">30–45</text> <text x="660" y="232" font-size="24" fill="#5B8C6E" text-anchor="middle" font-weight="normal">Sekunden</text> <text x="660" y="320" font-size="25" fill="#6B7780" text-anchor="middle" font-weight="normal">halten, nicht bewegen</text> <text x="60" y="600" font-size="25" fill="#6B7780" text-anchor="start" font-weight="normal">Position ruhig halten – wirkt bei vielen Sehnen sofort schmerzlindernd</text>
+</g>
+</svg></template>
+<template id="fig-tib_post"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 640" preserveAspectRatio="xMidYMid meet"> <defs> <marker id="ah_tib_post" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"> <path d="M0,0 L6,3 L0,6 z" fill="#C75B39"/> </marker> <marker id="ahg_tib_post" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"> <path d="M0,0 L6,3 L0,6 z" fill="#5B8C6E"/> </marker> </defs> <g font-family="Arial, Helvetica, sans-serif"> <text x="450" y="62" font-size="25" fill="#6B7780" text-anchor="middle" font-weight="normal">Draufsicht – rechter Fuß</text> <!-- foot outline seen from above, toes up --> <path d="M470,150 C540,160 560,250 552,340 C546,420 530,470 490,490 C440,512 392,492 378,440 C362,378 372,250 396,190 C410,158 436,145 470,150 Z" fill="#F5F2EE" stroke="#26323C" stroke-width="10" stroke-linejoin="round"/> <g fill="#26323C"> <ellipse cx="410" cy="140" rx="19" ry="24"/> <ellipse cx="452" cy="127" rx="17" ry="22"/> <ellipse cx="490" cy="130" rx="15" ry="20"/> <ellipse cx="523" cy="143" rx="13" ry="18"/> <ellipse cx="551" cy="163" rx="12" ry="16"/> </g> <!-- band --> <path d="M760,300 C650,300 600,290 552,285" stroke="#5B8C6E" stroke-width="16" fill="none" stroke-linecap="round"/> <text x="770" y="262" font-size="25" fill="#5B8C6E" text-anchor="start" font-weight="bold">Band fest</text> <text x="770" y="296" font-size="25" fill="#5B8C6E" text-anchor="start" font-weight="bold">verankert</text> <!-- movement arrow: foot pushes inward (medially) --> <path d="M360,300 C295,300 250,318 205,348" stroke="#C75B39" stroke-width="9" fill="none" marker-end="url(#ah_tib_post)"/> <text x="60" y="425" font-size="26" fill="#C75B39" text-anchor="start" font-weight="bold">Fuß nach innen</text> <text x="60" y="459" font-size="26" fill="#C75B39" text-anchor="start" font-weight="bold">und leicht nach</text> <text x="60" y="493" font-size="26" fill="#C75B39" text-anchor="start" font-weight="bold">unten drücken</text> <text x="60" y="600" font-size="25" fill="#6B7780" text-anchor="start" font-weight="normal">Unterschenkel bleibt ruhig – nur der Fuß bewegt sich. Langsam zurück.</text>
+</g>
+</svg></template>
+<template id="fig-tib_ant"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 640" preserveAspectRatio="xMidYMid meet"> <defs> <marker id="ah_tib_ant" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"> <path d="M0,0 L6,3 L0,6 z" fill="#C75B39"/> </marker> <marker id="ahg_tib_ant" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"> <path d="M0,0 L6,3 L0,6 z" fill="#5B8C6E"/> </marker> </defs> <g font-family="Arial, Helvetica, sans-serif"> <text x="450" y="62" font-size="25" fill="#6B7780" text-anchor="middle" font-weight="normal">Seitansicht – sitzend, Bein gestreckt</text> <!-- shin horizontal --> <line x1="120" y1="300" x2="470" y2="300" stroke="#26323C" stroke-width="18" stroke-linecap="round"/> <!-- foot up position --> <g stroke="#26323C" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" fill="none"> <path d="M470,300 L500,220 M470,300 L505,330"/> </g> <!-- ghost down --> <g stroke="#BFC6CC" stroke-width="14" stroke-linecap="round" stroke-dasharray="13,10" fill="none"> <path d="M470,300 L545,368"/> </g> <!-- band --> <path d="M498,236 C600,270 700,380 745,470" stroke="#5B8C6E" stroke-width="14" fill="none" stroke-linecap="round"/> <text x="700" y="520" font-size="25" fill="#5B8C6E" text-anchor="middle" font-weight="bold">Band fixiert</text> <path d="M420,250 C430,200 460,178 495,180" stroke="#C75B39" stroke-width="9" fill="none" marker-end="url(#ah_tib_ant)"/> <text x="390" y="225" font-size="27" fill="#C75B39" text-anchor="end" font-weight="bold">Fußspitze</text> <text x="390" y="260" font-size="27" fill="#C75B39" text-anchor="end" font-weight="bold">anziehen</text> <text x="60" y="600" font-size="25" fill="#6B7780" text-anchor="start" font-weight="normal">Gegen den Bandwiderstand anziehen, dann betont langsam ablassen</text>
+</g>
+</svg></template>
+<template id="fig-heel_walk"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 640" preserveAspectRatio="xMidYMid meet"> <defs> <marker id="ah_heel_walk" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"> <path d="M0,0 L6,3 L0,6 z" fill="#C75B39"/> </marker> <marker id="ahg_heel_walk" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"> <path d="M0,0 L6,3 L0,6 z" fill="#5B8C6E"/> </marker> </defs> <g font-family="Arial, Helvetica, sans-serif"> <line x1="80" y1="500" x2="820" y2="500" stroke="#E8E3DC" stroke-width="16" stroke-linecap="round"/> <g stroke="#26323C" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" fill="none"> <line x1="300" y1="120" x2="300" y2="380"/> <path d="M300,380 L285,495 M300,380 L370,318"/> </g> <g stroke="#26323C" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" fill="none"> <line x1="470" y1="120" x2="500" y2="370"/> <path d="M500,370 L488,495 M500,370 L572,315"/> </g> <circle cx="72" cy="552" r="13" fill="#C75B39"/> <text x="100" y="561" font-size="26" fill="#C75B39" text-anchor="start" font-weight="bold">Nur auf den Fersen gehen – Fußspitzen bleiben oben</text> <circle cx="72" cy="604" r="13" fill="#6B7780"/> <text x="100" y="613" font-size="26" fill="#6B7780" text-anchor="start" font-weight="normal">Schienbein brennt – das ist gewollt. 30 Sek. am Stück.</text>
+</g>
+</svg></template>
+<template id="fig-short_foot"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 640" preserveAspectRatio="xMidYMid meet"> <defs> <marker id="ah_short_foot" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"> <path d="M0,0 L6,3 L0,6 z" fill="#C75B39"/> </marker> <marker id="ahg_short_foot" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"> <path d="M0,0 L6,3 L0,6 z" fill="#5B8C6E"/> </marker> </defs> <g font-family="Arial, Helvetica, sans-serif"> <text x="450" y="62" font-size="25" fill="#6B7780" text-anchor="middle" font-weight="normal">Seitansicht – Fußgewölbe aktiv anheben</text> <line x1="120" y1="450" x2="800" y2="450" stroke="#E8E3DC" stroke-width="14" stroke-linecap="round"/> <!-- flat arch ghost --> <path d="M250,450 C340,450 480,450 600,450" stroke="#BFC6CC" stroke-width="12" fill="none" stroke-dasharray="13,10"/> <text x="390" y="512" font-size="24" fill="#BFC6CC" text-anchor="middle" font-weight="normal">flach (vorher)</text> <!-- lifted arch --> <path d="M250,450 C340,368 470,368 600,450" stroke="#26323C" stroke-width="16" fill="none" stroke-linecap="round"/> <circle cx="250" cy="450" r="14" fill="#26323C"/> <circle cx="600" cy="450" r="14" fill="#26323C"/> <text x="232" y="430" font-size="24" fill="#6B7780" text-anchor="end" font-weight="normal">Ferse bleibt</text> <text x="232" y="458" font-size="24" fill="#6B7780" text-anchor="end" font-weight="normal">am Boden</text> <text x="622" y="430" font-size="24" fill="#6B7780" text-anchor="start" font-weight="normal">Ballen bleibt</text> <text x="622" y="458" font-size="24" fill="#6B7780" text-anchor="start" font-weight="normal">am Boden</text> <line x1="425" y1="345" x2="425" y2="270" stroke="#C75B39" stroke-width="9" marker-end="url(#ah_short_foot)"/> <text x="425" y="240" font-size="27" fill="#C75B39" text-anchor="middle" font-weight="bold">Gewölbe anheben</text> <text x="60" y="600" font-size="25" fill="#C75B39" text-anchor="start" font-weight="normal">Zehen bleiben lang und entspannt – nicht krallen!</text>
+</g>
+</svg></template>
+<template id="fig-side_plank"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 640" preserveAspectRatio="xMidYMid meet"> <defs> <marker id="ah_side_plank" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"> <path d="M0,0 L6,3 L0,6 z" fill="#C75B39"/> </marker> <marker id="ahg_side_plank" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"> <path d="M0,0 L6,3 L0,6 z" fill="#5B8C6E"/> </marker> </defs> <g font-family="Arial, Helvetica, sans-serif"> <line x1="90" y1="470" x2="810" y2="470" stroke="#E8E3DC" stroke-width="14" stroke-linecap="round"/> <g stroke="#26323C" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" fill="none"> <!-- forearm --> <line x1="200" y1="470" x2="290" y2="470"/> <line x1="255" y1="470" x2="270" y2="330"/> <!-- torso --> <line x1="270" y1="330" x2="560" y2="415"/> <circle cx="252" cy="292" r="34"/> <!-- bottom leg --> <line x1="560" y1="415" x2="790" y2="465"/> </g> <!-- top leg raised --> <g stroke="#C75B39" stroke-width="16" stroke-linecap="round" fill="none"> <line x1="560" y1="410" x2="780" y2="350"/> </g> <path d="M700,430 C710,400 720,380 735,362" stroke="#C75B39" stroke-width="8" fill="none" marker-end="url(#ah_side_plank)"/> <text x="660" y="300" font-size="26" fill="#C75B39" text-anchor="middle" font-weight="bold">oberes Bein heben</text> <line x1="270" y1="345" x2="555" y2="428" stroke="#5B8C6E" stroke-width="5" stroke-dasharray="12,9"/> <text x="60" y="575" font-size="25" fill="#5B8C6E" text-anchor="start" font-weight="normal">Hüfte oben halten – gerade Linie Schulter–Hüfte–Knie</text>
+</g>
+</svg></template>
+<template id="fig-monster_walk"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 640" preserveAspectRatio="xMidYMid meet"> <defs> <marker id="ah_monster_walk" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"> <path d="M0,0 L6,3 L0,6 z" fill="#C75B39"/> </marker> <marker id="ahg_monster_walk" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"> <path d="M0,0 L6,3 L0,6 z" fill="#5B8C6E"/> </marker> </defs> <g font-family="Arial, Helvetica, sans-serif"> <text x="450" y="62" font-size="25" fill="#6B7780" text-anchor="middle" font-weight="normal">Frontalansicht – Band um die Fußgelenke</text> <line x1="100" y1="500" x2="800" y2="500" stroke="#E8E3DC" stroke-width="14" stroke-linecap="round"/> <g stroke="#26323C" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" fill="none"> <circle cx="450" cy="150" r="38"/> <line x1="450" y1="188" x2="450" y2="300"/> <line x1="450" y1="300" x2="345" y2="440"/> <line x1="345" y1="440" x2="330" y2="495"/> <line x1="450" y1="300" x2="565" y2="440"/> <line x1="565" y1="440" x2="580" y2="495"/> </g> <path d="M330,470 C420,438 490,438 580,470" stroke="#5B8C6E" stroke-width="14" fill="none"/> <text x="455" y="425" font-size="25" fill="#5B8C6E" text-anchor="middle" font-weight="bold">Band</text> <line x1="290" y1="495" x2="180" y2="495" stroke="#C75B39" stroke-width="9" marker-end="url(#ah_monster_walk)"/> <line x1="620" y1="495" x2="730" y2="495" stroke="#C75B39" stroke-width="9" marker-end="url(#ah_monster_walk)"/> <text x="450" y="560" font-size="26" fill="#C75B39" text-anchor="middle" font-weight="bold">seitliche Schritte, Spannung im Band halten</text> <text x="60" y="615" font-size="25" fill="#6B7780" text-anchor="start" font-weight="normal">Knie nicht nach innen fallen lassen – Zehen zeigen nach vorn</text>
+</g>
+</svg></template>
+<template id="fig-pogo"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 640" preserveAspectRatio="xMidYMid meet"> <defs> <marker id="ah_pogo" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"> <path d="M0,0 L6,3 L0,6 z" fill="#C75B39"/> </marker> <marker id="ahg_pogo" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"> <path d="M0,0 L6,3 L0,6 z" fill="#5B8C6E"/> </marker> </defs> <g font-family="Arial, Helvetica, sans-serif"> <line x1="100" y1="500" x2="800" y2="500" stroke="#E8E3DC" stroke-width="14" stroke-linecap="round"/> <g stroke="#26323C" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" fill="none"> <circle cx="420" cy="130" r="36"/> <line x1="420" y1="166" x2="425" y2="300"/> <line x1="425" y1="300" x2="410" y2="420"/> <line x1="410" y1="420" x2="415" y2="470"/> <path d="M415,470 L385,478 M415,470 L462,470"/> </g> <line x1="415" y1="470" x2="415" y2="500" stroke="#BFC6CC" stroke-width="6" stroke-dasharray="8,7"/> <line x1="640" y1="440" x2="640" y2="292" stroke="#C75B39" stroke-width="9" marker-start="url(#ah_pogo)" marker-end="url(#ah_pogo)"/> <text x="675" y="336" font-size="26" fill="#C75B39" text-anchor="start" font-weight="bold">kleine,</text> <text x="675" y="370" font-size="26" fill="#C75B39" text-anchor="start" font-weight="bold">schnelle</text> <text x="675" y="404" font-size="26" fill="#C75B39" text-anchor="start" font-weight="bold">Sprünge</text> <circle cx="72" cy="552" r="13" fill="#5B8C6E"/> <text x="100" y="561" font-size="26" fill="#5B8C6E" text-anchor="start" font-weight="normal">Knie fast gestreckt – die Arbeit macht das Sprunggelenk</text> <circle cx="72" cy="604" r="13" fill="#6B7780"/> <text x="100" y="613" font-size="26" fill="#6B7780" text-anchor="start" font-weight="normal">Bodenkontakt so kurz wie möglich, Ferse tippt nicht auf</text>
+</g>
+</svg></template>
+<template id="fig-hop_single"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 640" preserveAspectRatio="xMidYMid meet"> <defs> <marker id="ah_hop_single" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"> <path d="M0,0 L6,3 L0,6 z" fill="#C75B39"/> </marker> <marker id="ahg_hop_single" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"> <path d="M0,0 L6,3 L0,6 z" fill="#5B8C6E"/> </marker> </defs> <g font-family="Arial, Helvetica, sans-serif"> <line x1="100" y1="510" x2="800" y2="510" stroke="#E8E3DC" stroke-width="14" stroke-linecap="round"/> <g stroke="#26323C" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" fill="none"> <circle cx="410" cy="120" r="36"/> <line x1="410" y1="156" x2="418" y2="290"/> <line x1="418" y1="290" x2="408" y2="410"/> <line x1="408" y1="410" x2="414" y2="478"/> <path d="M414,478 L386,486 M414,478 L460,478"/> <!-- other leg lifted, bent --> <line x1="418" y1="290" x2="500" y2="360"/> <line x1="500" y1="360" x2="470" y2="425"/> </g> <path d="M300,430 C280,370 290,320 330,285" stroke="#C75B39" stroke-width="9" fill="none" marker-end="url(#ah_hop_single)"/> <text x="280" y="470" font-size="27" fill="#C75B39" text-anchor="end" font-weight="bold">einbeinig</text> <text x="280" y="505" font-size="27" fill="#C75B39" text-anchor="end" font-weight="bold">abdrücken</text> <circle cx="602" cy="252" r="12" fill="#5B8C6E"/> <text x="628" y="261" font-size="23" fill="#5B8C6E" text-anchor="start" font-weight="normal">Knie über Fußspitze</text> <circle cx="602" cy="306" r="12" fill="#5B8C6E"/> <text x="628" y="315" font-size="23" fill="#5B8C6E" text-anchor="start" font-weight="normal">weich landen</text> <circle cx="602" cy="360" r="12" fill="#5B8C6E"/> <text x="628" y="369" font-size="23" fill="#5B8C6E" text-anchor="start" font-weight="normal">Gewölbe stabil halten</text> <text x="60" y="605" font-size="25" fill="#6B7780" text-anchor="start" font-weight="normal">Erst wenn Seilspringen schmerzfrei läuft</text>
+</g>
+</svg></template>
+<template id="fig-heel_rise_test"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 640" preserveAspectRatio="xMidYMid meet"> <defs> <marker id="ah_heel_rise_test" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"> <path d="M0,0 L6,3 L0,6 z" fill="#C75B39"/> </marker> <marker id="ahg_heel_rise_test" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"> <path d="M0,0 L6,3 L0,6 z" fill="#5B8C6E"/> </marker> </defs> <g font-family="Arial, Helvetica, sans-serif"> <text x="450" y="60" font-size="25" fill="#6B7780" text-anchor="middle" font-weight="normal">Ebener Boden – einbeinig, Wiederholungen zählen</text> <line x1="110" y1="500" x2="790" y2="500" stroke="#E8E3DC" stroke-width="16" stroke-linecap="round"/> <!-- Standbein, Ferse angehoben --> <g stroke="#26323C" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" fill="none"> <circle cx="392" cy="128" r="36"/> <line x1="396" y1="164" x2="404" y2="290"/> <line x1="404" y1="290" x2="398" y2="392"/> <path d="M398,392 L344,438 M398,392 L452,492"/> <line x1="452" y1="492" x2="524" y2="492"/> <!-- freies Bein, angewinkelt --> <line x1="404" y1="290" x2="470" y2="352"/> <line x1="470" y1="352" x2="438" y2="418"/> </g> <!-- Ferse frei --> <line x1="300" y1="438" x2="300" y2="500" stroke="#5B8C6E" stroke-width="7" marker-start="url(#ahg_heel_rise_test)" marker-end="url(#ahg_heel_rise_test)"/> <text x="282" y="478" font-size="25" fill="#5B8C6E" text-anchor="end" font-weight="normal">Ferse frei</text> <!-- Zaehler --> <circle cx="655" cy="215" r="76" fill="none" stroke="#C75B39" stroke-width="8"/> <text x="655" y="228" font-size="46" fill="#C75B39" text-anchor="middle" font-weight="bold">× N</text> <text x="655" y="330" font-size="24" fill="#6B7780" text-anchor="middle" font-weight="normal">zählen, bis die Höhe</text> <text x="655" y="362" font-size="24" fill="#6B7780" text-anchor="middle" font-weight="normal">sichtbar einbricht</text> <circle cx="72" cy="565" r="13" fill="#C75B39"/> <text x="100" y="574" font-size="26" fill="#C75B39" text-anchor="start" font-weight="bold">Volle Reichweite, ruhiges Tempo, ohne Schwung</text> <circle cx="72" cy="612" r="13" fill="#6B7780"/> <text x="100" y="621" font-size="26" fill="#6B7780" text-anchor="start" font-weight="normal">Beide Seiten – gesunde zuerst, dann die rechte</text>
+</g>
+</svg></template>
 <script type="module">
 
 
@@ -373,7 +416,16 @@ const KEY_PREV  = 'sehnenlog:prev';   // Stand vor der letzten Änderung
 const KEY_TRASH = 'sehnenlog:trash';  // Stand vor „Alles löschen“
 const KEY_META  = 'sehnenlog:meta';   // u. a. wann zuletzt gesichert wurde
 const BACKUP_FAELLIG_TAGE = 14;
-const FIGS = {"calf_straight":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 900 640\" preserveAspectRatio=\"xMidYMid meet\"> <defs> <marker id=\"ah_calf_straight\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#C75B39\"/> </marker> <marker id=\"ahg_calf_straight\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#5B8C6E\"/> </marker> </defs> <g font-family=\"Arial, Helvetica, sans-serif\"> <rect x=\"430\" y=\"430\" width=\"420\" height=\"150\" rx=\"6\" fill=\"#E8E3DC\"/> <text x=\"640\" y=\"520\" font-size=\"24\" fill=\"#6B7780\" text-anchor=\"middle\" font-weight=\"normal\">Stufe / Treppe</text> <!-- leg, up position --> <g stroke=\"#26323C\" stroke-width=\"16\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill=\"none\"> <line x1=\"405\" y1=\"90\" x2=\"415\" y2=\"330\"/> <path d=\"M415,330 L360,395 M415,330 L470,430\"/> <line x1=\"470\" y1=\"430\" x2=\"560\" y2=\"430\"/> </g> <text x=\"405\" y=\"70\" font-size=\"24\" fill=\"#26323C\" text-anchor=\"middle\" font-weight=\"bold\">Knie gestreckt</text> <!-- ghost, down position --> <g stroke=\"#BFC6CC\" stroke-width=\"14\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill=\"none\" stroke-dasharray=\"14,11\"> <line x1=\"415\" y1=\"150\" x2=\"428\" y2=\"392\"/> <path d=\"M428,392 L370,520 M428,392 L470,432\"/> </g> <!-- range arrow --> <line x1=\"285\" y1=\"380\" x2=\"285\" y2=\"520\" stroke=\"#C75B39\" stroke-width=\"7\" marker-start=\"url(#ah_calf_straight)\" marker-end=\"url(#ah_calf_straight)\"/> <text x=\"258\" y=\"398\" font-size=\"25\" fill=\"#C75B39\" text-anchor=\"end\" font-weight=\"bold\">3 Sek. hoch</text> <text x=\"258\" y=\"512\" font-size=\"25\" fill=\"#C75B39\" text-anchor=\"end\" font-weight=\"bold\">3 Sek. runter</text> <line x1=\"330\" y1=\"430\" x2=\"430\" y2=\"430\" stroke=\"#6B7780\" stroke-width=\"3\" stroke-dasharray=\"8,8\"/> <text x=\"60\" y=\"600\" font-size=\"25\" fill=\"#6B7780\" text-anchor=\"start\" font-weight=\"normal\">Ferse unter die Stufenkante absenken – volle Bewegungsreichweite</text>\n</g>\n</svg>","calf_bent":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 900 640\" preserveAspectRatio=\"xMidYMid meet\"> <defs> <marker id=\"ah_calf_bent\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#C75B39\"/> </marker> <marker id=\"ahg_calf_bent\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#5B8C6E\"/> </marker> </defs> <g font-family=\"Arial, Helvetica, sans-serif\"> <rect x=\"430\" y=\"430\" width=\"420\" height=\"150\" rx=\"6\" fill=\"#E8E3DC\"/> <g stroke=\"#26323C\" stroke-width=\"16\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill=\"none\"> <line x1=\"330\" y1=\"90\" x2=\"360\" y2=\"250\"/> <line x1=\"360\" y1=\"250\" x2=\"415\" y2=\"330\"/> <path d=\"M415,330 L360,395 M415,330 L470,430\"/> <line x1=\"470\" y1=\"430\" x2=\"560\" y2=\"430\"/> </g> <path d=\"M300,255 A70,70 0 0,0 420,265\" fill=\"none\" stroke=\"#C75B39\" stroke-width=\"6\"/> <text x=\"292\" y=\"250\" font-size=\"27\" fill=\"#C75B39\" text-anchor=\"end\" font-weight=\"bold\">≈ 30°</text> <text x=\"330\" y=\"70\" font-size=\"24\" fill=\"#26323C\" text-anchor=\"middle\" font-weight=\"bold\">Knie gebeugt halten</text> <line x1=\"620\" y1=\"380\" x2=\"620\" y2=\"500\" stroke=\"#C75B39\" stroke-width=\"7\" marker-start=\"url(#ah_calf_bent)\" marker-end=\"url(#ah_calf_bent)\"/> <text x=\"645\" y=\"450\" font-size=\"25\" fill=\"#C75B39\" text-anchor=\"start\" font-weight=\"normal\">gleiches Tempo 3/3</text> <text x=\"60\" y=\"600\" font-size=\"25\" fill=\"#6B7780\" text-anchor=\"start\" font-weight=\"normal\">Beugung bleibt konstant – trifft den tiefen Wadenmuskel (Soleus)</text>\n</g>\n</svg>","iso_hold":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 900 640\" preserveAspectRatio=\"xMidYMid meet\"> <defs> <marker id=\"ah_iso_hold\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#C75B39\"/> </marker> <marker id=\"ahg_iso_hold\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#5B8C6E\"/> </marker> </defs> <g font-family=\"Arial, Helvetica, sans-serif\"> <line x1=\"120\" y1=\"470\" x2=\"780\" y2=\"470\" stroke=\"#E8E3DC\" stroke-width=\"16\" stroke-linecap=\"round\"/> <g stroke=\"#26323C\" stroke-width=\"16\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill=\"none\"> <line x1=\"380\" y1=\"110\" x2=\"392\" y2=\"345\"/> <path d=\"M392,345 L338,405 M392,345 L448,462\"/> <line x1=\"448\" y1=\"462\" x2=\"540\" y2=\"462\"/> </g> <line x1=\"292\" y1=\"405\" x2=\"292\" y2=\"470\" stroke=\"#5B8C6E\" stroke-width=\"7\" marker-start=\"url(#ahg_iso_hold)\" marker-end=\"url(#ahg_iso_hold)\"/> <text x=\"275\" y=\"445\" font-size=\"25\" fill=\"#5B8C6E\" text-anchor=\"end\" font-weight=\"normal\">Ferse angehoben</text> <circle cx=\"660\" cy=\"200\" r=\"72\" fill=\"none\" stroke=\"#5B8C6E\" stroke-width=\"8\"/> <text x=\"660\" y=\"195\" font-size=\"40\" fill=\"#5B8C6E\" text-anchor=\"middle\" font-weight=\"bold\">30–45</text> <text x=\"660\" y=\"232\" font-size=\"24\" fill=\"#5B8C6E\" text-anchor=\"middle\" font-weight=\"normal\">Sekunden</text> <text x=\"660\" y=\"320\" font-size=\"25\" fill=\"#6B7780\" text-anchor=\"middle\" font-weight=\"normal\">halten, nicht bewegen</text> <text x=\"60\" y=\"600\" font-size=\"25\" fill=\"#6B7780\" text-anchor=\"start\" font-weight=\"normal\">Position ruhig halten – wirkt bei vielen Sehnen sofort schmerzlindernd</text>\n</g>\n</svg>","tib_post":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 900 640\" preserveAspectRatio=\"xMidYMid meet\"> <defs> <marker id=\"ah_tib_post\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#C75B39\"/> </marker> <marker id=\"ahg_tib_post\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#5B8C6E\"/> </marker> </defs> <g font-family=\"Arial, Helvetica, sans-serif\"> <text x=\"450\" y=\"62\" font-size=\"25\" fill=\"#6B7780\" text-anchor=\"middle\" font-weight=\"normal\">Draufsicht – rechter Fuß</text> <!-- foot outline seen from above, toes up --> <path d=\"M470,150 C540,160 560,250 552,340 C546,420 530,470 490,490 C440,512 392,492 378,440 C362,378 372,250 396,190 C410,158 436,145 470,150 Z\" fill=\"#F5F2EE\" stroke=\"#26323C\" stroke-width=\"10\" stroke-linejoin=\"round\"/> <g fill=\"#26323C\"> <ellipse cx=\"410\" cy=\"140\" rx=\"19\" ry=\"24\"/> <ellipse cx=\"452\" cy=\"127\" rx=\"17\" ry=\"22\"/> <ellipse cx=\"490\" cy=\"130\" rx=\"15\" ry=\"20\"/> <ellipse cx=\"523\" cy=\"143\" rx=\"13\" ry=\"18\"/> <ellipse cx=\"551\" cy=\"163\" rx=\"12\" ry=\"16\"/> </g> <!-- band --> <path d=\"M760,300 C650,300 600,290 552,285\" stroke=\"#5B8C6E\" stroke-width=\"16\" fill=\"none\" stroke-linecap=\"round\"/> <text x=\"770\" y=\"262\" font-size=\"25\" fill=\"#5B8C6E\" text-anchor=\"start\" font-weight=\"bold\">Band fest</text> <text x=\"770\" y=\"296\" font-size=\"25\" fill=\"#5B8C6E\" text-anchor=\"start\" font-weight=\"bold\">verankert</text> <!-- movement arrow: foot pushes inward (medially) --> <path d=\"M360,300 C295,300 250,318 205,348\" stroke=\"#C75B39\" stroke-width=\"9\" fill=\"none\" marker-end=\"url(#ah_tib_post)\"/> <text x=\"60\" y=\"425\" font-size=\"26\" fill=\"#C75B39\" text-anchor=\"start\" font-weight=\"bold\">Fuß nach innen</text> <text x=\"60\" y=\"459\" font-size=\"26\" fill=\"#C75B39\" text-anchor=\"start\" font-weight=\"bold\">und leicht nach</text> <text x=\"60\" y=\"493\" font-size=\"26\" fill=\"#C75B39\" text-anchor=\"start\" font-weight=\"bold\">unten drücken</text> <text x=\"60\" y=\"600\" font-size=\"25\" fill=\"#6B7780\" text-anchor=\"start\" font-weight=\"normal\">Unterschenkel bleibt ruhig – nur der Fuß bewegt sich. Langsam zurück.</text>\n</g>\n</svg>","tib_ant":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 900 640\" preserveAspectRatio=\"xMidYMid meet\"> <defs> <marker id=\"ah_tib_ant\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#C75B39\"/> </marker> <marker id=\"ahg_tib_ant\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#5B8C6E\"/> </marker> </defs> <g font-family=\"Arial, Helvetica, sans-serif\"> <text x=\"450\" y=\"62\" font-size=\"25\" fill=\"#6B7780\" text-anchor=\"middle\" font-weight=\"normal\">Seitansicht – sitzend, Bein gestreckt</text> <!-- shin horizontal --> <line x1=\"120\" y1=\"300\" x2=\"470\" y2=\"300\" stroke=\"#26323C\" stroke-width=\"18\" stroke-linecap=\"round\"/> <!-- foot up position --> <g stroke=\"#26323C\" stroke-width=\"16\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill=\"none\"> <path d=\"M470,300 L500,220 M470,300 L505,330\"/> </g> <!-- ghost down --> <g stroke=\"#BFC6CC\" stroke-width=\"14\" stroke-linecap=\"round\" stroke-dasharray=\"13,10\" fill=\"none\"> <path d=\"M470,300 L545,368\"/> </g> <!-- band --> <path d=\"M498,236 C600,270 700,380 745,470\" stroke=\"#5B8C6E\" stroke-width=\"14\" fill=\"none\" stroke-linecap=\"round\"/> <text x=\"700\" y=\"520\" font-size=\"25\" fill=\"#5B8C6E\" text-anchor=\"middle\" font-weight=\"bold\">Band fixiert</text> <path d=\"M420,250 C430,200 460,178 495,180\" stroke=\"#C75B39\" stroke-width=\"9\" fill=\"none\" marker-end=\"url(#ah_tib_ant)\"/> <text x=\"390\" y=\"225\" font-size=\"27\" fill=\"#C75B39\" text-anchor=\"end\" font-weight=\"bold\">Fußspitze</text> <text x=\"390\" y=\"260\" font-size=\"27\" fill=\"#C75B39\" text-anchor=\"end\" font-weight=\"bold\">anziehen</text> <text x=\"60\" y=\"600\" font-size=\"25\" fill=\"#6B7780\" text-anchor=\"start\" font-weight=\"normal\">Gegen den Bandwiderstand anziehen, dann betont langsam ablassen</text>\n</g>\n</svg>","heel_walk":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 900 640\" preserveAspectRatio=\"xMidYMid meet\"> <defs> <marker id=\"ah_heel_walk\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#C75B39\"/> </marker> <marker id=\"ahg_heel_walk\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#5B8C6E\"/> </marker> </defs> <g font-family=\"Arial, Helvetica, sans-serif\"> <line x1=\"80\" y1=\"500\" x2=\"820\" y2=\"500\" stroke=\"#E8E3DC\" stroke-width=\"16\" stroke-linecap=\"round\"/> <g stroke=\"#26323C\" stroke-width=\"16\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill=\"none\"> <line x1=\"300\" y1=\"120\" x2=\"300\" y2=\"380\"/> <path d=\"M300,380 L285,495 M300,380 L370,318\"/> </g> <g stroke=\"#26323C\" stroke-width=\"16\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill=\"none\"> <line x1=\"470\" y1=\"120\" x2=\"500\" y2=\"370\"/> <path d=\"M500,370 L488,495 M500,370 L572,315\"/> </g> <circle cx=\"72\" cy=\"552\" r=\"13\" fill=\"#C75B39\"/> <text x=\"100\" y=\"561\" font-size=\"26\" fill=\"#C75B39\" text-anchor=\"start\" font-weight=\"bold\">Nur auf den Fersen gehen – Fußspitzen bleiben oben</text> <circle cx=\"72\" cy=\"604\" r=\"13\" fill=\"#6B7780\"/> <text x=\"100\" y=\"613\" font-size=\"26\" fill=\"#6B7780\" text-anchor=\"start\" font-weight=\"normal\">Schienbein brennt – das ist gewollt. 30 Sek. am Stück.</text>\n</g>\n</svg>","short_foot":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 900 640\" preserveAspectRatio=\"xMidYMid meet\"> <defs> <marker id=\"ah_short_foot\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#C75B39\"/> </marker> <marker id=\"ahg_short_foot\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#5B8C6E\"/> </marker> </defs> <g font-family=\"Arial, Helvetica, sans-serif\"> <text x=\"450\" y=\"62\" font-size=\"25\" fill=\"#6B7780\" text-anchor=\"middle\" font-weight=\"normal\">Seitansicht – Fußgewölbe aktiv anheben</text> <line x1=\"120\" y1=\"450\" x2=\"800\" y2=\"450\" stroke=\"#E8E3DC\" stroke-width=\"14\" stroke-linecap=\"round\"/> <!-- flat arch ghost --> <path d=\"M250,450 C340,450 480,450 600,450\" stroke=\"#BFC6CC\" stroke-width=\"12\" fill=\"none\" stroke-dasharray=\"13,10\"/> <text x=\"390\" y=\"512\" font-size=\"24\" fill=\"#BFC6CC\" text-anchor=\"middle\" font-weight=\"normal\">flach (vorher)</text> <!-- lifted arch --> <path d=\"M250,450 C340,368 470,368 600,450\" stroke=\"#26323C\" stroke-width=\"16\" fill=\"none\" stroke-linecap=\"round\"/> <circle cx=\"250\" cy=\"450\" r=\"14\" fill=\"#26323C\"/> <circle cx=\"600\" cy=\"450\" r=\"14\" fill=\"#26323C\"/> <text x=\"232\" y=\"430\" font-size=\"24\" fill=\"#6B7780\" text-anchor=\"end\" font-weight=\"normal\">Ferse bleibt</text> <text x=\"232\" y=\"458\" font-size=\"24\" fill=\"#6B7780\" text-anchor=\"end\" font-weight=\"normal\">am Boden</text> <text x=\"622\" y=\"430\" font-size=\"24\" fill=\"#6B7780\" text-anchor=\"start\" font-weight=\"normal\">Ballen bleibt</text> <text x=\"622\" y=\"458\" font-size=\"24\" fill=\"#6B7780\" text-anchor=\"start\" font-weight=\"normal\">am Boden</text> <line x1=\"425\" y1=\"345\" x2=\"425\" y2=\"270\" stroke=\"#C75B39\" stroke-width=\"9\" marker-end=\"url(#ah_short_foot)\"/> <text x=\"425\" y=\"240\" font-size=\"27\" fill=\"#C75B39\" text-anchor=\"middle\" font-weight=\"bold\">Gewölbe anheben</text> <text x=\"60\" y=\"600\" font-size=\"25\" fill=\"#C75B39\" text-anchor=\"start\" font-weight=\"normal\">Zehen bleiben lang und entspannt – nicht krallen!</text>\n</g>\n</svg>","side_plank":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 900 640\" preserveAspectRatio=\"xMidYMid meet\"> <defs> <marker id=\"ah_side_plank\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#C75B39\"/> </marker> <marker id=\"ahg_side_plank\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#5B8C6E\"/> </marker> </defs> <g font-family=\"Arial, Helvetica, sans-serif\"> <line x1=\"90\" y1=\"470\" x2=\"810\" y2=\"470\" stroke=\"#E8E3DC\" stroke-width=\"14\" stroke-linecap=\"round\"/> <g stroke=\"#26323C\" stroke-width=\"16\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill=\"none\"> <!-- forearm --> <line x1=\"200\" y1=\"470\" x2=\"290\" y2=\"470\"/> <line x1=\"255\" y1=\"470\" x2=\"270\" y2=\"330\"/> <!-- torso --> <line x1=\"270\" y1=\"330\" x2=\"560\" y2=\"415\"/> <circle cx=\"252\" cy=\"292\" r=\"34\"/> <!-- bottom leg --> <line x1=\"560\" y1=\"415\" x2=\"790\" y2=\"465\"/> </g> <!-- top leg raised --> <g stroke=\"#C75B39\" stroke-width=\"16\" stroke-linecap=\"round\" fill=\"none\"> <line x1=\"560\" y1=\"410\" x2=\"780\" y2=\"350\"/> </g> <path d=\"M700,430 C710,400 720,380 735,362\" stroke=\"#C75B39\" stroke-width=\"8\" fill=\"none\" marker-end=\"url(#ah_side_plank)\"/> <text x=\"660\" y=\"300\" font-size=\"26\" fill=\"#C75B39\" text-anchor=\"middle\" font-weight=\"bold\">oberes Bein heben</text> <line x1=\"270\" y1=\"345\" x2=\"555\" y2=\"428\" stroke=\"#5B8C6E\" stroke-width=\"5\" stroke-dasharray=\"12,9\"/> <text x=\"60\" y=\"575\" font-size=\"25\" fill=\"#5B8C6E\" text-anchor=\"start\" font-weight=\"normal\">Hüfte oben halten – gerade Linie Schulter–Hüfte–Knie</text>\n</g>\n</svg>","monster_walk":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 900 640\" preserveAspectRatio=\"xMidYMid meet\"> <defs> <marker id=\"ah_monster_walk\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#C75B39\"/> </marker> <marker id=\"ahg_monster_walk\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#5B8C6E\"/> </marker> </defs> <g font-family=\"Arial, Helvetica, sans-serif\"> <text x=\"450\" y=\"62\" font-size=\"25\" fill=\"#6B7780\" text-anchor=\"middle\" font-weight=\"normal\">Frontalansicht – Band um die Fußgelenke</text> <line x1=\"100\" y1=\"500\" x2=\"800\" y2=\"500\" stroke=\"#E8E3DC\" stroke-width=\"14\" stroke-linecap=\"round\"/> <g stroke=\"#26323C\" stroke-width=\"16\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill=\"none\"> <circle cx=\"450\" cy=\"150\" r=\"38\"/> <line x1=\"450\" y1=\"188\" x2=\"450\" y2=\"300\"/> <line x1=\"450\" y1=\"300\" x2=\"345\" y2=\"440\"/> <line x1=\"345\" y1=\"440\" x2=\"330\" y2=\"495\"/> <line x1=\"450\" y1=\"300\" x2=\"565\" y2=\"440\"/> <line x1=\"565\" y1=\"440\" x2=\"580\" y2=\"495\"/> </g> <path d=\"M330,470 C420,438 490,438 580,470\" stroke=\"#5B8C6E\" stroke-width=\"14\" fill=\"none\"/> <text x=\"455\" y=\"425\" font-size=\"25\" fill=\"#5B8C6E\" text-anchor=\"middle\" font-weight=\"bold\">Band</text> <line x1=\"290\" y1=\"495\" x2=\"180\" y2=\"495\" stroke=\"#C75B39\" stroke-width=\"9\" marker-end=\"url(#ah_monster_walk)\"/> <line x1=\"620\" y1=\"495\" x2=\"730\" y2=\"495\" stroke=\"#C75B39\" stroke-width=\"9\" marker-end=\"url(#ah_monster_walk)\"/> <text x=\"450\" y=\"560\" font-size=\"26\" fill=\"#C75B39\" text-anchor=\"middle\" font-weight=\"bold\">seitliche Schritte, Spannung im Band halten</text> <text x=\"60\" y=\"615\" font-size=\"25\" fill=\"#6B7780\" text-anchor=\"start\" font-weight=\"normal\">Knie nicht nach innen fallen lassen – Zehen zeigen nach vorn</text>\n</g>\n</svg>","pogo":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 900 640\" preserveAspectRatio=\"xMidYMid meet\"> <defs> <marker id=\"ah_pogo\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#C75B39\"/> </marker> <marker id=\"ahg_pogo\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#5B8C6E\"/> </marker> </defs> <g font-family=\"Arial, Helvetica, sans-serif\"> <line x1=\"100\" y1=\"500\" x2=\"800\" y2=\"500\" stroke=\"#E8E3DC\" stroke-width=\"14\" stroke-linecap=\"round\"/> <g stroke=\"#26323C\" stroke-width=\"16\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill=\"none\"> <circle cx=\"420\" cy=\"130\" r=\"36\"/> <line x1=\"420\" y1=\"166\" x2=\"425\" y2=\"300\"/> <line x1=\"425\" y1=\"300\" x2=\"410\" y2=\"420\"/> <line x1=\"410\" y1=\"420\" x2=\"415\" y2=\"470\"/> <path d=\"M415,470 L385,478 M415,470 L462,470\"/> </g> <line x1=\"415\" y1=\"470\" x2=\"415\" y2=\"500\" stroke=\"#BFC6CC\" stroke-width=\"6\" stroke-dasharray=\"8,7\"/> <line x1=\"640\" y1=\"440\" x2=\"640\" y2=\"292\" stroke=\"#C75B39\" stroke-width=\"9\" marker-start=\"url(#ah_pogo)\" marker-end=\"url(#ah_pogo)\"/> <text x=\"675\" y=\"336\" font-size=\"26\" fill=\"#C75B39\" text-anchor=\"start\" font-weight=\"bold\">kleine,</text> <text x=\"675\" y=\"370\" font-size=\"26\" fill=\"#C75B39\" text-anchor=\"start\" font-weight=\"bold\">schnelle</text> <text x=\"675\" y=\"404\" font-size=\"26\" fill=\"#C75B39\" text-anchor=\"start\" font-weight=\"bold\">Sprünge</text> <circle cx=\"72\" cy=\"552\" r=\"13\" fill=\"#5B8C6E\"/> <text x=\"100\" y=\"561\" font-size=\"26\" fill=\"#5B8C6E\" text-anchor=\"start\" font-weight=\"normal\">Knie fast gestreckt – die Arbeit macht das Sprunggelenk</text> <circle cx=\"72\" cy=\"604\" r=\"13\" fill=\"#6B7780\"/> <text x=\"100\" y=\"613\" font-size=\"26\" fill=\"#6B7780\" text-anchor=\"start\" font-weight=\"normal\">Bodenkontakt so kurz wie möglich, Ferse tippt nicht auf</text>\n</g>\n</svg>","hop_single":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 900 640\" preserveAspectRatio=\"xMidYMid meet\"> <defs> <marker id=\"ah_hop_single\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#C75B39\"/> </marker> <marker id=\"ahg_hop_single\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#5B8C6E\"/> </marker> </defs> <g font-family=\"Arial, Helvetica, sans-serif\"> <line x1=\"100\" y1=\"510\" x2=\"800\" y2=\"510\" stroke=\"#E8E3DC\" stroke-width=\"14\" stroke-linecap=\"round\"/> <g stroke=\"#26323C\" stroke-width=\"16\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill=\"none\"> <circle cx=\"410\" cy=\"120\" r=\"36\"/> <line x1=\"410\" y1=\"156\" x2=\"418\" y2=\"290\"/> <line x1=\"418\" y1=\"290\" x2=\"408\" y2=\"410\"/> <line x1=\"408\" y1=\"410\" x2=\"414\" y2=\"478\"/> <path d=\"M414,478 L386,486 M414,478 L460,478\"/> <!-- other leg lifted, bent --> <line x1=\"418\" y1=\"290\" x2=\"500\" y2=\"360\"/> <line x1=\"500\" y1=\"360\" x2=\"470\" y2=\"425\"/> </g> <path d=\"M300,430 C280,370 290,320 330,285\" stroke=\"#C75B39\" stroke-width=\"9\" fill=\"none\" marker-end=\"url(#ah_hop_single)\"/> <text x=\"280\" y=\"470\" font-size=\"27\" fill=\"#C75B39\" text-anchor=\"end\" font-weight=\"bold\">einbeinig</text> <text x=\"280\" y=\"505\" font-size=\"27\" fill=\"#C75B39\" text-anchor=\"end\" font-weight=\"bold\">abdrücken</text> <circle cx=\"602\" cy=\"252\" r=\"12\" fill=\"#5B8C6E\"/> <text x=\"628\" y=\"261\" font-size=\"23\" fill=\"#5B8C6E\" text-anchor=\"start\" font-weight=\"normal\">Knie über Fußspitze</text> <circle cx=\"602\" cy=\"306\" r=\"12\" fill=\"#5B8C6E\"/> <text x=\"628\" y=\"315\" font-size=\"23\" fill=\"#5B8C6E\" text-anchor=\"start\" font-weight=\"normal\">weich landen</text> <circle cx=\"602\" cy=\"360\" r=\"12\" fill=\"#5B8C6E\"/> <text x=\"628\" y=\"369\" font-size=\"23\" fill=\"#5B8C6E\" text-anchor=\"start\" font-weight=\"normal\">Gewölbe stabil halten</text> <text x=\"60\" y=\"605\" font-size=\"25\" fill=\"#6B7780\" text-anchor=\"start\" font-weight=\"normal\">Erst wenn Seilspringen schmerzfrei läuft</text>\n</g>\n</svg>","heel_rise_test":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 900 640\" preserveAspectRatio=\"xMidYMid meet\"> <defs> <marker id=\"ah_heel_rise_test\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#C75B39\"/> </marker> <marker id=\"ahg_heel_rise_test\" markerWidth=\"6\" markerHeight=\"6\" refX=\"3\" refY=\"3\" orient=\"auto\"> <path d=\"M0,0 L6,3 L0,6 z\" fill=\"#5B8C6E\"/> </marker> </defs> <g font-family=\"Arial, Helvetica, sans-serif\"> <text x=\"450\" y=\"60\" font-size=\"25\" fill=\"#6B7780\" text-anchor=\"middle\" font-weight=\"normal\">Ebener Boden – einbeinig, Wiederholungen zählen</text> <line x1=\"110\" y1=\"500\" x2=\"790\" y2=\"500\" stroke=\"#E8E3DC\" stroke-width=\"16\" stroke-linecap=\"round\"/> <!-- Standbein, Ferse angehoben --> <g stroke=\"#26323C\" stroke-width=\"16\" stroke-linecap=\"round\" stroke-linejoin=\"round\" fill=\"none\"> <circle cx=\"392\" cy=\"128\" r=\"36\"/> <line x1=\"396\" y1=\"164\" x2=\"404\" y2=\"290\"/> <line x1=\"404\" y1=\"290\" x2=\"398\" y2=\"392\"/> <path d=\"M398,392 L344,438 M398,392 L452,492\"/> <line x1=\"452\" y1=\"492\" x2=\"524\" y2=\"492\"/> <!-- freies Bein, angewinkelt --> <line x1=\"404\" y1=\"290\" x2=\"470\" y2=\"352\"/> <line x1=\"470\" y1=\"352\" x2=\"438\" y2=\"418\"/> </g> <!-- Ferse frei --> <line x1=\"300\" y1=\"438\" x2=\"300\" y2=\"500\" stroke=\"#5B8C6E\" stroke-width=\"7\" marker-start=\"url(#ahg_heel_rise_test)\" marker-end=\"url(#ahg_heel_rise_test)\"/> <text x=\"282\" y=\"478\" font-size=\"25\" fill=\"#5B8C6E\" text-anchor=\"end\" font-weight=\"normal\">Ferse frei</text> <!-- Zaehler --> <circle cx=\"655\" cy=\"215\" r=\"76\" fill=\"none\" stroke=\"#C75B39\" stroke-width=\"8\"/> <text x=\"655\" y=\"228\" font-size=\"46\" fill=\"#C75B39\" text-anchor=\"middle\" font-weight=\"bold\">× N</text> <text x=\"655\" y=\"330\" font-size=\"24\" fill=\"#6B7780\" text-anchor=\"middle\" font-weight=\"normal\">zählen, bis die Höhe</text> <text x=\"655\" y=\"362\" font-size=\"24\" fill=\"#6B7780\" text-anchor=\"middle\" font-weight=\"normal\">sichtbar einbricht</text> <circle cx=\"72\" cy=\"565\" r=\"13\" fill=\"#C75B39\"/> <text x=\"100\" y=\"574\" font-size=\"26\" fill=\"#C75B39\" text-anchor=\"start\" font-weight=\"bold\">Volle Reichweite, ruhiges Tempo, ohne Schwung</text> <circle cx=\"72\" cy=\"612\" r=\"13\" fill=\"#6B7780\"/> <text x=\"100\" y=\"621\" font-size=\"26\" fill=\"#6B7780\" text-anchor=\"start\" font-weight=\"normal\">Beide Seiten – gesunde zuerst, dann die rechte</text>\n</g>\n</svg>"};
+// Fachgrenzen aus dem Plan – an einer Stelle, damit Urteil, Skala und Diagramm dieselben Zahlen nutzen
+const SCHMERZ_MAX = 3;            // Schmerz während der Einheit: bis hierhin erlaubt
+const ANSTRENGUNG_LEICHT = 6;     // letzter Satz bei höchstens 6/10: Last vermutlich zu leicht
+const STEIGERUNG_TAGE = 7;        // eine Variable pro Woche
+const MORGEN_OFFEN_TAGE = 3;      // so lange hält ein fehlender Morgen das Urteil an
+const WARN_FENSTER_TAGE = 21;     // Warnzeichen: die Morgen der letzten drei Wochen
+const EXPORT_TAGE = 30;           // Textfassung fürs Chat: so viele Tage mit Einträgen
+const TEST_INTERVALL_TAGE = 30;   // Monatstest: danach wieder fällig
+const TEST_ERSTER_AB_TAGE = 14;   // erster Monatstest fällig, sobald zwei Wochen Daten da sind
+const TEST_WARN_TAGE = 45;        // so lange wirkt ein auffälliger Monatstest als Warnzeichen
 
 /* ============================================ Übungen */
 const EX = {
@@ -580,7 +632,8 @@ const SCALES = [
 ];
 
 /* ============================================ State */
-let state = { entries: [], mornings: [], loaded: false, error: null, dataNote: null, migrationNote: null,
+let _now = () => new Date();   // die Uhr – vor dem Zustand, weil newDraft() sie beim Start braucht; im Test austauschbar
+let state = { entries: [], mornings: [], tests: [], loaded: false, error: null, dataNote: null, migrationNote: null,
   persist: null, snapPrev: null, snapTrash: null, meta: { lastBackup: null } };
 let tab = 'log';
 let openAcc = null;
@@ -601,12 +654,13 @@ let formOpen = false;      // „Einheit erfassen“ aufgeklappt?
 let whenOpen = false;      // Datum/Uhrzeit als Felder statt als eine Zeile?
 let uiFlash = null;        // kurze Rückmeldung { where:'entry'|'backup'|'morning'|'history', ok, text } – verschwindet beim nächsten Tippen
 let lastDeleted = null;    // zuletzt gelöschte Einheit – für „Rückgängig“ direkt nach dem Löschen
+let testDraft = null;      // { date, right, left, note, orig } – Monatstest-Formular offen? orig = Datum des bearbeiteten Tests
 
-function nowTime() { const d = new Date(); return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0'); }
+function nowTime() { const d = _now(); return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0'); }
 function today() {
   // Bewusst lokale Datumsteile statt toISOString() – letzteres rechnet auf UTC
   // und liefert in mitteleuropäischer Zeit nachts den Vortag.
-  const d = new Date();
+  const d = _now();
   return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
 function newDraft() {
@@ -615,6 +669,7 @@ function newDraft() {
     painDuring: null, effort: null, collagen: false, progressed: false, note: '' };
 }
 function fmt(iso) { const [y,m,d] = iso.split('-'); return `${+d}.${+m}.`; }
+function fmtY(iso) { return fmt(iso) + iso.slice(0, 4); }
 function fmtWhen(iso) {
   const d = new Date(iso);
   if (isNaN(d)) return '–';
@@ -650,12 +705,14 @@ function relDay(iso) {
   return `${weekday(iso)}, ${fmt(iso)}`;
 }
 function dayLabel(iso) {
-  const base = `${weekday(iso)}, ${fmt(iso)}`;
-  if (iso === today()) return 'Heute · ' + base;
-  if (addDays(iso, 1) === today()) return 'Gestern · ' + base;
-  return base;
+  const base = `${weekday(iso)}, ${fmt(iso)}`, r = relDay(iso);
+  return r === base ? base : r[0].toUpperCase() + r.slice(1) + ' · ' + base;
 }
 function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function typeLabel(t) { return TYPES[t] ? TYPES[t].label : t; }
+function stiffLabel(v) { const s = STIFF.find(x => x.v === v); return s ? s.label : '–'; }
+function stiffMins(v) { const s = STIFF.find(x => x.v === v); return s ? s.mins : 0; }
+function hasData() { return state.entries.length > 0 || state.mornings.length > 0 || state.tests.length > 0; }
 
 /* ============================================ Storage */
 // Ohne Kennung und Datum lässt sich ein Datensatz weder sortieren noch anzeigen –
@@ -669,7 +726,6 @@ const isIsoDate = d => {
 };
 const hasId = x => (typeof x.id === 'string' && x.id.length > 0) || typeof x.id === 'number';
 function validEntry(e) { return !!e && typeof e === 'object' && hasId(e) && isIsoDate(e.date); }
-const validRest = validEntry;
 function validMorning(m) {
   return !!m && typeof m === 'object' && isIsoDate(m.date)
     && (m.skipped === true || (typeof m.pain === 'number' && m.pain >= 0 && m.pain <= 10));
@@ -681,7 +737,7 @@ function keepValid(list, check) {
 }
 function noteDropped(n) {
   state.dataNote = n
-    ? `${n} ${n === 1 ? 'Datensatz war' : 'Datensätze waren'} unvollständig (Kennung oder Datum fehlt) und ${n === 1 ? 'wurde' : 'wurden'} nicht übernommen. Der Rest deiner Daten ist unverändert.`
+    ? `${n} ${n === 1 ? 'Datensatz war' : 'Datensätze waren'} unvollständig (Kennung, Datum oder Zahlen fehlen) und ${n === 1 ? 'wurde' : 'wurden'} nicht übernommen. Der Rest deiner Daten ist unverändert.`
     : null;
 }
 
@@ -690,6 +746,11 @@ function makeMorning(date, pain, stiff, note) {
   return { id: 'm' + date, date, pain, stiff: asStiff(stiff), note: asStr(note).trim(), skipped: false };
 }
 function skippedMorning(date) { return { id: 'm' + date, date, pain: null, stiff: null, note: '', skipped: true }; }
+// Monatstest: einbeiniges Wadenheben, Wiederholungen je Seite – einer je Kalendertag.
+// Rechts ist die betroffene Seite, links die gesunde (so steht es im Plan).
+const asCount = v => (typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 999) ? Math.round(v) : null;
+function validTest(x) { return !!x && typeof x === 'object' && isIsoDate(x.date) && asCount(x.right) !== null && asCount(x.left) !== null; }
+function makeTest(date, right, left, note) { return { id: 't' + date, date, right: asCount(right), left: asCount(left), note: asStr(note).trim() }; }
 // Alles, was aus einer Sicherung kommt, wird hier auf die erwarteten Typen gebracht.
 // Sonst landet ein „time“ als Attribut-Injektion im Formular oder ein null in summary().
 const asStr = v => (typeof v === 'string' || typeof v === 'number') ? String(v) : '';
@@ -723,7 +784,7 @@ function cleanEntry(e) {
 // vom Di = Morgen vom Mi), Morgen nach Ruhetagen lagen getrennt unter „rest“.
 // Beides wird hier zu einem Morgen je Kalendertag.
 function fromLegacy(rawEntries, rawRest) {
-  const e = keepValid(rawEntries, validEntry), r = keepValid(rawRest, validRest);
+  const e = keepValid(rawEntries, validEntry), r = keepValid(rawRest, validEntry);
   const map = new Map();
   let dropped = e.dropped + r.dropped, doppelt = 0;
   [...e.ok].sort((a,b) => String(a.date + (a.time||'')).localeCompare(String(b.date + (b.time||'')))).forEach(x => {
@@ -737,13 +798,12 @@ function fromLegacy(rawEntries, rawRest) {
     if (cur && !cur.skipped) {
       // Doppelt erfasst: der Morgen-Check gewinnt, der zweite Wert bleibt in der Notiz erhalten
       doppelt++;
-      const st = STIFF.find(s => s.v === x.stiff);
       const extra = [x.pain !== cur.pain ? 'Schmerz ' + x.pain : '',
-        x.stiff !== cur.stiff && st ? 'Sehne steif ' + st.label : '', String(x.note || '').trim()].filter(Boolean).join(', ');
+        x.stiff !== cur.stiff && asStiff(x.stiff) ? 'Sehne steif ' + stiffLabel(x.stiff) : '', String(x.note || '').trim()].filter(Boolean).join(', ');
       if (extra) cur.note = [cur.note, 'zweiter Eintrag: ' + extra].filter(Boolean).join(' · ');
     } else map.set(x.date, makeMorning(x.date, x.pain, x.stiff, x.note));
   });
-  return { entries: e.ok.map(cleanEntry), mornings: [...map.values()], dropped, doppelt, legacy: true };
+  return { entries: e.ok.map(cleanEntry), mornings: [...map.values()], tests: [], dropped, doppelt, legacy: true };
 }
 
 // Nimmt jedes bekannte Format an (v1–v4) und liefert den aktuellen Aufbau – oder null.
@@ -751,30 +811,34 @@ function normalize(p) {
   if (Array.isArray(p)) return fromLegacy(p, []);
   if (!p || typeof p !== 'object' || !Array.isArray(p.entries)) return null;
   if (!Array.isArray(p.mornings)) return fromLegacy(p.entries, p.rest);
-  const e = keepValid(p.entries, validEntry), m = keepValid(p.mornings, validMorning);
-  const map = new Map();
+  const e = keepValid(p.entries, validEntry), m = keepValid(p.mornings, validMorning), t = keepValid(p.tests, validTest);
+  const map = new Map(), tmap = new Map();
   m.ok.forEach(x => map.set(x.date, x.skipped ? skippedMorning(x.date) : makeMorning(x.date, x.pain, x.stiff, x.note)));
-  return { entries: e.ok.map(cleanEntry), mornings: [...map.values()], dropped: e.dropped + m.dropped, doppelt: 0, legacy: false };
+  t.ok.forEach(x => tmap.set(x.date, makeTest(x.date, x.right, x.left, x.note)));
+  return { entries: e.ok.map(cleanEntry), mornings: [...map.values()], tests: [...tmap.values()],
+    dropped: e.dropped + m.dropped + t.dropped, doppelt: 0, legacy: false };
 }
 
 function adopt(n) {
   if (!n) return false;
   state.entries = n.entries;
   state.mornings = n.mornings;
+  state.tests = n.tests || [];
+  invalidate();
   noteDropped(n.dropped);
-  return state.entries.length > 0 || state.mornings.length > 0;
+  return hasData();
 }
-function packState() { return { v: 4, entries: state.entries, mornings: state.mornings }; }
+function packState() { return { v: 4, entries: state.entries, mornings: state.mornings, tests: state.tests }; }
 function migrationText(n) {
   return 'Morgenwerte stehen jetzt an dem Tag, an dem du aufgewacht bist – nicht mehr beim Training vom Vortag. Deine Daten wurden übernommen, der alte Stand bleibt zusätzlich unverändert gespeichert.'
     + (n.doppelt ? ` Für ${n.doppelt} Morgen gab es zwei Werte (Morgen-Check und „Morgen ohne Training“). Übernommen wurde der Morgen-Check, der zweite Wert steht in der Notiz.` : '');
 }
 
-// Rueckfallebenen. Duerfen nie das eigentliche Speichern gefaehrden – darum
+// Rückfallebenen. Dürfen nie das eigentliche Speichern gefährden – darum
 // schluckt hier alles seine Fehler und liefert im Zweifel null.
 async function writeSnapshot(key, payload) {
   try { await window.storage.set(key, JSON.stringify({ at: new Date().toISOString(), payload })); }
-  catch (e) { /* Rueckfallebene ist Kuer, nicht Pflicht */ }
+  catch (e) { /* Rückfallebene ist Kür, nicht Pflicht */ }
 }
 async function readSnapshot(key) {
   try {
@@ -783,8 +847,8 @@ async function readSnapshot(key) {
     const s = JSON.parse(r.value);
     if (!s || !s.at || !s.payload) return null;
     const n = normalize(s.payload);   // auch Zwischenstände aus der Zeit vor der Umstellung
-    if (!n || (!n.entries.length && !n.mornings.length)) return null;
-    return { at: s.at, entries: n.entries, mornings: n.mornings };
+    if (!n || (!n.entries.length && !n.mornings.length && !n.tests.length)) return null;
+    return { at: s.at, entries: n.entries, mornings: n.mornings, tests: n.tests };
   } catch (e) { return null; }
 }
 async function dropSnapshot(key) {
@@ -809,16 +873,16 @@ function backupAge() {
   return Math.max(0, Math.floor((Date.now() - d.getTime()) / 86400000));
 }
 function backupFaellig() {
-  if (!state.entries.length && !state.mornings.length) return false;
+  if (!hasData()) return false;
   // Erst erinnern, wenn es etwas zu verlieren gibt: eine Woche Daten oder zehn Datensätze
   const dates = dayList(), oldest = dates[dates.length - 1];
-  const genug = state.entries.length + state.mornings.length >= 10 || (oldest && daysBetween(oldest, today()) >= 7);
+  const genug = state.entries.length + state.mornings.length + state.tests.length >= 10 || (oldest && daysBetween(oldest, today()) >= 7);
   if (!genug) return false;
   const a = backupAge();
   return a === null || a >= BACKUP_FAELLIG_TAGE;
 }
 
-// Ohne Zusage darf der Browser den Speicher raeumen, wenn er Platz braucht.
+// Ohne Zusage darf der Browser den Speicher räumen, wenn er Platz braucht.
 async function checkPersistence(fragen) {
   if (!navigator.storage || !navigator.storage.persist) { state.persist = 'na'; return; }
   try {
@@ -860,6 +924,7 @@ async function load() {
   checkPersistence(true).then(render);
 }
 async function save(opts) {
+  invalidate();   // jede Änderung am Datenstand läuft hier durch
   try {
     if (!window.storage || typeof window.storage.set !== 'function') throw new Error('window.storage steht in dieser Umgebung nicht zur Verfügung');
     // Den Stand vor dieser Änderung als Rückfallebene behalten
@@ -876,7 +941,7 @@ async function save(opts) {
   } catch (e) {
     state.error = (e && e.message) ? String(e.message) : String(e);
   }
-  render();
+  if (!(opts && opts.silent)) render();
 }
 
 /* ============================================ Logik */
@@ -887,11 +952,8 @@ function summary(e) {
   if (k === 'ex') {
     const list = Object.entries(d.ex || {}).map(([id,v]) => {
       const ex = EX[id]; if (!ex || !v || typeof v !== 'object') return null;
-      const b = [];
-      if (v.sets) b.push(v.sets + '×');
-      if (v.reps) b.push(v.reps + ' ' + UNIT_LABEL[ex.unit]);
-      if (v.weight) b.push(v.weight + ' kg');
-      return ex.name.split('(')[0].trim() + (b.length ? ' ' + b.join(' ') : '');
+      const txt = exDoseText(v, ex.unit);
+      return ex.name.split('(')[0].trim() + (txt ? ' ' + txt : '');
     }).filter(Boolean);
     return list.length ? list.join(' · ') : 'keine Übungen erfasst';
   }
@@ -913,6 +975,15 @@ function summary(e) {
   return 'keine Angabe';
 }
 
+// „3× 12 Wdh. 15 kg“ – dieselbe Schreibweise im Verlauf und unter „Zuletzt“
+function exDoseText(v, unit) {
+  const b = [];
+  if (v.sets) b.push(v.sets + '×');
+  if (v.reps) b.push(v.reps + ' ' + UNIT_LABEL[unit]);
+  if (v.weight) b.push(v.weight + ' kg');
+  return b.join(' ');
+}
+
 function collagenGap() {
   if (!draft.collagen || !draft.time || !draft.date) return null;
   const mine = new Date(draft.date + 'T' + draft.time);
@@ -929,42 +1000,60 @@ function collagenGap() {
   return best;
 }
 
-function sorted() { return [...state.entries].sort((a,b) => String(a.date + (a.time||'')).localeCompare(String(b.date + (b.time||'')))); }
-
-function entriesOf(date) { return sorted().filter(e => e.date === date); }
-function hasTraining(date) { return state.entries.some(e => e.date === date); }
-function morningOf(date) { return state.mornings.find(m => m.date === date) || null; }
-function upsertMorning(m) { state.mornings = state.mornings.filter(x => x.date !== m.date).concat([m]); }
+// Abgeleitete Sichten (sortierte Einheiten, Einheiten je Tag, Trainingstage) werden je Aufbau
+// einmal berechnet. save() und render() leeren den Speicher – jede Änderung läuft dort durch.
+// Die Rückgaben sind geteilt: nur lesen, nicht verändern.
+let memo = {};
+function invalidate() { memo = {}; }
+function sorted() {
+  return memo.sorted || (memo.sorted = [...state.entries].sort((a,b) => String(a.date + (a.time||'')).localeCompare(String(b.date + (b.time||'')))));
+}
+function byDate() {
+  if (!memo.byDate) {
+    const m = new Map();
+    sorted().forEach(e => { if (!m.has(e.date)) m.set(e.date, []); m.get(e.date).push(e); });
+    memo.byDate = m;
+  }
+  return memo.byDate;
+}
+function entriesOf(date) { return byDate().get(date) || []; }
+function hasTraining(date) { return byDate().has(date); }
+function morningMap() {
+  if (!memo.mornings) { const m = new Map(); state.mornings.forEach(x => m.set(x.date, x)); memo.mornings = m; }
+  return memo.mornings;
+}
+function morningOf(date) { return morningMap().get(date) || null; }
+function upsertMorning(m) { state.mornings = state.mornings.filter(x => x.date !== m.date).concat([m]); invalidate(); }
+function testOf(date) { return state.tests.find(x => x.date === date) || null; }
+function upsertTest(x) { state.tests = state.tests.filter(y => y.date !== x.date).concat([x]); invalidate(); }
+function testsSorted() { return memo.tests || (memo.tests = [...state.tests].sort((a,b) => a.date.localeCompare(b.date))); }
 function maxDuring(date) {
-  const v = state.entries.filter(e => e.date === date && typeof e.painDuring === 'number').map(e => e.painDuring);
+  const v = entriesOf(date).filter(e => typeof e.painDuring === 'number').map(e => e.painDuring);
   return v.length ? Math.max(...v) : null;
 }
 // Alle Tage mit irgendeinem Eintrag, neueste zuerst
 function dayList() {
+  if (memo.dayList) return memo.dayList;
   const s = new Set();
   state.entries.forEach(e => s.add(e.date));
   state.mornings.forEach(m => s.add(m.date));
-  return [...s].sort().reverse();
+  state.tests.forEach(x => s.add(x.date));
+  return (memo.dayList = [...s].sort().reverse());
 }
 
 // Trainingstage, jeweils verbunden mit dem Morgen danach – die 24-Stunden-Regel.
 // Der Morgen selbst gehört zu dem Tag, an dem du aufwachst.
 function days() {
-  const map = new Map();
-  sorted().forEach(e => {
-    if (!map.has(e.date)) map.set(e.date, { date:e.date, n:0, painDuring:null, progressed:false, efforts:[], labels:[] });
-    const d = map.get(e.date);
-    d.n++;
-    d.labels.push(TYPES[e.type] ? TYPES[e.type].label : e.type);
-    if (e.painDuring != null) d.painDuring = d.painDuring == null ? e.painDuring : Math.max(d.painDuring, e.painDuring);
-    if (e.progressed) d.progressed = true;
-    if (e.effort != null) d.efforts.push(e.effort);
+  if (memo.days) return memo.days;
+  const out = [];
+  byDate().forEach((list, date) => {
+    const md = addDays(date, 1), m = morningOf(md);
+    out.push({ date, n: list.length, painDuring: maxDuring(date), progressed: list.some(e => e.progressed),
+      efforts: list.filter(e => e.effort != null).map(e => e.effort), labels: list.map(e => typeLabel(e.type)),
+      morningDate: md, skipped: !!(m && m.skipped),
+      painMorning: m && !m.skipped ? m.pain : null, stiffness: m && !m.skipped ? m.stiff : null });
   });
-  return [...map.values()].sort((a,b) => a.date.localeCompare(b.date)).map(d => {
-    const md = addDays(d.date, 1), m = morningOf(md);
-    return { ...d, morningDate: md, skipped: !!(m && m.skipped),
-      painMorning: m && !m.skipped ? m.pain : null, stiffness: m && !m.skipped ? m.stiff : null };
-  });
+  return (memo.days = out.sort((a,b) => a.date.localeCompare(b.date)));
 }
 function pending() { return days().filter(d => d.painMorning == null && !d.skipped && d.morningDate <= today()); }
 
@@ -973,44 +1062,43 @@ function assess() {
   const done = all.filter(d => d.painMorning != null);
   // Nur ein frisch offener Morgen (bis drei Tage) hält das Urteil an. Ältere bleiben
   // unbewertet und stehen in „Noch offene Morgen“ – sie blockieren aber nichts mehr.
-  if (pending().some(d => daysBetween(d.morningDate, today()) <= 3)) return { tone:'none', word:'Morgen-Check offen', kicker:'Noch keine Bewertung möglich',
+  if (pending().some(d => daysBetween(d.morningDate, today()) <= MORGEN_OFFEN_TAGE)) return { tone:'none', word:'Morgen-Check offen', kicker:'Noch keine Bewertung möglich',
     reasons:['Ohne den Wert vom Folgemorgen fehlt der wichtigste Marker.'], todo:'Trag den fehlenden Morgenwert ein oder überspring ihn – dann bewertet die App die Einheit.' };
   if (done.length < 2) return { tone:'none', word:'Noch zu wenig Daten', kicker:`${done.length} von 2 bewerteten Trainingstagen`,
     reasons:['Ein Trainingstag gilt als vollständig, sobald am Folgetag der Morgen-Check ausgefüllt ist. Ab dem zweiten vergleicht die App die beiden Morgenwerte.'], todo:'Weiter erfassen und nichts an der Last ändern.' };
 
   const last = done[done.length-1], prev = done[done.length-2];
-  const stiff = STIFF.find(s => s.v === last.stiffness);
-  const stiffMins = stiff ? stiff.mins : 0;
+  const stiffMin = stiffMins(last.stiffness);
   const delta = last.painMorning - prev.painMorning;
   const red = [], amber = [], green = [];
 
-  if (last.painDuring > 3) red.push(`Höchster Schmerzwert an diesem Tag lag bei ${last.painDuring}/10 – über der 3/10-Grenze.`);
+  if (last.painDuring > SCHMERZ_MAX) red.push(`Höchster Schmerzwert an diesem Tag lag bei ${last.painDuring}/10 – über der ${SCHMERZ_MAX}/10-Grenze.`);
   if (delta >= 2) red.push(`Morgenschmerz ist von ${prev.painMorning} auf ${last.painMorning} gestiegen.`);
   else if (delta === 1) amber.push(`Morgenschmerz ist um einen Punkt gestiegen (${prev.painMorning} → ${last.painMorning}).`);
-  if (stiffMins > 45) red.push('Die Sehne war morgens über 45 Minuten steif.');
-  else if (stiffMins > 30) amber.push('Die Sehne war morgens 30 bis 45 Minuten steif.');
+  if (stiffMin > 45) red.push('Die Sehne war morgens über 45 Minuten steif.');
+  else if (stiffMin > 30) amber.push('Die Sehne war morgens 30 bis 45 Minuten steif.');
 
   const recent = done.slice(-3);
-  const calm = recent.length === 3 && recent.every(d => typeof d.painDuring === 'number' && d.painDuring <= 3)
-    && recent.every(d => { const s = STIFF.find(x => x.v === d.stiffness); return !s || s.mins <= 30; })
+  const calm = recent.length === 3 && recent.every(d => typeof d.painDuring === 'number' && d.painDuring <= SCHMERZ_MAX)
+    && recent.every(d => stiffMins(d.stiffness) <= 30)
     && recent[2].painMorning <= recent[0].painMorning;
 
   const lastProgress = [...all].reverse().find(d => d.progressed);
-  const sinceProgress = lastProgress ? daysBetween(lastProgress.date, today()) : 999;
+  const sinceProgress = lastProgress ? Math.max(0, daysBetween(lastProgress.date, today())) : 999;   // Zukunftsdatum → nicht negativ
 
   if (calm) {
     green.push('Die letzten drei Trainingstage waren ruhig: Schmerz während ≤ 3/10, Sehne morgens höchstens 30 Minuten steif, Schmerz am Morgen nicht gestiegen.');
     const eff = recent.flatMap(d => d.efforts);
-    if (eff.length && Math.max(...eff) <= 6) green.push(`Der letzte Satz fühlte sich zuletzt bei höchstens ${Math.max(...eff)}/10 an – das ist zu leicht.`);
+    if (eff.length && Math.max(...eff) <= ANSTRENGUNG_LEICHT) green.push(`Der letzte Satz fühlte sich zuletzt bei höchstens ${Math.max(...eff)}/10 an – das ist zu leicht.`);
   }
 
   if (red.length) return { tone:'down', word:'Zurücknehmen', kicker:`Nach dem Trainingstag ${fmt(last.date)}`, reasons:red.concat(amber),
     todo:'Auf das letzte funktionierende Level zurück, dort ein bis zwei Wochen bleiben, dann in kleineren Schritten weiter. Isometrie geht fast immer.' };
   if (amber.length) return { tone:'hold', word:'Level halten', kicker:`Nach dem Trainingstag ${fmt(last.date)}`, reasons:amber,
     todo:'Nichts steigern. Gleiche Last noch einmal wiederholen und beobachten, ob sich der Wert einpendelt.' };
-  if (green.length && sinceProgress < 7) return { tone:'hold', word:'Level halten', kicker:'Alles ruhig – aber die Woche ist noch nicht um',
+  if (green.length && sinceProgress < STEIGERUNG_TAGE) return { tone:'hold', word:'Level halten', kicker:'Alles ruhig – aber die Woche ist noch nicht um',
     reasons:green.concat([`Die letzte Steigerung war vor ${sinceProgress} ${sinceProgress===1?'Tag':'Tagen'}. Eine Variable pro Woche.`]),
-    todo:`Noch ${7-sinceProgress} ${7-sinceProgress===1?'Tag':'Tage'} auf diesem Level bleiben.` };
+    todo:`Noch ${STEIGERUNG_TAGE-sinceProgress} ${STEIGERUNG_TAGE-sinceProgress===1?'Tag':'Tage'} auf diesem Level bleiben.` };
   if (green.length) return { tone:'up', word:'Steigern', kicker:'Die Sehne verträgt mehr', reasons:green,
     todo:'Beim Krafttraining zuerst das Gewicht erhöhen, nicht die Wiederholungen. Beim Laufen eine Variable um etwa 10 %. Hak beim nächsten Eintrag „Das war eine Steigerung“ an.' };
   return { tone:'hold', word:'Level halten', kicker:`Nach dem Trainingstag ${fmt(last.date)}`,
@@ -1023,7 +1111,7 @@ function assess() {
 function redFlags() {
   const t = today();
   const recent = state.mornings
-    .filter(m => !m.skipped && typeof m.pain === 'number' && m.date <= t && daysBetween(m.date, t) <= 21)
+    .filter(m => !m.skipped && typeof m.pain === 'number' && m.date <= t && daysBetween(m.date, t) <= WARN_FENSTER_TAGE)
     .sort((a,b) => a.date.localeCompare(b.date));
   const out = [];
   if (recent.filter(m => m.pain >= 6).length >= 3) out.push('Der Morgenschmerz lag in den letzten drei Wochen mehrfach bei 6/10 oder höher.');
@@ -1033,27 +1121,52 @@ function redFlags() {
     const l = (recent[recent.length - 2].pain + recent[recent.length - 1].pain) / 2;
     if (l - f >= 2) out.push('Der Morgenschmerz steigt über die letzten Wochen kontinuierlich an.');
   }
-  return out;
+  return out.concat(testFlags());
+}
+// Monatstest als Warnzeichen: rechts kein einbeiniges Wadenheben mehr – oder deutlich weniger als beim letzten Mal.
+// Ein Abstand zur gesunden Seite allein ist am Anfang normal und steht darum nur in der Übersicht.
+function testFlags() {
+  const t = today(), list = testsSorted().filter(x => x.date <= t);
+  const last = list[list.length - 1], prev = list[list.length - 2];
+  if (!last || daysBetween(last.date, t) > TEST_WARN_TAGE) return [];
+  if (last.right === 0 && last.left > 0) return [`Beim Monatstest vom ${fmt(last.date)} war rechts kein einbeiniges Wadenheben möglich.`];
+  if (prev && prev.right > 0 && last.right <= prev.right * 0.7) return [`Beim Monatstest ist die Wiederholungszahl rechts von ${prev.right} auf ${last.right} gefallen.`];
+  return [];
+}
+function lastTest() { const l = testsSorted(); return l.length ? l[l.length - 1] : null; }
+function testDue() {
+  const last = lastTest();
+  if (last) return daysBetween(last.date, today()) >= TEST_INTERVALL_TAGE;
+  const dates = dayList(), oldest = dates[dates.length - 1];
+  return !!oldest && daysBetween(oldest, today()) >= TEST_ERSTER_AB_TAGE;
 }
 
 function buildExport() {
   const dates = dayList();
   if (!dates.length) return 'Noch keine Einträge.';
   const a = assess();
-  const L = ['Sehnenlog – Auswertung bitte', `Stand: ${new Date().toLocaleDateString('de-DE')}`,
-    `Einheiten: ${state.entries.length}, erfasste Morgen: ${state.mornings.filter(m => !m.skipped).length}`,
+  const tests = testsSorted();
+  const L = ['Sehnenlog – Auswertung bitte', `Stand: ${_now().toLocaleDateString('de-DE')}`,
+    `Einheiten: ${state.entries.length}, erfasste Morgen: ${state.mornings.filter(m => !m.skipped).length}, Monatstests: ${tests.length}`,
     `Aktuelle Einschätzung der App: ${a.word}`,
-    'Schmerzwerte 0–10. Ein Morgenwert gilt jeweils für das Training vom Vortag (24-Stunden-Regel).', ''];
-  dates.slice(0, 30).reverse().forEach(date => {
-    const list = entriesOf(date), prev = addDays(date, -1), m = morningOf(date);
-    L.push(`${weekday(date)}, ${fmt(date)}${list.length ? '' : ' – Ruhetag'}`);
+    'Schmerzwerte 0–10. Ein Morgenwert gilt jeweils für das Training vom Vortag (24-Stunden-Regel).'];
+  if (dates.length > EXPORT_TAGE) L.push(`Gekürzt auf die letzten ${EXPORT_TAGE} Tage mit Einträgen (von ${dates.length}).`);
+  L.push('');
+  if (tests.length) {
+    L.push('Monatstests – einbeiniges Wadenheben, Wiederholungen (rechts = betroffene Seite):');
+    tests.forEach(x => L.push(`  ${fmtY(x.date)}: rechts ${x.right}, links ${x.left}${x.note ? ' – ' + x.note : ''}`));
+    L.push('');
+  }
+  dates.slice(0, EXPORT_TAGE).reverse().forEach(date => {
+    const list = entriesOf(date), prev = addDays(date, -1), m = morningOf(date), x = testOf(date);
+    L.push(`${weekday(date)}, ${fmt(date)}${list.length ? '' : x ? ' – Monatstest' : ' – Ruhetag'}`);
     if (m && !m.skipped) {
-      const st = STIFF.find(x => x.v === m.stiff);
-      L.push(`  Morgen: Schmerz ${m.pain}/10, Sehne steif ${st ? st.label : '–'}${hasTraining(prev) ? ` (gilt für das Training vom ${fmt(prev)})` : ''}${m.note ? ' – ' + m.note : ''}`);
+      L.push(`  Morgen: Schmerz ${m.pain}/10, Sehne steif ${stiffLabel(m.stiff)}${hasTraining(prev) ? ` (gilt für das Training vom ${fmt(prev)})` : ''}${m.note ? ' – ' + m.note : ''}`);
     } else if (m && m.skipped) L.push('  Morgen: übersprungen');
     else if (hasTraining(prev)) L.push('  Morgen: nicht erfasst');
+    if (x) L.push(`  Monatstest: rechts ${x.right}, links ${x.left}`);
     list.forEach(e => {
-      const parts = [`${e.time || '–'} ${TYPES[e.type] ? TYPES[e.type].label : e.type}: ${summary(e)}`,
+      const parts = [`${e.time || '–'} ${typeLabel(e.type)}: ${summary(e)}`,
         `während ${e.painDuring != null ? e.painDuring + '/10' : '–'}`];
       if (e.effort != null) parts.push(`Anstrengung ${e.effort}/10`);
       parts.push(`Kollagen ${e.collagen ? 'ja' : 'nein'}`);
@@ -1070,9 +1183,9 @@ function buildExport() {
 function scaleHtml(name, value, showLimit, label) {
   let s = `<div class="scale" role="group" aria-label="${esc(label || name)}">`;
   for (let i = 0; i <= 10; i++)
-    s += `<button type="button" class="${showLimit && i <= 3 ? 'ok' : ''}" data-scale="${name}" data-val="${i}" aria-pressed="${value===i}" aria-label="${i} von 10">${i}</button>`;
+    s += `<button type="button" class="${showLimit && i <= SCHMERZ_MAX ? 'ok' : ''}" data-scale="${name}" data-val="${i}" aria-pressed="${value===i}" aria-label="${i} von 10">${i}</button>`;
   s += '</div>';
-  if (showLimit) s += '<p class="scale-note">0 bis 3 sind erlaubt – darüber heißt es Zurücknehmen.</p>';
+  if (showLimit) s += `<p class="scale-note">0 bis ${SCHMERZ_MAX} sind erlaubt – darüber heißt es Zurücknehmen.</p>`;
   return s;
 }
 function segHtml(name, options, value, label) {
@@ -1086,9 +1199,9 @@ function num(path, val, ph, decimal) {
     ? `<input type="text" id="${id}" inputmode="decimal" data-path="${path}" value="${esc(val)}" placeholder="${esc(ph||'')}">`
     : `<input type="number" id="${id}" inputmode="numeric" min="0" data-path="${path}" value="${esc(val)}" placeholder="${esc(ph||'')}">`;
 }
-function acc(id, name, meta, bodyHtml) {
+function acc(id, name, meta, bodyHtml, due) {
   const open = openAcc === id;
-  return `<div class="acc${open ? ' open' : ''}">
+  return `<div class="acc${open ? ' open' : ''}${due ? ' due' : ''}">
     <button type="button" data-acc="${id}" aria-expanded="${open}">
       <span><span class="acc-name">${esc(name)}</span>${meta ? `<span class="acc-meta">${esc(meta)}</span>` : ''}</span>
       <span class="acc-chev">${open ? '−' : '+'}</span>
@@ -1096,26 +1209,56 @@ function acc(id, name, meta, bodyHtml) {
     ${open ? `<div class="acc-body">${bodyHtml}</div>` : ''}
   </div>`;
 }
-function figHtml(key) { return FIGS[key] ? `<div class="fig">${FIGS[key]}</div>` : ''; }
+// Die Zeichnungen liegen als <template id="fig-…"> im Dokument
+function figHtml(key) {
+  const t = key ? document.getElementById('fig-' + key) : null;
+  return t ? `<div class="fig">${t.innerHTML}</div>` : '';
+}
+
+// Letzte Einheit, in der diese Übung stand – ohne die gerade bearbeitete
+function lastExUse(id) {
+  const list = sorted();
+  for (let i = list.length - 1; i >= 0; i--) {
+    const e = list[i];
+    if (e.id === editingId) continue;
+    const v = e.details && e.details.ex && e.details.ex[id];
+    if (v && (v.sets || v.reps || v.weight)) return { date: e.date, sets: v.sets || '', reps: v.reps || '', weight: v.weight || '' };
+  }
+  return null;
+}
+// „4 × 10 · Tempo 3/3“ → Platzhalter 4 und 10
+function doseParts(dose) {
+  const m = /^(\d+)\s*×\s*([\d–-]+)/.exec(dose || '');
+  return m ? { sets: m[1], reps: m[2] } : { sets: '', reps: '' };
+}
 
 function exPickerHtml() {
   const pool = TYPES[draft.type].pool;
-  const ids = Object.keys(EX).filter(id => pool.includes(EX[id].g));
+  const groups = GROUPS.filter(g => pool.includes(g.g))
+    .map(g => ({ ...g, ids: Object.keys(EX).filter(id => EX[id].g === g.g) })).filter(g => g.ids.length);
   let h = `<div class="field"><span class="field-label">Übungen</span><p class="hint">Antippen zum Auswählen, dann Sätze und Wiederholungen eintragen.</p>`;
-  h += '<div class="seg">' + ids.map(id =>
-    `<button type="button" data-extoggle="${id}" aria-pressed="${!!draft.ex[id]}">${esc(EX[id].name.split('(')[0].trim())}</button>`).join('') + '</div></div>';
-  const chosen = ids.filter(id => draft.ex[id]);
+  groups.forEach(g => {
+    const all = g.ids.every(id => draft.ex[id]);
+    if (groups.length > 1) h += `<div class="exblock"><span class="exblock-name">${esc(g.title)}</span>
+      <button type="button" class="sc-link" data-exblock="${g.g}">${all ? 'Block abwählen' : 'ganzen Block wählen'}</button></div>`;
+    h += '<div class="seg">' + g.ids.map(id =>
+      `<button type="button" data-extoggle="${id}" aria-pressed="${!!draft.ex[id]}">${esc(EX[id].name.split('(')[0].trim())}</button>`).join('') + '</div>';
+  });
+  h += '</div>';
+  const chosen = groups.flatMap(g => g.ids).filter(id => draft.ex[id]);
   if (chosen.length) {
     h += '<div class="field">';
     chosen.forEach(id => {
-      const ex = EX[id], v = draft.ex[id];
+      const ex = EX[id], v = draft.ex[id], last = lastExUse(id), ph = doseParts(ex.dose);
       h += `<div class="exrow">
         <div class="exrow-top"><span class="exrow-name">${esc(ex.name)}</span><span class="exrow-dose">Ziel: ${esc(ex.dose)}</span></div>
         <div class="exrow-in">
-          <div><label for="f-ex-${id}-sets">Sätze</label>${num(`ex.${id}.sets`, v.sets, '3')}</div>
-          <div><label for="f-ex-${id}-reps">${UNIT_LABEL[ex.unit]}</label>${num(`ex.${id}.reps`, v.reps, ex.unit==='sek'?'30':'12')}</div>
-          ${ex.unit === 'wdh' ? `<div><label for="f-ex-${id}-weight">kg</label>${num(`ex.${id}.weight`, v.weight, '12,5', true)}</div>` : ''}
-        </div></div>`;
+          <div><label for="f-ex-${id}-sets">Sätze</label>${num(`ex.${id}.sets`, v.sets, ph.sets)}</div>
+          <div><label for="f-ex-${id}-reps">${UNIT_LABEL[ex.unit]}</label>${num(`ex.${id}.reps`, v.reps, ph.reps)}</div>
+          ${ex.unit === 'wdh' ? `<div><label for="f-ex-${id}-weight">kg</label>${num(`ex.${id}.weight`, v.weight, last && last.weight ? last.weight : '0', true)}</div>` : ''}
+        </div>
+        ${last ? `<div class="exrow-last"><span>Zuletzt ${esc(relDay(last.date))}: ${esc(exDoseText(last, ex.unit))}</span><button type="button" class="sc-link" data-exlast="${id}">übernehmen</button></div>` : ''}
+      </div>`;
     });
     h += '</div>';
   }
@@ -1165,12 +1308,8 @@ function chartInnerHtml() {
   const t = today();
   const morn = state.mornings.filter(m => !m.skipped && typeof m.pain === 'number' && m.date <= t)
     .sort((a,b) => a.date.localeCompare(b.date));
-  const dur = new Map();
-  state.entries.forEach(e => {
-    if (typeof e.painDuring !== 'number' || e.date > t) return;
-    dur.set(e.date, Math.max(dur.has(e.date) ? dur.get(e.date) : 0, e.painDuring));
-  });
-  const firstDate = [...morn.map(m => m.date), ...dur.keys()].sort()[0];
+  const dur = days().filter(d => d.painDuring != null && d.date <= t);   // höchster Wert je Trainingstag
+  const firstDate = [...morn.map(m => m.date), ...dur.map(d => d.date)].sort()[0];
   if (!firstDate) { chartState = null; return ''; }
 
   let start = chartRange === 'all' ? firstDate : addDays(t, -(chartRange - 1));
@@ -1185,7 +1324,7 @@ function chartInnerHtml() {
   const n1 = v => v.toFixed(1);
 
   const mIn = morn.filter(m => m.date >= start);
-  const dIn = [...dur.entries()].filter(([d]) => d >= start).sort((a,b) => a[0].localeCompare(b[0]));
+  const dIn = dur.filter(d => d.date >= start).map(d => [d.date, d.painDuring]);
 
   // Y-Achse: Raster als feine, durchgezogene Linien
   let s = '';
@@ -1194,8 +1333,8 @@ function chartInnerHtml() {
        + `<text x="${M.l - 7}" y="${n1(Y(v) + 3.5)}" text-anchor="end" class="chart-axis">${v}</text>`;
   }
   // Die Grenze ist eine Schwelle, kein Raster – deshalb gestrichelt und beschriftet
-  s += `<line x1="${M.l}" x2="${W - M.r}" y1="${n1(Y(3))}" y2="${n1(Y(3))}" style="stroke:var(--chart-limit)" stroke-width="1" stroke-dasharray="4 3"/>`
-     + `<text x="${M.l + 4}" y="${n1(Y(3) - 5)}" class="chart-axis chart-halo">Grenze 3</text>`;
+  s += `<line x1="${M.l}" x2="${W - M.r}" y1="${n1(Y(SCHMERZ_MAX))}" y2="${n1(Y(SCHMERZ_MAX))}" style="stroke:var(--chart-limit)" stroke-width="1" stroke-dasharray="4 3"/>`
+     + `<text x="${M.l + 4}" y="${n1(Y(SCHMERZ_MAX) - 5)}" class="chart-axis chart-halo">Grenze ${SCHMERZ_MAX}</text>`;
 
   // X-Achse: Montage als Raster, Abstand passend zur verfügbaren Breite
   const maxTicks = Math.max(2, Math.floor(pw / 58));
@@ -1286,9 +1425,9 @@ function chartShow(date) {
   head.className = 'chart-tip-date';
   head.textContent = `${weekday(date)}, ${fmt(date)}`;
   tip.append(head);
-  const m = morningOf(date), st = m && !m.skipped ? STIFF.find(x => x.v === m.stiff) : null;
-  const arten = [...new Set(entriesOf(date).map(e => TYPES[e.type] ? TYPES[e.type].label : e.type))].join(', ');
-  const rows = [[C_MORNING, m && !m.skipped ? m.pain : null, 'Morgen', st ? 'steif ' + st.label : ''],
+  const m = morningOf(date);
+  const arten = [...new Set(entriesOf(date).map(e => typeLabel(e.type)))].join(', ');
+  const rows = [[C_MORNING, m && !m.skipped ? m.pain : null, 'Morgen', m && !m.skipped && m.stiff ? 'steif ' + stiffLabel(m.stiff) : ''],
                 [C_DURING, maxDuring(date), 'während', arten]];
   rows.forEach(([c, v, name, extra]) => {
     const row = document.createElement('div');
@@ -1355,6 +1494,7 @@ function tabPlan() {
       </ul>
       ${figHtml('heel_rise_test')}
       <p style="font-size:13.5px;margin:12px 0 0"><b>Zwei Zahlen sollen sich bewegen:</b> die absolute Wiederholungszahl rechts – und die Differenz zur gesunden Seite. Schließt sich diese Lücke, arbeitet das Programm.</p>
+      <p class="note" style="margin-top:10px">Eintragen kannst du ihn im Logbuch unter „Einheit erfassen“ → Monatstest. Die Werte stehen danach im Verlauf und in der Übersicht „Monatstest“.</p>
     </div></div>
 
     <div class="flag">
@@ -1476,7 +1616,7 @@ function morningCardHtml(mt) {
       <p class="lede">Noch nicht eingetragen. Freiwillig, weil gestern kein Training war – hilft aber später zu sehen, wie schnell sich die Sehne erholt.</p>
       <button class="btn ghost" data-act="openMorning">Heute Morgen eintragen</button>
     </div>`;
-  const labels = entriesOf(prev).map(e => TYPES[e.type] ? TYPES[e.type].label : e.type);
+  const labels = entriesOf(prev).map(e => typeLabel(e.type));
   const ok = morningDraft.pain != null && !!morningDraft.stiff;
   return `<div class="card${mt.due ? ' pending' : ''}">
       <h2>Wie war es heute Morgen?</h2>
@@ -1505,7 +1645,7 @@ function openMorningsHtml() {
       ${list.map(md => {
         if (mEdit && mEdit.where === 'list' && mEdit.date === md) return `<div class="day-row editing">${morningEditorHtml()}</div>`;
         const prev = addDays(md, -1);
-        const labels = entriesOf(prev).map(e => TYPES[e.type] ? TYPES[e.type].label : e.type);
+        const labels = entriesOf(prev).map(e => typeLabel(e.type));
         return `<div class="day-row">
           <span class="day-time">${esc(weekday(md))} ${fmt(md)}</span>
           <div class="day-main">
@@ -1547,11 +1687,10 @@ function morningRowHtml(date) {
   const m = morningOf(date), prev = addDays(date, -1);
   const bezug = hasTraining(prev) ? `<div class="day-sub">gilt für das Training vom ${esc(weekday(prev))}, ${fmt(prev)}</div>` : '';
   if (m && !m.skipped) {
-    const st = STIFF.find(x => x.v === m.stiff);
     return `<div class="day-row">
         <span class="day-time">Morgen</span>
         <div class="day-main">
-          <div class="day-title">Sehne steif: ${st ? esc(st.label) : '–'}</div>
+          <div class="day-title">Sehne steif: ${esc(stiffLabel(m.stiff))}</div>
           ${bezug}
           ${m.note ? `<div class="day-sub day-note">${esc(m.note)}</div>` : ''}
         </div>
@@ -1574,7 +1713,7 @@ function morningRowHtml(date) {
 }
 
 function entryRowHtml(e) {
-  const label = TYPES[e.type] ? TYPES[e.type].label : e.type;
+  const label = typeLabel(e.type);
   return `<div class="day-row${editingId === e.id ? ' editing' : ''}">
       <span class="day-time">${e.time ? esc(e.time) : '–'}</span>
       <div class="day-main">
@@ -1584,10 +1723,26 @@ function entryRowHtml(e) {
       </div>
       <div class="day-side">
         <div class="day-val">während<b>${e.painDuring != null ? esc(e.painDuring) : '–'}</b></div>
-        <div class="day-acts">
-          <button type="button" class="edit" data-act="edit" data-id="${esc(e.id)}" aria-label="Einheit vom ${fmt(e.date)} bearbeiten">ändern</button>
-          <button type="button" class="del" data-act="del" data-id="${esc(e.id)}" aria-label="Einheit vom ${fmt(e.date)} löschen">×</button>
-        </div>
+        <div class="day-acts"><button type="button" class="edit" data-act="edit" data-id="${esc(e.id)}" aria-label="Einheit vom ${fmt(e.date)} bearbeiten">ändern</button></div>
+      </div>
+    </div>`;
+}
+
+function testRowHtml(date) {
+  const x = testOf(date);
+  if (!x) return '';
+  const diff = x.left - x.right, pct = x.left > 0 ? Math.round(x.right / x.left * 100) : null;
+  const abstand = diff === 0 ? 'beide Seiten gleich' : diff > 0 ? `rechts ${diff} weniger` : `rechts ${-diff} mehr`;
+  return `<div class="day-row${testDraft && testDraft.orig === date ? ' editing' : ''}">
+      <span class="day-time">Test</span>
+      <div class="day-main">
+        <div class="day-title">Monatstest</div>
+        <div class="day-sub">rechts ${x.right} · links ${x.left} · ${abstand}${pct !== null ? ` (${pct} % von links)` : ''}</div>
+        ${x.note ? `<div class="day-sub day-note">${esc(x.note)}</div>` : ''}
+      </div>
+      <div class="day-side">
+        <div class="day-val">rechts<b>${x.right}</b></div>
+        <div class="day-acts"><button type="button" class="edit" data-act="editTest" data-date="${date}" aria-label="Monatstest vom ${fmt(date)} ändern">ändern</button></div>
       </div>
     </div>`;
 }
@@ -1597,9 +1752,10 @@ function dayCardHtml(date) {
   return `<div class="day">
       <div class="day-head">
         <span class="day-date">${esc(dayLabel(date))}</span>
-        <span class="day-tag">${list.length ? `${list.length} ${list.length === 1 ? 'Einheit' : 'Einheiten'}` : 'Ruhetag'}</span>
+        <span class="day-tag">${list.length ? `${list.length} ${list.length === 1 ? 'Einheit' : 'Einheiten'}` : testOf(date) ? 'Monatstest' : 'Ruhetag'}</span>
       </div>
       ${morningRowHtml(date)}
+      ${testRowHtml(date)}
       ${list.map(entryRowHtml).join('')}
     </div>`;
 }
@@ -1619,11 +1775,71 @@ function formClosedHtml() {
   const last = sorted().slice(-1)[0];
   return `<div class="card" id="form">
       <h2 tabindex="-1">Einheit erfassen</h2>
-      ${uiFlash && uiFlash.where === 'entry' ? `<p class="${uiFlash.ok ? 'flash' : 'err'}" style="margin:0 0 12px">${esc(uiFlash.text)}</p>` : ''}
+      ${uiFlash && uiFlash.where === 'entry' ? `<p class="${uiFlash.ok ? 'flash' : 'err'}" style="margin:0 0 12px">${esc(uiFlash.text)}${uiFlash.undo && lastDeleted ? ' <button type="button" class="sc-link" data-act="undoDel">Rückgängig</button>' : ''}</p>` : ''}
       <div class="seg type-pick">${Object.entries(TYPES).map(([v, t]) =>
-        `<button type="button" data-act="openForm" data-type="${v}">${esc(t.label)}</button>`).join('')}</div>
-      ${last ? `<p class="hint" style="margin:10px 0 0">Zuletzt: ${esc(TYPES[last.type] ? TYPES[last.type].label : last.type)}, ${esc(relDay(last.date))}${last.time ? ' ' + esc(last.time) : ''}</p>` : ''}
+        `<button type="button" data-act="openForm" data-type="${v}">${esc(t.label)}</button>`).join('')}<button type="button" data-act="openTest">Monatstest</button></div>
+      ${last ? `<p class="hint" style="margin:10px 0 0">Zuletzt: ${esc(typeLabel(last.type))}, ${esc(relDay(last.date))}${last.time ? ' ' + esc(last.time) : ''}</p>` : ''}
     </div>`;
+}
+
+// Monatstest erfassen oder ändern – in derselben Karte wie die Einheiten
+function countOf(s) { const v = String(s ?? '').trim(); return /^\d{1,3}$/.test(v) ? +v : null; }
+function testCheck(d) {
+  const r = countOf(d.right), l = countOf(d.left), gueltig = isIsoDate(d.date), zukunft = gueltig && d.date > today();
+  return { r, l, gueltig, zukunft, ok: gueltig && !zukunft && r !== null && l !== null };
+}
+function testMissing(c) {
+  if (c.ok) return '';
+  if (!c.gueltig) return 'Das Datum fehlt oder ist ungültig.';
+  if (c.zukunft) return 'Ein Test in der Zukunft lässt sich nicht eintragen.';
+  const fehlt = [c.r === null ? 'rechts' : '', c.l === null ? 'links' : ''].filter(Boolean).join(' und ');
+  return `Es fehlt noch die Zahl ${fehlt}.`;
+}
+// Beim Tippen nur Knopf und Hinweis nachführen – ein Neuaufbau würde das Feld unter dem Finger ersetzen
+function updateTestForm() {
+  if (!testDraft) return;
+  const c = testCheck(testDraft), b = document.querySelector('[data-act="saveTest"]'), h = document.getElementById('t-hint');
+  if (b) b.disabled = !c.ok;
+  if (h) { h.textContent = testMissing(c); h.hidden = c.ok; }
+}
+function testFormHtml() {
+  const d = testDraft, editing = !!d.orig, c = testCheck(d);
+  const last = testsSorted().filter(x => x.date !== d.orig).slice(-1)[0];
+  return `<div class="card" id="form">
+      <h2 tabindex="-1">${editing ? 'Monatstest bearbeiten' : 'Monatstest erfassen'}</h2>
+      <p class="lede">Einbeiniges Wadenheben auf ebenem Boden, volle Reichweite, ruhiges Tempo – zählen, bis die Höhe sichtbar einbricht. Beide Seiten, die gesunde zuerst.</p>
+      <div class="field"><label class="sublabel" for="t-date">Datum</label><input type="date" id="t-date" value="${esc(d.date)}" max="${today()}" data-tpath="date"></div>
+      ${!editing && c.gueltig && !c.zukunft && testOf(d.date) ? '<div class="warnbox">Für diesen Tag gibt es schon einen Monatstest. Er wird ersetzt.</div>' : ''}
+      <div class="field"><div class="grid2">
+        <div><label class="sublabel" for="t-right">Wiederholungen rechts (betroffene Seite)</label>
+          <input type="number" id="t-right" inputmode="numeric" min="0" max="999" value="${esc(d.right)}" placeholder="${last ? esc(last.right) : '12'}" data-tpath="right"></div>
+        <div><label class="sublabel" for="t-left">Wiederholungen links (gesunde Seite)</label>
+          <input type="number" id="t-left" inputmode="numeric" min="0" max="999" value="${esc(d.left)}" placeholder="${last ? esc(last.left) : '25'}" data-tpath="left"></div>
+      </div>
+      ${last ? `<p class="hint" style="margin:7px 0 0">Zuletzt am ${esc(weekday(last.date))}, ${fmtY(last.date)}: rechts ${last.right}, links ${last.left}.</p>` : ''}</div>
+      <div class="field"><label for="t-note">Notiz</label>
+        <textarea id="t-note" data-tpath="note" placeholder="Optional – z. B. „mit Rucksack 5 kg“">${esc(d.note)}</textarea></div>
+      <div class="btn-row">
+        <button class="btn" data-act="saveTest" ${c.ok ? '' : 'disabled'}>${editing ? 'Änderungen speichern' : 'Test speichern'}</button>
+        <button class="btn quiet" data-act="cancelTest">Abbrechen</button>
+        ${editing ? '<button type="button" class="edit" data-act="delTest" style="margin-left:auto">Test entfernen</button>' : ''}
+      </div>
+      <p class="hint" id="t-hint" style="margin-top:8px"${c.ok ? ' hidden' : ''}>${esc(testMissing(c))}</p>
+    </div>`;
+}
+// Übersicht aller Monatstests – zugeklappt eine Zeile, bei Fälligkeit markiert
+function testAccHtml() {
+  const t = testsSorted(), last = t[t.length - 1], due = testDue();
+  const meta = last
+    ? `${due ? 'Fällig – ' : ''}zuletzt ${fmt(last.date)}: rechts ${last.right}, links ${last.left}`
+    : due ? 'Fällig – noch keiner erfasst' : 'Noch keiner erfasst';
+  const rows = [...t].reverse();
+  const body = `<p style="font-size:13.5px;margin:13px 0 0">Einmal im Monat, immer gleich ausgeführt: einbeiniges Wadenheben, bis die Höhe einbricht – beide Seiten. Zwei Zahlen sollen sich bewegen: die Wiederholungen rechts und der Abstand zur gesunden Seite.</p>
+    ${rows.length ? `<table class="ttab"><thead><tr><th>Datum</th><th>rechts</th><th>links</th><th>Abstand</th></tr></thead><tbody>${rows.map(x =>
+      `<tr><td>${esc(weekday(x.date))}, ${fmtY(x.date)}</td><td>${x.right}</td><td>${x.left}</td><td>${x.left - x.right}</td></tr>`).join('')}</tbody></table>` : ''}
+    ${last && last.left > 0 && last.right <= last.left / 2 ? '<div class="warnbox" style="margin-top:12px"><b>Rechts schafft höchstens die Hälfte von links.</b> Im Plan steht das unter den Warnzeichen. Schließt sich der Abstand über die nächsten Tests nicht oder wird er größer, gehört das ärztlich angeschaut.</div>' : ''}
+    <div class="btn-row" style="margin-top:12px"><button type="button" class="btn ghost small" data-act="openTest">Monatstest eintragen</button></div>`;
+  return acc('mtest', 'Monatstest', meta, body, due);
 }
 
 function tabLog() {
@@ -1646,7 +1862,7 @@ function tabLog() {
     <div class="log-in">
     <div class="o3">${uiFlash && uiFlash.where === 'morning' ? `<div class="infobox" id="morning-flash" tabindex="-1">${esc(uiFlash.text)}</div>` : ''}${mt && mt.due ? morningCardHtml(mt) : ''}${openMorningsHtml()}</div>
     <div class="o8">${mt && !mt.due ? morningCardHtml(mt) : ''}</div>
-    <div class="o9">${!formOpen && !editingId ? formClosedHtml() : `<div class="card" id="form">
+    <div class="o9">${testDraft ? testFormHtml() : !formOpen && !editingId ? formClosedHtml() : `<div class="card" id="form">
       <h2 tabindex="-1">${editingId ? 'Einheit bearbeiten' : 'Einheit erfassen'}</h2>
       <p class="lede">${editingId ? 'Änderungen wirken sich sofort auf die Bewertung aus.' : 'Direkt nach dem Training, solange du es noch im Gefühl hast.'}</p>
       ${editingId ? (() => {
@@ -1683,7 +1899,7 @@ function tabLog() {
         <span class="field-label">Wie schwer war der letzte Satz?</span>
         <p class="hint">Kraft, nicht Schmerz. Ein niedriger Wert spricht für mehr Gewicht – aber nur, solange der Schmerz bei 3/10 oder darunter bleibt.${scaleLink('effort', 'f-effort')}</p>
         ${scaleHtml('effort', draft.effort, false, 'Anstrengung des letzten Satzes, 0 bis 10')}
-        ${draft.painDuring != null && draft.painDuring > 3 && draft.effort != null && draft.effort <= 6 ? `<div class="warnbox" style="margin-top:12px"><b>Muskel leicht, Sehne laut.</b> Die Wade hat noch Reserve, das Gewebe verträgt sie aber nicht. Mehr Gewicht wäre trotz des niedrigen Anstrengungswerts falsch. Verkleinere stattdessen die Bewegungsreichweite oder stell auf Isometrie um – Halten erzeugt hohe Spannung ohne die schmerzhafte Bewegung.</div>` : ''}
+        ${draft.painDuring != null && draft.painDuring > SCHMERZ_MAX && draft.effort != null && draft.effort <= ANSTRENGUNG_LEICHT ? `<div class="warnbox" style="margin-top:12px"><b>Muskel leicht, Sehne laut.</b> Die Wade hat noch Reserve, das Gewebe verträgt sie aber nicht. Mehr Gewicht wäre trotz des niedrigen Anstrengungswerts falsch. Verkleinere stattdessen die Bewegungsreichweite oder stell auf Isometrie um – Halten erzeugt hohe Spannung ohne die schmerzhafte Bewegung.</div>` : ''}
       </div>` : ''}
 
       <label class="check"><input type="checkbox" data-path="collagen" ${draft.collagen?'checked':''}><span>Kollagen 45–60 Min. vorher genommen</span></label>
@@ -1698,13 +1914,14 @@ function tabLog() {
       <div class="btn-row">
         <button class="btn" data-act="saveEntry" ${draft.painDuring == null || !isIsoDate(draft.date) ? 'disabled' : ''}>${editingId ? 'Änderungen speichern' : 'Einheit speichern'}</button>
         <button class="btn quiet" data-act="cancelEdit">Abbrechen</button>
+        ${editingId ? `<button type="button" class="edit" data-act="del" data-id="${esc(editingId)}" style="margin-left:auto">Einheit löschen</button>` : ''}
       </div>
       ${draft.painDuring == null ? '<p class="hint" style="margin-top:8px">Der Schmerzwert fehlt noch.</p>' : !isIsoDate(draft.date) ? '<p class="hint" style="margin-top:8px">Das Datum fehlt oder ist ungültig.</p>' : ''}
 
     </div>`}</div>
-    <div class="o10">${acc('howto', 'Wie die Bewertung zustande kommt', 'Erklärung – keine Daten',
+    <div class="o10">${testAccHtml()}${acc('howto', 'Wie die Bewertung zustande kommt', 'Erklärung – keine Daten',
       `<h3>Schmerz während der Einheit</h3>
-       <p style="font-size:13.5px;margin:0">Trägst du unten im Formular ein, direkt nach dem Training. Bis 3/10 ist erlaubt.</p>
+       <p style="font-size:13.5px;margin:0">Trägst du unter „Einheit erfassen“ ein, direkt nach dem Training. Bis 3/10 ist erlaubt.</p>
        <h3>Schmerz am Morgen und Steifigkeit der Sehne</h3>
        <p style="font-size:13.5px;margin:0">Jeder Morgen gehört zu dem Tag, an dem du aufwachst. Nach einem Trainingstag fragt die Morgen-Karte danach, weil die Bewertung diesen Wert braucht; an anderen Tagen ist er freiwillig. Ändern oder nachtragen kannst du ihn jederzeit im Verlauf.</p>
        <h3>Der Vergleich</h3>
@@ -1729,13 +1946,12 @@ function tabLog() {
     </div>` : uiFlash && uiFlash.where === 'backup' ? `<div class="${uiFlash.ok ? 'infobox' : 'flag'}">${esc(uiFlash.text)}</div>` : ''}</div>
     <div class="o11"><div class="card">
       <h2>Verlauf</h2>
-      <p class="lede">${state.entries.length || state.mornings.length
-        ? `${state.entries.length} ${state.entries.length === 1 ? 'Einheit' : 'Einheiten'} und ${state.mornings.filter(m => !m.skipped).length} Morgen erfasst.`
+      <p class="lede">${hasData()
+        ? `${state.entries.length} ${state.entries.length === 1 ? 'Einheit' : 'Einheiten'} und ${state.mornings.filter(m => !m.skipped).length} Morgen erfasst${state.tests.length ? `, dazu ${state.tests.length} ${state.tests.length === 1 ? 'Monatstest' : 'Monatstests'}` : ''}.`
         : 'Noch nichts erfasst.'}</p>
-      ${uiFlash && uiFlash.where === 'history' ? `<div class="infobox" style="margin:0 0 12px">${esc(uiFlash.text)}${lastDeleted ? ' <button type="button" class="sc-link" data-act="undoDel">Rückgängig</button>' : ''}</div>` : ''}
       <div id="chartbox">${chartInnerHtml()}</div>
       ${historyHtml()}
-      ${!state.entries.length && !state.mornings.length ? '<p class="empty">Der erste Eintrag macht noch keine Aussage. Ab dem zweiten bewerteten Trainingstag wird es aussagekräftig.</p>' : ''}
+      ${!hasData() ? '<p class="empty">Der erste Eintrag macht noch keine Aussage. Ab dem zweiten bewerteten Trainingstag wird es aussagekräftig.</p>' : ''}
     </div></div>
     </div>
   </div>`;
@@ -1850,7 +2066,7 @@ function focusKeyOf(el) {
   if (!el || el === document.body || !document.getElementById('root').contains(el)) return null;
   if (el.id) return '#' + CSS.escape(el.id);
   if (el.classList.contains('chart-svg')) return '.chart-svg';
-  const attrs = ['data-tab','data-act','data-scale','data-seg','data-extoggle','data-acc','data-val','data-id','data-date','data-snap','data-type','data-range','data-sc','data-where','data-path','data-mpath','data-epath'];
+  const attrs = ['data-tab','data-act','data-scale','data-seg','data-extoggle','data-exblock','data-exlast','data-acc','data-val','data-id','data-date','data-snap','data-type','data-range','data-sc','data-where','data-path','data-mpath','data-epath','data-tpath'];
   const parts = attrs.filter(a => el.hasAttribute(a)).map(a => `[${a}="${CSS.escape(el.getAttribute(a))}"]`);
   return parts.length ? parts.join('') : null;
 }
@@ -1865,14 +2081,10 @@ function announce(text) {
   l.textContent = '';
   setTimeout(() => { l.textContent = text; }, 40);
 }
-function updateTabFade(strip) {
-  strip.classList.toggle('scrollable', strip.scrollWidth > strip.clientWidth + 1);
-  strip.classList.toggle('at-end', strip.scrollLeft + strip.clientWidth >= strip.scrollWidth - 2);
-}
 
 function render() {
   if (!state.loaded) return;
-  const tabScroll = document.querySelector('.tabs')?.scrollLeft || 0;
+  invalidate();
   const focusKey = focusKeyOf(document.activeElement);
   let body;
   try {
@@ -1898,29 +2110,17 @@ function render() {
   </div>`;
   // Das Diagramm rechnet in echten Pixeln – hat sich die Breite beim Aufbau verschoben, neu zeichnen
   if (tab === 'log' && chartOutOfDate()) updateChart();
-  // Auf dem Handy ist die Tab-Leiste wischbar: Position halten und den aktiven Tab sichtbar machen
-  const strip = document.querySelector('.tabs');
-  if (strip && strip.scrollWidth > strip.clientWidth) {
-    strip.scrollLeft = tabScroll;
-    const act = strip.querySelector('[aria-selected="true"]');
-    if (act) {
-      const s = strip.getBoundingClientRect(), r = act.getBoundingClientRect();
-      if (r.left < s.left) strip.scrollLeft -= s.left - r.left + 12;
-      else if (r.right > s.right) strip.scrollLeft += r.right - s.right + 12;
-    }
-  }
-  if (strip) updateTabFade(strip);
   focusEl(focusKey);
 }
 
 /* ============================================ Sicherung */
 function backupPayload() {
   return JSON.stringify({ app:'sehnenlog', v:4, exported:new Date().toISOString(),
-    entries: state.entries, mornings: state.mornings });
+    entries: state.entries, mornings: state.mornings, tests: state.tests });
 }
 
 // Auf dem Handy ist das Teilen-Blatt der richtige Weg (dort landet OneDrive),
-// am Rechner ein normaler Download. Beides zaehlt als erfolgte Sicherung.
+// am Rechner ein normaler Download. Beides zählt als erfolgte Sicherung.
 async function saveBackupFile() {
   const name = `sehnenlog-${today()}.json`;
   const text = backupPayload();
@@ -1933,7 +2133,7 @@ async function saveBackupFile() {
     }
   } catch (e) {
     if (e && e.name === 'AbortError') return { ok: false, text: 'Abgebrochen – es wurde nichts gesichert.' };
-    // sonst faellt es unten auf den Download zurueck
+    // sonst fällt es unten auf den Download zurück
   }
   try {
     const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
@@ -1948,7 +2148,7 @@ async function saveBackupFile() {
   }
 }
 
-// Gemeinsamer Weg fuer Textfeld und Datei. Nimmt auch Sicherungen aus der Zeit
+// Gemeinsamer Weg für Textfeld und Datei. Nimmt auch Sicherungen aus der Zeit
 // vor der Umstellung an und rechnet sie um.
 async function applyBackup(raw) {
   if (!raw || !raw.trim()) {
@@ -1963,22 +2163,24 @@ async function applyBackup(raw) {
     importMsg = { ok:false, text:'Das war keine gültige Sicherung. Nimm die komplette Datei bzw. den kompletten Text, ohne etwas wegzulassen. Es wurde nichts verändert.' };
     return render();
   }
-  let neu = 0, ersetzt = 0, mNeu = 0, mErsetzt = 0;
+  let neu = 0, ersetzt = 0, mNeu = 0, mErsetzt = 0, tNeu = 0, tErsetzt = 0;
   n.entries.forEach(e => {
     const i = state.entries.findIndex(x => x.id === e.id);
     if (i >= 0) { state.entries[i] = e; ersetzt++; } else { state.entries.push(e); neu++; }
   });
   n.mornings.forEach(m => {
     const cur = morningOf(m.date);
-    if (!cur) { state.mornings.push(m); mNeu++; }
+    if (!cur) { state.mornings.push(m); invalidate(); mNeu++; }
     else if (m.skipped && !cur.skipped) { /* einen echten Wert nicht durch „übersprungen“ ersetzen */ }
     else { upsertMorning(m); mErsetzt++; }
   });
-  importBuf = ''; state.dataNote = null; mEdit = null;
-  editingId = null; draft = newDraft(); formOpen = false; whenOpen = false;
+  n.tests.forEach(x => {
+    if (testOf(x.date)) { upsertTest(x); tErsetzt++; } else { state.tests.push(x); invalidate(); tNeu++; }
+  });
+  importBuf = ''; state.dataNote = null; mEdit = null; closeForm();
   await save();
   importMsg = { ok:!state.error, text: state.error ? 'Nicht gespeichert – siehe Fehlermeldung oben.' :
-    `Einheiten: ${neu} neu, ${ersetzt} aktualisiert. Morgen: ${mNeu} neu, ${mErsetzt} aktualisiert. Insgesamt ${state.entries.length} ${state.entries.length === 1 ? 'Einheit' : 'Einheiten'}.`
+    `Einheiten: ${neu} neu, ${ersetzt} aktualisiert. Morgen: ${mNeu} neu, ${mErsetzt} aktualisiert.${n.tests.length ? ` Monatstests: ${tNeu} neu, ${tErsetzt} aktualisiert.` : ''} Insgesamt ${state.entries.length} ${state.entries.length === 1 ? 'Einheit' : 'Einheiten'}.`
     + (n.dropped ? ` ${n.dropped} unvollständige ${n.dropped === 1 ? 'Zeile wurde' : 'Zeilen wurden'} übersprungen.` : '')
     + (n.doppelt ? ` Bei ${n.doppelt} Morgen gab es zwei Werte – übernommen wurde der Morgen-Check, der zweite steht in der Notiz.` : '') };
   announce(importMsg.text);
@@ -1986,6 +2188,13 @@ async function applyBackup(raw) {
 }
 
 /* ============================================ Events */
+// Erfassung zuklappen und Entwurf verwerfen – nach Speichern, Abbrechen, Löschen, Import, Zurückholen
+function closeForm() { editingId = null; draft = newDraft(); formOpen = false; whenOpen = false; testDraft = null; }
+// Steht noch nichts im Entwurf, beginnt „Einheit erfassen“ frisch – mit der aktuellen Uhrzeit
+function draftIsEmpty(d) {
+  return d.painDuring == null && d.effort == null && !d.collagen && !d.progressed && !d.note.trim()
+    && !Object.keys(d.ex).length && !Object.values(d.run).some(v => String(v).trim()) && !Object.values(d.session).some(v => String(v).trim());
+}
 function setPath(path, val) {
   const p = path.split('.');
   let o = draft;
@@ -1995,7 +2204,7 @@ function setPath(path, val) {
 
 document.addEventListener('click', async (ev) => {
   if (chartState && chartState.sel && !(ev.target.closest && ev.target.closest('.chart-svg'))) chartShow(null);
-  const t = ev.target.closest('[data-scale],[data-seg],[data-act],[data-tab],[data-extoggle],[data-acc]');
+  const t = ev.target.closest('[data-scale],[data-seg],[data-act],[data-tab],[data-extoggle],[data-exblock],[data-exlast],[data-acc]');
   if (!t) return;
   uiFlash = null;   // Rückmeldungen gelten nur bis zum nächsten Tippen
 
@@ -2004,6 +2213,17 @@ document.addEventListener('click', async (ev) => {
   if (t.dataset.extoggle) {
     const id = t.dataset.extoggle;
     if (draft.ex[id]) delete draft.ex[id]; else draft.ex[id] = { sets:'', reps:'', weight:'' };
+    return render();
+  }
+  if (t.dataset.exblock) {
+    const ids = Object.keys(EX).filter(id => EX[id].g === t.dataset.exblock);
+    const all = ids.every(id => draft.ex[id]);
+    ids.forEach(id => { if (all) delete draft.ex[id]; else if (!draft.ex[id]) draft.ex[id] = { sets:'', reps:'', weight:'' }; });
+    return render();
+  }
+  if (t.dataset.exlast) {
+    const last = lastExUse(t.dataset.exlast);
+    if (last) draft.ex[t.dataset.exlast] = { sets: last.sets, reps: last.reps, weight: last.weight };
     return render();
   }
   if (t.dataset.scale) {
@@ -2041,10 +2261,9 @@ document.addEventListener('click', async (ev) => {
   if (act === 'editWhen') { whenOpen = true; return render(); }
   if (act === 'openForm') {
     if (!TYPES[t.dataset.type]) return;
-    // Noch nichts eingetragen? Dann frisch beginnen – mit der aktuellen Uhrzeit
-    if (draft.painDuring == null && !draft.note && !Object.keys(draft.ex).length) draft = newDraft();
+    if (draftIsEmpty(draft)) draft = newDraft();
     if (draft.type !== t.dataset.type) { draft.type = t.dataset.type; draft.ex = {}; }
-    formOpen = true;
+    testDraft = null; formOpen = true;
     render();
     document.getElementById('form')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
     focusEl('#form h2');
@@ -2059,7 +2278,7 @@ document.addEventListener('click', async (ev) => {
       collagen:draft.collagen, progressed:draft.progressed, note:draft.note.trim() };
 
     if (base.painDuring == null || !isIsoDate(base.date)) return;   // der Knopf ist dann ohnehin gesperrt
-    const art = TYPES[base.type] ? TYPES[base.type].label : base.type;
+    const art = typeLabel(base.type);
     const wann = `${relDay(base.date)}${base.time ? ' ' + base.time : ''}`;
     let text;
     if (editingId) {
@@ -2072,7 +2291,7 @@ document.addEventListener('click', async (ev) => {
       state.entries.push({ id:'e'+Date.now(), ...base });
       text = `Gespeichert: ${art}, ${wann}.`;
     }
-    draft = newDraft(); formOpen = false; whenOpen = false;
+    closeForm();
     await save();
     // Erst nach dem Speichern bestätigen – ein Speicherfehler zeigt sonst „Gespeichert“ neben der Fehlerkarte
     if (text === null) uiFlash = { where: 'entry', ok: false, text: 'Diese Einheit gibt es nicht mehr – die Änderung wurde nicht gespeichert.' };
@@ -2089,7 +2308,7 @@ document.addEventListener('click', async (ev) => {
     if (e) { editingId = e.id; draft = draftFromEntry(e); formOpen = true; render(); document.getElementById('form')?.scrollIntoView({ block:'start', behavior:'smooth' }); focusEl('#form h2'); }
     return;
   }
-  if (act === 'cancelEdit') { editingId = null; draft = newDraft(); formOpen = false; whenOpen = false; return render(); }
+  if (act === 'cancelEdit') { closeForm(); return render(); }
 
   if (act === 'saveMorning') {
     const date = t.dataset.date;
@@ -2097,8 +2316,7 @@ document.addEventListener('click', async (ev) => {
     const m = makeMorning(date, morningDraft.pain, morningDraft.stiff, morningDraft.note);
     upsertMorning(m);
     morningDraft = {}; morningOpen = false; await save();
-    const st = STIFF.find(x => x.v === m.stiff);
-    const text = `Morgen vom ${fmt(date)} gespeichert: Schmerz ${m.pain}, Sehne steif ${st ? st.label : '–'}`;
+    const text = `Morgen vom ${fmt(date)} gespeichert: Schmerz ${m.pain}, Sehne steif ${stiffLabel(m.stiff)}`;
     if (!state.error) { uiFlash = { where: 'morning', ok: true, text: text.endsWith('.') ? text : text + '.' }; announce(uiFlash.text); }
     render(); focusEl('#morning-flash');
     return;
@@ -2132,6 +2350,7 @@ document.addEventListener('click', async (ev) => {
     const gespeichert = mEdit.date;
     mEdit = null; await save();
     announce(`Morgen vom ${fmt(gespeichert)} gespeichert.`);
+    return;
   }
   if (act === 'cancelMorningEdit') { mEdit = null; return render(); }
   if (act === 'delMorning') {
@@ -2139,6 +2358,7 @@ document.addEventListener('click', async (ev) => {
     const date = mEdit.date;
     state.mornings = state.mornings.filter(x => x.date !== date);
     mEdit = null; await save();
+    return;
   }
   if (act === 'toggleDays') {
     histOpen = !histOpen;
@@ -2152,25 +2372,74 @@ document.addEventListener('click', async (ev) => {
   if (act === 'chartRange') { chartRange = t.dataset.range === 'all' ? 'all' : +t.dataset.range; updateChart(); return; }
   if (act === 'dismissMigration') { state.migrationNote = null; return render(); }
 
+  // Löschen gibt es nur im Bearbeitungsformular – die Zeilen im Verlauf haben alle denselben einen Knopf „ändern“
   if (act === 'del') {
     const e = state.entries.find(x => x.id === t.dataset.id);
     if (!e) return;
-    if (editingId === e.id) { editingId = null; draft = newDraft(); formOpen = false; whenOpen = false; }
+    closeForm();
     state.entries = state.entries.filter(x => x.id !== e.id);
     lastDeleted = e;
     await save();
-    if (!state.error) { uiFlash = { where: 'history', ok: true, text: `Einheit vom ${fmt(e.date)} (${TYPES[e.type] ? TYPES[e.type].label : e.type}) gelöscht.` }; announce(uiFlash.text + ' Rückgängig ist möglich.'); }
-    return render();
+    if (!state.error) { uiFlash = { where: 'entry', ok: true, undo: true, text: `Einheit vom ${fmt(e.date)} (${typeLabel(e.type)}) gelöscht.` }; announce(uiFlash.text + ' Rückgängig ist möglich.'); }
+    render();
+    document.getElementById('form')?.scrollIntoView({ block: 'nearest' });
+    focusEl('#form h2');
+    return;
   }
   if (act === 'undoDel') {
     if (!lastDeleted) return;
-    if (!state.entries.some(x => x.id === lastDeleted.id)) state.entries.push(lastDeleted);
+    const e = lastDeleted;
+    if (!state.entries.some(x => x.id === e.id)) state.entries.push(e);
     lastDeleted = null;
     await save();
-    announce('Einheit wiederhergestellt.');
+    if (!state.error) { uiFlash = { where: 'entry', ok: true, text: `Einheit vom ${fmt(e.date)} wiederhergestellt.` }; announce(uiFlash.text); }
+    return render();
+  }
+
+  if (act === 'openTest') {
+    closeForm();
+    testDraft = { date: today(), right: '', left: '', note: '', orig: null };
+    render();
+    document.getElementById('form')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    focusEl('#form h2');
     return;
   }
-  if (act === 'export') { showExport = true; render(); document.getElementById('exportbox')?.scrollIntoView({block:'nearest'}); }
+  if (act === 'editTest') {
+    const x = testOf(t.dataset.date);
+    if (!x) return;
+    closeForm();
+    testDraft = { date: x.date, right: String(x.right), left: String(x.left), note: x.note || '', orig: x.date };
+    render();
+    document.getElementById('form')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    focusEl('#form h2');
+    return;
+  }
+  if (act === 'cancelTest') { testDraft = null; return render(); }
+  if (act === 'saveTest') {
+    if (!testDraft) return;
+    const d = testDraft, c = testCheck(d);
+    if (!c.ok) return;   // der Knopf ist dann ohnehin gesperrt
+    if (d.orig && d.orig !== d.date) state.tests = state.tests.filter(x => x.date !== d.orig);   // umdatiert
+    upsertTest(makeTest(d.date, c.r, c.l, d.note));
+    const text = `${d.orig ? 'Änderung gespeichert' : 'Gespeichert'}: Monatstest, ${relDay(d.date)} – rechts ${c.r}, links ${c.l}.`;
+    testDraft = null;
+    await save();
+    if (!state.error) { uiFlash = { where: 'entry', ok: true, text }; announce(text); }
+    render();
+    document.getElementById('form')?.scrollIntoView({ block: 'nearest' });
+    focusEl('#form h2');
+    return;
+  }
+  if (act === 'delTest') {
+    if (!testDraft || !testDraft.orig || !confirm(`Monatstest vom ${fmt(testDraft.orig)} entfernen?`)) return;
+    const date = testDraft.orig;
+    state.tests = state.tests.filter(x => x.date !== date);
+    testDraft = null;
+    await save();
+    announce(`Monatstest vom ${fmt(date)} entfernt.`);
+    return;
+  }
+  if (act === 'export') { showExport = true; render(); document.getElementById('exportbox')?.scrollIntoView({block:'nearest'}); return; }
   if (act === 'copy') {
     const box = document.getElementById('exportbox');
     if (box) {
@@ -2178,6 +2447,7 @@ document.addEventListener('click', async (ev) => {
       try { await navigator.clipboard.writeText(box.value); } catch (e) { document.execCommand('copy'); }
       t.textContent = 'Kopiert'; announce('In die Zwischenablage kopiert.'); setTimeout(() => { t.textContent = 'Kopieren'; }, 1600);
     }
+    return;
   }
   if (act === 'retrySave') { await save(); return; }
   if (act === 'backup') {
@@ -2203,12 +2473,12 @@ document.addEventListener('click', async (ev) => {
     return;
   }
   if (act === 'reset') {
-    if (!state.entries.length && !state.mornings.length) return;
+    if (!hasData()) return;
     if (!confirm('Alle Einträge löschen?\n\nDer Stand wandert in den Papierkorb und lässt sich danach zurückholen – bis du ihn dort endgültig leerst. Ältere Kopien auf diesem Gerät werden entfernt.')) return;
     await writeSnapshot(KEY_TRASH, packState());
-    state.entries = []; state.mornings = []; mEdit = null; morningDraft = {}; state.dataNote = null;
-    editingId = null; draft = newDraft(); formOpen = false; whenOpen = false; lastDeleted = null;
-    await save({ skipPrev: true });                                  // sonst läge das Gelöschte noch einmal im Vorgängerstand
+    state.entries = []; state.mornings = []; state.tests = []; mEdit = null; morningDraft = {}; state.dataNote = null;
+    closeForm(); lastDeleted = null;
+    await save({ skipPrev: true, silent: true });                    // sonst läge das Gelöschte noch einmal im Vorgängerstand
     await dropSnapshot(KEY_PREV);
     for (const k of KEYS_ALT) { try { await window.storage.remove(k); } catch (e) {} }   // Kopien aus der Zeit vor der Umstellung
     state.snapPrev = null;
@@ -2229,10 +2499,11 @@ document.addEventListener('click', async (ev) => {
     if (!snap) return;
     // save() legt den jetzigen Stand automatisch als Vorgänger ab – also umkehrbar
     // Kopieren – sonst teilen sich Verlauf und Papierkorb dieselben Objekte und jede Änderung landet im Papierkorb
-    state.entries = JSON.parse(JSON.stringify(snap.entries)); state.mornings = JSON.parse(JSON.stringify(snap.mornings)); mEdit = null;
+    state.entries = JSON.parse(JSON.stringify(snap.entries)); state.mornings = JSON.parse(JSON.stringify(snap.mornings));
+    state.tests = JSON.parse(JSON.stringify(snap.tests || [])); mEdit = null;
     state.dataNote = null; importMsg = null;
-    editingId = null; draft = newDraft(); formOpen = false; whenOpen = false; lastDeleted = null;
-    await save();
+    closeForm(); lastDeleted = null;
+    await save({ silent: true });
     return render();
   }
   if (act === 'emptyTrash') {
@@ -2261,13 +2532,20 @@ async function readBackupFile(file) {
 function onField(ev) {
   if (ev.target.id === 'impfile') {
     const f = ev.target.files && ev.target.files[0];
-    ev.target.value = '';   // damit dieselbe Datei erneut gewaehlt werden kann
+    ev.target.value = '';   // damit dieselbe Datei erneut gewählt werden kann
     readBackupFile(f);
     return;
   }
   if (ev.target.id === 'impbox') { importBuf = ev.target.value; return; }
   const ep = ev.target.dataset.epath;
   if (ep) { if (mEdit) mEdit[ep] = ev.target.value; if (ep === 'date' && ev.type === 'change') render(); return; }
+  const tp = ev.target.dataset.tpath;
+  if (tp) {
+    if (!testDraft) return;
+    testDraft[tp] = ev.target.value;
+    if (tp === 'date' && ev.type === 'change') render(); else updateTestForm();
+    return;
+  }
   const mp = ev.target.dataset.mpath;
   if (mp) { morningDraft[mp] = ev.target.value; return; }
   const p = ev.target.dataset.path;
@@ -2334,9 +2612,6 @@ document.addEventListener('keydown', ev => {
   tab = TABS[j][0]; openAcc = null; scaleJump = null; render();
   focusEl(`[data-tab="${tab}"]`);
 });
-document.addEventListener('scroll', ev => {
-  if (ev.target && ev.target.classList && ev.target.classList.contains('tabs')) updateTabFade(ev.target);
-}, true);
 
 // Nur bei geänderter Breite neu zeichnen – die Bildschirmtastatur ändert nur die Höhe
 let resizeTimer = null;
@@ -2347,14 +2622,23 @@ window.addEventListener('resize', () => {
   }, 150);
 });
 
-/* Offline-Cache. Nur unter http(s) moeglich – wird die Datei direkt vom Dateisystem
-   geoeffnet (file://), gibt es keinen Service Worker. Die App laeuft dann trotzdem,
+/* Offline-Cache. Nur unter http(s) möglich – wird die Datei direkt vom Dateisystem
+   geöffnet (file://), gibt es keinen Service Worker. Die App läuft dann trotzdem,
    nur eben ohne Offline-Garantie. */
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('sw.js').catch(() => { /* ohne Cache weiterarbeiten */ });
   });
 }
+
+// Nur für Tests (siehe test/): Uhr, Datenstand und Entwurf von außen setzen
+const _test = {
+  setNow(f) { _now = f; },
+  setState(s) { state.entries = s.entries || []; state.mornings = s.mornings || []; state.tests = s.tests || []; state.loaded = true; invalidate(); },
+  setDraft(d, editing) { draft = d; editingId = editing ?? null; },
+  setTab(t) { tab = t; },
+  ui() { return { tab, formOpen, editingId, testDraft, uiFlash, lastDeleted, draft }; }
+};
 
 load();
 

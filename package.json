@@ -1,0 +1,9 @@
+{
+  "name": "sehnenlog",
+  "private": true,
+  "type": "module",
+  "description": "Trainingstagebuch und Reha-Plan für die Tibialis-posterior-Sehne – eine Datei, keine Abhängigkeiten",
+  "scripts": {
+    "test": "node --test \"test/*.test.mjs\""
+  }
+}
