@@ -58,6 +58,9 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
   .masthead { margin-bottom: 14px; }
   .masthead h1 { margin: 0; font-size: 26px; font-weight: 650; letter-spacing: -0.02em; }
   .masthead p { margin: 4px 0 0; font-size: 13.5px; color: var(--ink-soft); }
+  .txt { font-size: 13.5px; margin: 0; }
+  .txt-gap { margin-top: 13px; }
+  .txt.soft { color: var(--ink-soft); }
 
   .tabs { display: flex; gap: 5px; margin-bottom: 16px; flex-wrap: wrap; }
   .tabs button { font-family: inherit; font-size: 14px; font-weight: 600; padding: 9px 14px; min-height: 40px;
@@ -112,6 +115,9 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
 
   .grid2 { display: flex; gap: 10px; }
   .grid2 > div { flex: 1; min-width: 0; }
+  .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .grid4 > div { min-width: 0; }
+  .subfield { margin: -2px 0 12px 25px; }
   .sublabel { font-size: 12.5px; color: var(--ink-soft); margin-bottom: 3px; display: block; }
 
   .exrow { background: var(--surface-2); border: 1px solid var(--rule-soft); border-radius: 7px; padding: 10px 11px; margin-bottom: 8px; }
@@ -215,6 +221,8 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
     padding: 14px 16px; font-size: 14px; margin-bottom: 14px; }
   .flag b { display: block; margin-bottom: 4px; color: var(--down); }
 
+  /* Der unsichtbare Datei-Wähler gibt seinen Fokusring an den sichtbaren Knopf dahinter */
+  #impfile:focus-visible + label { outline: 2px solid var(--act); outline-offset: 2px; }
   .exportbox { width: 100%; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: 12px; line-height: 1.45; min-height: 150px; margin-top: 10px; }
   @media (max-width: 700px) { .exportbox { font-size: 16px; } }
@@ -245,11 +253,13 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
     padding: 8px; margin-top: 12px; }
   .fig svg { width: 100%; height: auto; display: block; }
 
-  .kv { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0;
-    border-bottom: 1px solid var(--rule-soft); font-size: 13.5px; }
-  .kv:last-child { border-bottom: 0; }
-  .kv b { font-weight: 600; }
-  .kv span { color: var(--act-ink); font-weight: 600; white-space: nowrap; }
+  /* Titel, Zeitangabe und Erklärung als ein Block – die Linie trennt Blöcke, nicht Titel von Text */
+  .kvblock { padding: 9px 0; border-bottom: 1px solid var(--rule-soft); }
+  .kvblock:last-of-type { border-bottom: 0; }
+  .kv-head { display: flex; justify-content: space-between; gap: 12px; font-size: 13.5px; }
+  .kv-head b { font-weight: 600; }
+  .kv-head span { color: var(--act-ink); font-weight: 600; white-space: nowrap; }
+  .kv-text { font-size: 13px; color: var(--ink-soft); margin: 3px 0 0; }
 
   .prod { border: 1px solid var(--rule-soft); border-radius: 8px; padding: 13px 14px; margin-bottom: 9px; }
   .prod-name { font-size: 14.5px; font-weight: 650; }
@@ -318,6 +328,9 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
   @media (max-width: 560px) {
     .tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
     .tabs button { padding: 8px 6px; font-size: 13.5px; }
+    .masthead p { display: none; }   /* drei Zeilen Untertitel auf jedem Tab – auf dem Handy entbehrlich */
+    .masthead { margin-bottom: 12px; }
+    .grid4 { grid-template-columns: 1fr 1fr; }
   }
   @media (max-width: 560px) {
     /* Skala in zwei Reihen (0–5 / 6–10): Tasten 44 px hoch und ≥ 50 px breit statt 25 px */
@@ -415,6 +428,7 @@ const KEYS_ALT = ['sehnenlog:v3', 'sehnenlog:v2', 'sehnenlog:v1'];   // ältere 
 const KEY_PREV  = 'sehnenlog:prev';   // Stand vor der letzten Änderung
 const KEY_TRASH = 'sehnenlog:trash';  // Stand vor „Alles löschen“
 const KEY_META  = 'sehnenlog:meta';   // u. a. wann zuletzt gesichert wurde
+const KEY_RESCUE = 'sehnenlog:rescue'; // Rohtext eines Stands, der sich nicht lesen ließ
 const BACKUP_FAELLIG_TAGE = 14;
 // Fachgrenzen aus dem Plan – an einer Stelle, damit Urteil, Skala und Diagramm dieselben Zahlen nutzen
 const SCHMERZ_MAX = 3;            // Schmerz während der Einheit: bis hierhin erlaubt
@@ -634,7 +648,7 @@ const SCALES = [
 /* ============================================ State */
 let _now = () => new Date();   // die Uhr – vor dem Zustand, weil newDraft() sie beim Start braucht; im Test austauschbar
 let state = { entries: [], mornings: [], tests: [], loaded: false, error: null, dataNote: null, migrationNote: null,
-  persist: null, snapPrev: null, snapTrash: null, meta: { lastBackup: null } };
+  persist: null, snapPrev: null, snapTrash: null, rescue: null, meta: { lastBackup: null } };
 let tab = 'log';
 let openAcc = null;
 let scaleJump = null;   // { sc, from }: Sprung aus dem Formular in den Skalen-Tab und zurück
@@ -665,8 +679,8 @@ function today() {
 }
 function newDraft() {
   return { date: today(), time: nowTime(), type: 'kraft', ex: {},
-    run: { min:'', pace:'', hr:'', intervals:'' }, session: { min:'', hr:'', what:'' },
-    painDuring: null, effort: null, collagen: false, progressed: false, note: '' };
+    run: { min:'', pace:'', hr:'', cadence:'', intervals:'' }, session: { min:'', hr:'', what:'' },
+    painDuring: null, effort: null, collagen: false, progressed: false, progressedWhat: '', note: '' };
 }
 function fmt(iso) { const [y,m,d] = iso.split('-'); return `${+d}.${+m}.`; }
 function fmtY(iso) { return fmt(iso) + iso.slice(0, 4); }
@@ -682,10 +696,10 @@ function draftFromEntry(e) {
   d.date = e.date; d.time = e.time || '';
   d.type = TYPES[e.type] ? e.type : 'crossfit';
   d.painDuring = e.painDuring; d.effort = e.effort;
-  d.collagen = !!e.collagen; d.progressed = !!e.progressed;
+  d.collagen = !!e.collagen; d.progressed = !!e.progressed; d.progressedWhat = asStr(e.progressedWhat);
   d.note = [e.note, e.detail ? 'Alteintrag: ' + e.detail : ''].filter(Boolean).join(' · ');
   if (kind === 'ex') d.ex = JSON.parse(JSON.stringify((e.details || {}).ex || {}));
-  else if (kind === 'run') d.run = { min:'', pace:'', hr:'', intervals:'', ...(e.details || {}) };
+  else if (kind === 'run') d.run = { min:'', pace:'', hr:'', cadence:'', intervals:'', ...(e.details || {}) };
   else d.session = { min:'', hr:'', what:'', ...(e.details || {}) };
   return d;
 }
@@ -766,10 +780,10 @@ function cleanEntry(e) {
   if (c.detail != null) c.detail = asStr(c.detail);
   c.painDuring = asScore(c.painDuring);
   c.effort = asScore(c.effort);
-  c.collagen = !!c.collagen; c.progressed = !!c.progressed;
+  c.collagen = !!c.collagen; c.progressed = !!c.progressed; c.progressedWhat = asStr(c.progressedWhat);
   const d = (c.details && typeof c.details === 'object') ? c.details : {};
   const det = {};
-  ['min', 'pace', 'hr', 'intervals', 'what'].forEach(k => { if (k in d) det[k] = asStr(d[k]); });
+  ['min', 'pace', 'hr', 'cadence', 'intervals', 'what'].forEach(k => { if (k in d) det[k] = asStr(d[k]); });
   if (d.ex && typeof d.ex === 'object') {
     det.ex = {};
     Object.entries(d.ex).forEach(([k, v]) => {
@@ -862,9 +876,31 @@ async function loadMeta() {
     state.meta = (m && typeof m === 'object') ? m : { lastBackup: null };
   } catch (e) { state.meta = { lastBackup: null }; }
 }
-async function markBackup() {
-  state.meta.lastBackup = new Date().toISOString();
-  try { await window.storage.set(KEY_META, JSON.stringify(state.meta)); } catch (e) {}
+async function saveMeta() { try { await window.storage.set(KEY_META, JSON.stringify(state.meta)); } catch (e) {} }
+async function markBackup() { state.meta.lastBackup = new Date().toISOString(); await saveMeta(); }
+// Ein Stand, der sich nicht lesen ließ, wird als Rohtext beiseitegelegt – bevor das nächste
+// Speichern ihn überschreibt. Im Tab „Daten“ lässt er sich kopieren oder verwerfen.
+async function writeRescue(raw) {
+  try {
+    const cur = await readRescue();
+    if (cur && cur.raw === raw) return;
+    await window.storage.set(KEY_RESCUE, JSON.stringify({ at: new Date().toISOString(), raw: String(raw) }));
+  } catch (e) {}
+}
+async function readRescue() {
+  try {
+    const r = await window.storage.get(KEY_RESCUE);
+    const s = r && r.value ? JSON.parse(r.value) : null;
+    return s && s.at && typeof s.raw === 'string' ? s : null;
+  } catch (e) { return null; }
+}
+// Safari löscht im Browser-Modus die Daten einer Seite nach rund sieben Tagen ohne Nutzung (ITP).
+// Als Home-Bildschirm-App gilt das nicht – darum dort ein Hinweis, hier die Erkennung.
+function safariBrowserModus() {
+  const ua = navigator.userAgent || '';
+  const safari = /Safari\//.test(ua) && !/Chrome|CriOS|FxiOS|EdgiOS|OPiOS|Android/.test(ua);
+  const standalone = navigator.standalone === true || !!(window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+  return safari && !standalone;
 }
 function backupAge() {
   if (!state.meta || !state.meta.lastBackup) return null;
@@ -887,7 +923,10 @@ async function checkPersistence(fragen) {
   if (!navigator.storage || !navigator.storage.persist) { state.persist = 'na'; return; }
   try {
     if (await navigator.storage.persisted()) { state.persist = true; return; }
-    state.persist = fragen ? await navigator.storage.persist() : false;
+    if (!fragen) { state.persist = false; return; }
+    state.persist = await navigator.storage.persist();
+    // Firefox stellt dafür einen Dialog – den nur einmal von selbst, danach nur auf Knopfdruck
+    if (!state.meta.persistAsked) { state.meta.persistAsked = true; await saveMeta(); }
   } catch (e) { state.persist = 'na'; }
 }
 
@@ -898,7 +937,10 @@ async function load() {
     let n = null;
     try { n = normalize(JSON.parse(raw)); } catch (e) { n = null; }
     if (n) adopt(n);
-    else state.dataNote = 'Der gespeicherte Stand ließ sich nicht lesen. Spiel deine letzte Sicherung ein oder hol im Tab „Daten“ unter „Sicherheitsnetz“ einen Zwischenstand zurück.';
+    else {
+      await writeRescue(raw);
+      state.dataNote = 'Der gespeicherte Stand ließ sich nicht lesen. Spiel deine letzte Sicherung ein oder hol im Tab „Daten“ unter „Sicherheitsnetz“ einen Zwischenstand zurück – dort liegt der unlesbare Stand auch als Rohtext.';
+    }
   } else {
     // Erster Start im neuen Format: ältere Stände übernehmen.
     // Die alten Schlüssel bleiben unangetastet liegen – als Rückfallebene.
@@ -919,9 +961,10 @@ async function load() {
   await loadMeta();
   state.snapPrev  = await readSnapshot(KEY_PREV);
   state.snapTrash = await readSnapshot(KEY_TRASH);
+  state.rescue = await readRescue();
   state.loaded = true;
   render();
-  checkPersistence(true).then(render);
+  checkPersistence(!state.meta.persistAsked).then(render);
 }
 async function save(opts) {
   invalidate();   // jede Änderung am Datenstand läuft hier durch
@@ -962,6 +1005,7 @@ function summary(e) {
     if (d.min) b.push(d.min + ' Min.');
     if (d.pace) b.push(d.pace);
     if (d.hr) b.push('Ø ' + d.hr + ' bpm');
+    if (d.cadence) b.push(d.cadence + ' Schritte/Min.');
     if (d.intervals) b.push('Intervalle: ' + d.intervals);
     return b.length ? b.join(' · ') : 'keine Angabe';
   }
@@ -1170,7 +1214,7 @@ function buildExport() {
         `während ${e.painDuring != null ? e.painDuring + '/10' : '–'}`];
       if (e.effort != null) parts.push(`Anstrengung ${e.effort}/10`);
       parts.push(`Kollagen ${e.collagen ? 'ja' : 'nein'}`);
-      if (e.progressed) parts.push('Steigerung');
+      if (e.progressed) parts.push('Steigerung' + (e.progressedWhat ? ': ' + e.progressedWhat : ''));
       L.push('  ' + parts.join(' | '));
       if (e.note) L.push(`    Notiz: ${e.note}`);
     });
@@ -1266,10 +1310,11 @@ function exPickerHtml() {
 }
 function runFieldsHtml() {
   const r = draft.run;
-  return `<div class="field"><div class="grid2">
+  return `<div class="field"><div class="grid4">
       <div><label class="sublabel" for="f-run-min">Dauer (Min.)</label>${num('run.min', r.min, '32')}</div>
       <div><label class="sublabel" for="f-run-pace">Pace</label><input type="text" id="f-run-pace" data-path="run.pace" value="${esc(r.pace)}" placeholder="5:45 min/km"></div>
       <div><label class="sublabel" for="f-run-hr">Ø Puls</label>${num('run.hr', r.hr, '148')}</div>
+      <div><label class="sublabel" for="f-run-cadence">Kadenz/Min.</label>${num('run.cadence', r.cadence, '172')}</div>
     </div></div>
     <div class="field"><label for="d-int">Intervalle</label>
       <p class="hint">Leer lassen bei Dauerlauf.</p>
@@ -1393,7 +1438,7 @@ function chartInnerHtml() {
     </div>
     <div class="chart-wrap">
       <svg class="chart-svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" tabindex="0"
-        aria-label="Schmerzverlauf in ${zeitraum}: ${mIn.length} Morgenwerte, ${dIn.length} Trainingstage. Antippen oder Pfeiltasten zeigen die Werte eines Tages; alle Werte stehen auch in der Tagesliste darunter.">${s}</svg>
+        aria-label="Schmerzverlauf in ${zeitraum}: ${mIn.length} Morgenwerte, ${dIn.length} Trainingstage. Antippen oder Pfeiltasten zeigen die Werte eines Tages; alle Werte stehen auch im Verlauf darunter, ältere Tage nach dem Aufklappen.">${s}</svg>
       <div class="chart-tip" hidden></div>
     </div>
     <div class="chart-legend">
@@ -1451,20 +1496,20 @@ function tabPlan() {
   return `<div class="cards2"><div class="card">
       <h2>Das Ziel</h2>
       <p class="lede">Belastbarkeit größer als die Trainingslast – nicht „das MRT wird sauber“.</p>
-      <p style="font-size:13.5px;margin:0;color:var(--ink-soft)">Fettige Umbauten in einer Sehne bilden sich in der Regel nicht zurück. Die Sehne baut aber um den geschädigten Bereich herum neues, tragfähiges Kollagen auf. Beschwerdefrei laufen bei unverändertem MRT-Bild ist ein normaler Erfolg.</p>
+      <p class="txt soft">Fettige Umbauten in einer Sehne bilden sich in der Regel nicht zurück. Die Sehne baut aber um den geschädigten Bereich herum neues, tragfähiges Kollagen auf. Beschwerdefrei laufen bei unverändertem MRT-Bild ist ein normaler Erfolg.</p>
     </div>
 
     <div class="card">
       <h2>Drei Regeln über allem</h2>
       <p class="lede">Diese drei steuern jede Einheit der nächsten sechs Monate.</p>
-      ${RULES.map((r,i) => acc('rule'+i, r[0], null, `<p style="font-size:13.5px;margin:13px 0 0">${esc(r[1])}</p>`)).join('')}
+      ${RULES.map((r,i) => acc('rule'+i, r[0], null, `<p class="txt txt-gap">${esc(r[1])}</p>`)).join('')}
     </div>
 
     <div class="card">
       <h2>Die vier Phasen</h2>
       <p class="lede">Jede baut auf der vorherigen auf.</p>
-      ${PHASES.map((p,i) => acc('ph'+i, p.title, p.span,
-        `<p style="font-size:13.5px;margin:13px 0 0">${esc(p.goal)}</p>` +
+      ${PHASES.map((p,i) => acc('ph'+i, p.title, `Phase ${i+1} · ${p.span}`,
+        `<p class="txt txt-gap">${esc(p.goal)}</p>` +
         p.parts.map(part => `<h3>${esc(part[0])}</h3><ul>${part[1].map(x => `<li>${esc(x)}</li>`).join('')}</ul>`).join('')
       )).join('')}
     </div>
@@ -1472,15 +1517,14 @@ function tabPlan() {
     <div class="card">
       <h2>Belastungsschwelle beim Laufen</h2>
       <p class="lede">Nicht die Kilometer sind das Problem, sondern Tempo × Dauer.</p>
-      ${RUNCTRL.map(r => `<div class="kv"><b>${esc(r[0])}</b></div><p style="font-size:13px;color:var(--ink-soft);margin:-4px 0 10px">${esc(r[1])}</p>`).join('')}
+      ${RUNCTRL.map(r => `<div class="kvblock"><div class="kv-head"><b>${esc(r[0])}</b></div><p class="kv-text">${esc(r[1])}</p></div>`).join('')}
     </div>
 
     <div class="card">
       <h2>Woran du merkst, dass es wirkt</h2>
       <p class="lede">Vier Zeichen – keines davon ist der Schmerz.</p>
-      ${MARKERS.map(m => `<div class="kv"><b>${esc(m[1])}</b><span>${esc(m[0])}</span></div>
-        <p style="font-size:13px;color:var(--ink-soft);margin:-4px 0 10px">${esc(m[2])}</p>`).join('')}
-      <p style="font-size:13.5px;margin:8px 0 0">Fortschritt heißt nicht „es tut weniger weh“, sondern „ich vertrage mehr“. Einzelne gute oder schlechte Tage und ein Kontroll-MRT sagen nichts.</p>
+      ${MARKERS.map(m => `<div class="kvblock"><div class="kv-head"><b>${esc(m[1])}</b><span>${esc(m[0])}</span></div><p class="kv-text">${esc(m[2])}</p></div>`).join('')}
+      <p class="txt" style="margin-top:12px">Fortschritt heißt nicht „es tut weniger weh“, sondern „ich vertrage mehr“. Einzelne gute oder schlechte Tage und ein Kontroll-MRT sagen nichts.</p>
     </div>
 
     <div class="card">
@@ -1546,7 +1590,7 @@ function tabSupp() {
     <div class="card">
       <h2>Regeln</h2>
       <p class="lede">Ohne Belastung passiert nichts – die Peptide allein bauen keine Sehne.</p>
-      ${SUPPRULES.map((r,i) => acc('sr'+i, r[0], null, `<p style="font-size:13.5px;margin:13px 0 0">${esc(r[1])}</p>`)).join('')}
+      ${SUPPRULES.map((r,i) => acc('sr'+i, r[0], null, `<p class="txt txt-gap">${esc(r[1])}</p>`)).join('')}
     </div></div>`;
 }
 
@@ -1662,23 +1706,37 @@ function openMorningsHtml() {
 }
 
 // Morgen ändern oder nachtragen – im Verlauf, direkt am Tag oder mit frei wählbarem Datum
+function morningEditCheck(d) {
+  const gueltig = isIsoDate(d.date), zukunft = gueltig && d.date > today(), cur = gueltig ? morningOf(d.date) : null;
+  return { gueltig, zukunft, cur, ok: gueltig && !zukunft && d.pain != null && !!d.stiff };
+}
+function morningEditNotesHtml(c) {
+  return (c.zukunft ? '<div class="warnbox">Ein Morgen in der Zukunft lässt sich nicht eintragen.</div>' : '')
+    + (!c.zukunft && c.cur && !c.cur.skipped ? '<div class="warnbox">Für diesen Tag gibt es schon einen Morgenwert. Er wird ersetzt.</div>' : '');
+}
+function morningEditHintText(d, c) { return c.ok || c.zukunft || !c.gueltig ? '' : `Es fehlt noch: ${missingMorning(d)}.`; }
+// Datum im Editor geändert: nur Hinweise und Knopf nachführen (siehe refreshEntryForm)
+function refreshMorningEdit() {
+  if (!mEdit) return;
+  const c = morningEditCheck(mEdit);
+  setHtml('e-notes', morningEditNotesHtml(c));
+  const b = document.querySelector('[data-act="saveMorningEdit"]'); if (b) b.disabled = !c.ok;
+  setHint('e-hint', morningEditHintText(mEdit, c));
+}
 function morningEditorHtml() {
-  const d = mEdit, frei = d.where === 'free', cur = morningOf(d.date);
-  const zukunft = !!d.date && d.date > today();
-  const ok = isIsoDate(d.date) && !zukunft && d.pain != null && !!d.stiff;
+  const d = mEdit, frei = d.where === 'free', c = morningEditCheck(d);
   return `<div class="m-edit">
       <div class="day-title" style="margin-bottom:10px">${frei ? 'Morgen nachtragen' : `Morgen vom ${esc(weekday(d.date))}, ${fmt(d.date)}`}</div>
       ${frei ? `<div class="field"><label class="sublabel" for="e-date">Datum</label>
           <input type="date" id="e-date" value="${esc(d.date)}" max="${today()}" data-epath="date"></div>
-        ${zukunft ? '<div class="warnbox">Ein Morgen in der Zukunft lässt sich nicht eintragen.</div>' : ''}
-        ${!zukunft && cur && !cur.skipped ? '<div class="warnbox">Für diesen Tag gibt es schon einen Morgenwert. Er wird ersetzt.</div>' : ''}` : ''}
+        <div id="e-notes">${morningEditNotesHtml(c)}</div>` : ''}
       ${morningFieldsHtml('e', d)}
       <div class="btn-row">
-        <button class="btn small" data-act="saveMorningEdit" ${ok ? '' : 'disabled'}>Speichern</button>
+        <button class="btn small" data-act="saveMorningEdit" ${c.ok ? '' : 'disabled'}>Speichern</button>
         <button class="btn quiet small" data-act="cancelMorningEdit">Abbrechen</button>
-        ${!frei && cur ? '<button type="button" class="edit" data-act="delMorning" style="margin-left:auto">Morgenwert entfernen</button>' : ''}
+        ${!frei && c.cur ? '<button type="button" class="edit" data-act="delMorning" style="margin-left:auto">Morgenwert entfernen</button>' : ''}
       </div>
-      ${ok || zukunft || !isIsoDate(d.date) ? '' : `<p class="hint" style="margin-top:8px">Es fehlt noch: ${esc(missingMorning(d))}.</p>`}
+      <p class="hint" id="e-hint" style="margin-top:8px"${morningEditHintText(d, c) ? '' : ' hidden'}>${esc(morningEditHintText(d, c))}</p>
     </div>`;
 }
 
@@ -1717,8 +1775,8 @@ function entryRowHtml(e) {
   return `<div class="day-row${editingId === e.id ? ' editing' : ''}">
       <span class="day-time">${e.time ? esc(e.time) : '–'}</span>
       <div class="day-main">
-        <div class="day-title">${esc(label)}${e.progressed ? ' · gesteigert' : ''}</div>
-        <div class="day-sub">${esc(summary(e))}${e.effort != null ? ' · Anstrengung ' + esc(e.effort) + '/10' : ''}</div>
+        <div class="day-title">${esc(label)}${e.progressed ? ' · gesteigert' + (e.progressedWhat ? ': ' + esc(e.progressedWhat) : '') : ''}</div>
+        <div class="day-sub">${esc(summary(e))}${e.effort != null ? ' · Anstrengung ' + esc(e.effort) + '/10' : ''}${e.collagen ? ' · Kollagen' : ''}</div>
         ${e.note ? `<div class="day-sub day-note">${esc(e.note)}</div>` : ''}
       </div>
       <div class="day-side">
@@ -1796,11 +1854,15 @@ function testMissing(c) {
   return `Es fehlt noch die Zahl ${fehlt}.`;
 }
 // Beim Tippen nur Knopf und Hinweis nachführen – ein Neuaufbau würde das Feld unter dem Finger ersetzen
+function testNotesHtml(d, c) {
+  return !d.orig && c.gueltig && !c.zukunft && testOf(d.date) ? '<div class="warnbox">Für diesen Tag gibt es schon einen Monatstest. Er wird ersetzt.</div>' : '';
+}
 function updateTestForm() {
   if (!testDraft) return;
-  const c = testCheck(testDraft), b = document.querySelector('[data-act="saveTest"]'), h = document.getElementById('t-hint');
+  const c = testCheck(testDraft), b = document.querySelector('[data-act="saveTest"]');
+  setHtml('t-notes', testNotesHtml(testDraft, c));
   if (b) b.disabled = !c.ok;
-  if (h) { h.textContent = testMissing(c); h.hidden = c.ok; }
+  setHint('t-hint', testMissing(c));
 }
 function testFormHtml() {
   const d = testDraft, editing = !!d.orig, c = testCheck(d);
@@ -1809,7 +1871,7 @@ function testFormHtml() {
       <h2 tabindex="-1">${editing ? 'Monatstest bearbeiten' : 'Monatstest erfassen'}</h2>
       <p class="lede">Einbeiniges Wadenheben auf ebenem Boden, volle Reichweite, ruhiges Tempo – zählen, bis die Höhe sichtbar einbricht. Beide Seiten, die gesunde zuerst.</p>
       <div class="field"><label class="sublabel" for="t-date">Datum</label><input type="date" id="t-date" value="${esc(d.date)}" max="${today()}" data-tpath="date"></div>
-      ${!editing && c.gueltig && !c.zukunft && testOf(d.date) ? '<div class="warnbox">Für diesen Tag gibt es schon einen Monatstest. Er wird ersetzt.</div>' : ''}
+      <div id="t-notes">${testNotesHtml(d, c)}</div>
       <div class="field"><div class="grid2">
         <div><label class="sublabel" for="t-right">Wiederholungen rechts (betroffene Seite)</label>
           <input type="number" id="t-right" inputmode="numeric" min="0" max="999" value="${esc(d.right)}" placeholder="${last ? esc(last.right) : '12'}" data-tpath="right"></div>
@@ -1834,7 +1896,7 @@ function testAccHtml() {
     ? `${due ? 'Fällig – ' : ''}zuletzt ${fmt(last.date)}: rechts ${last.right}, links ${last.left}`
     : due ? 'Fällig – noch keiner erfasst' : 'Noch keiner erfasst';
   const rows = [...t].reverse();
-  const body = `<p style="font-size:13.5px;margin:13px 0 0">Einmal im Monat, immer gleich ausgeführt: einbeiniges Wadenheben, bis die Höhe einbricht – beide Seiten. Zwei Zahlen sollen sich bewegen: die Wiederholungen rechts und der Abstand zur gesunden Seite.</p>
+  const body = `<p class="txt txt-gap">Einmal im Monat, immer gleich ausgeführt: einbeiniges Wadenheben, bis die Höhe einbricht – beide Seiten. Zwei Zahlen sollen sich bewegen: die Wiederholungen rechts und der Abstand zur gesunden Seite.</p>
     ${rows.length ? `<table class="ttab"><thead><tr><th>Datum</th><th>rechts</th><th>links</th><th>Abstand</th></tr></thead><tbody>${rows.map(x =>
       `<tr><td>${esc(weekday(x.date))}, ${fmtY(x.date)}</td><td>${x.right}</td><td>${x.left}</td><td>${x.left - x.right}</td></tr>`).join('')}</tbody></table>` : ''}
     ${last && last.left > 0 && last.right <= last.left / 2 ? '<div class="warnbox" style="margin-top:12px"><b>Rechts schafft höchstens die Hälfte von links.</b> Im Plan steht das unter den Warnzeichen. Schließt sich der Abstand über die nächsten Tests nicht oder wird er größer, gehört das ärztlich angeschaut.</div>' : ''}
@@ -1842,10 +1904,34 @@ function testAccHtml() {
   return acc('mtest', 'Monatstest', meta, body, due);
 }
 
+// Teile des Formulars, die von Datum, Uhrzeit oder den Häkchen abhängen. Sie werden beim
+// Tippen einzeln nachgeführt statt die Karte neu aufzubauen – sonst schließt auf iOS der
+// Datumswähler bei jedem Verstellen, weil sein Feld unter dem Finger ersetzt wird.
+function whenNoteHtml() {
+  return draft.date !== today() && isIsoDate(draft.date)
+    ? `<p class="hint" style="margin:7px 0 0">Der Eintrag steht nicht auf heute (${esc(weekday(today()))}, ${fmt(today())}). <button type="button" class="btn quiet small" style="padding:4px 9px;margin-left:4px" data-act="setToday">Auf heute setzen</button></p>` : '';
+}
+function collagenNoteHtml() {
+  const gap = collagenGap();
+  return gap !== null ? `<div class="warnbox"><b>Nur ${gap.toFixed(1)} Stunden seit der letzten Dosis.</b> Nach einem Reiz ist die Sehne rund 6 Stunden refraktär – diese Dosis bringt vermutlich nichts.</div>` : '';
+}
+function entryHintText() {
+  return draft.painDuring == null ? 'Der Schmerzwert fehlt noch.' : !isIsoDate(draft.date) ? 'Das Datum fehlt oder ist ungültig.' : '';
+}
+function setHtml(id, html) { const el = document.getElementById(id); if (el && el.innerHTML !== html) el.innerHTML = html; }
+function setHint(id, text) { const el = document.getElementById(id); if (el) { el.textContent = text; el.hidden = !text; } }
+function refreshEntryForm() {
+  if (!formOpen && !editingId) return;
+  setHtml('when-note', whenNoteHtml());
+  setHtml('collagen-note', collagenNoteHtml());
+  const w = document.getElementById('progressed-what'); if (w) w.hidden = !draft.progressed;
+  const b = document.getElementById('save-entry'); if (b) b.disabled = draft.painDuring == null || !isIsoDate(draft.date);
+  setHint('entry-hint', entryHintText());
+}
+
 function tabLog() {
   const a = assess(), mt = morningTarget(), flags = redFlags();
   const kind = TYPES[draft.type].kind;
-  const gap = collagenGap();
 
   return `<div class="log">
     <div class="log-top">
@@ -1880,7 +1966,7 @@ function tabLog() {
         <div><label class="sublabel" for="d-date">Datum</label><input type="date" id="d-date" value="${esc(draft.date)}" max="${today()}" data-path="date"></div>
         <div><label class="sublabel" for="d-time">Startzeit</label><input type="time" id="d-time" value="${esc(draft.time)}" data-path="time"></div>
       </div>
-      ${draft.date !== today() ? `<p class="hint" style="margin:7px 0 0">Der Eintrag steht nicht auf heute (${esc(weekday(today()))}, ${fmt(today())}). <button type="button" class="btn quiet small" style="padding:4px 9px;margin-left:4px" data-act="setToday">Auf heute setzen</button></p>` : ''}</div>`}
+      <div id="when-note">${whenNoteHtml()}</div></div>`}
 
       <div class="field">
         <span class="field-label">Art der Einheit</span>
@@ -1903,8 +1989,12 @@ function tabLog() {
       </div>` : ''}
 
       <label class="check"><input type="checkbox" data-path="collagen" ${draft.collagen?'checked':''}><span>Kollagen 45–60 Min. vorher genommen</span></label>
-      ${gap !== null ? `<div class="warnbox"><b>Nur ${gap.toFixed(1)} Stunden seit der letzten Dosis.</b> Nach einem Reiz ist die Sehne rund 6 Stunden refraktär – diese Dosis bringt vermutlich nichts.</div>` : ''}
+      <div id="collagen-note">${collagenNoteHtml()}</div>
       <label class="check"><input type="checkbox" data-path="progressed" ${draft.progressed?'checked':''}><span>Das war eine Steigerung gegenüber der letzten Einheit</span></label>
+      <div class="field subfield" id="progressed-what" ${draft.progressed ? '' : 'hidden'}>
+        <label class="sublabel" for="d-prog">Was wurde gesteigert?</label>
+        <input type="text" id="d-prog" data-path="progressedWhat" value="${esc(draft.progressedWhat)}" placeholder="z. B. Gewicht 15 → 17,5 kg">
+      </div>
 
       <div class="field" style="margin-top:14px">
         <label for="d-note">Notiz</label>
@@ -1912,24 +2002,24 @@ function tabLog() {
       </div>
 
       <div class="btn-row">
-        <button class="btn" data-act="saveEntry" ${draft.painDuring == null || !isIsoDate(draft.date) ? 'disabled' : ''}>${editingId ? 'Änderungen speichern' : 'Einheit speichern'}</button>
+        <button class="btn" id="save-entry" data-act="saveEntry" ${draft.painDuring == null || !isIsoDate(draft.date) ? 'disabled' : ''}>${editingId ? 'Änderungen speichern' : 'Einheit speichern'}</button>
         <button class="btn quiet" data-act="cancelEdit">Abbrechen</button>
         ${editingId ? `<button type="button" class="edit" data-act="del" data-id="${esc(editingId)}" style="margin-left:auto">Einheit löschen</button>` : ''}
       </div>
-      ${draft.painDuring == null ? '<p class="hint" style="margin-top:8px">Der Schmerzwert fehlt noch.</p>' : !isIsoDate(draft.date) ? '<p class="hint" style="margin-top:8px">Das Datum fehlt oder ist ungültig.</p>' : ''}
+      <p class="hint" id="entry-hint" style="margin-top:8px"${entryHintText() ? '' : ' hidden'}>${esc(entryHintText())}</p>
 
     </div>`}</div>
     <div class="o10">${testAccHtml()}${acc('howto', 'Wie die Bewertung zustande kommt', 'Erklärung – keine Daten',
       `<h3>Schmerz während der Einheit</h3>
-       <p style="font-size:13.5px;margin:0">Trägst du unter „Einheit erfassen“ ein, direkt nach dem Training. Bis 3/10 ist erlaubt.</p>
+       <p class="txt">Trägst du unter „Einheit erfassen“ ein, direkt nach dem Training. Bis 3/10 ist erlaubt.</p>
        <h3>Schmerz am Morgen und Steifigkeit der Sehne</h3>
-       <p style="font-size:13.5px;margin:0">Jeder Morgen gehört zu dem Tag, an dem du aufwachst. Nach einem Trainingstag fragt die Morgen-Karte danach, weil die Bewertung diesen Wert braucht; an anderen Tagen ist er freiwillig. Ändern oder nachtragen kannst du ihn jederzeit im Verlauf.</p>
+       <p class="txt">Jeder Morgen gehört zu dem Tag, an dem du aufwachst. Nach einem Trainingstag fragt die Morgen-Karte danach, weil die Bewertung diesen Wert braucht; an anderen Tagen ist er freiwillig. Ändern oder nachtragen kannst du ihn jederzeit im Verlauf.</p>
        <h3>Der Vergleich</h3>
-       <p style="font-size:13.5px;margin:0">Verglichen wird der Morgen nach dem letzten Trainingstag mit dem Morgen nach dem vorletzten. Steigt der Schmerz um zwei Punkte, heißt das Zurücknehmen. Das ist die 24-Stunden-Regel in Zahlen.</p>
+       <p class="txt">Verglichen wird der Morgen nach dem letzten Trainingstag mit dem Morgen nach dem vorletzten. Steigt der Schmerz um zwei Punkte, heißt das Zurücknehmen. Das ist die 24-Stunden-Regel in Zahlen.</p>
        <h3>Die Rangfolge</h3>
-       <p style="font-size:13.5px;margin:0">Schmerz schlägt Anstrengung. Liegt der Schmerz über 3/10, heißt das Zurücknehmen – auch wenn sich der letzte Satz leicht angefühlt hat. Die Anstrengung wird erst zum Steuerungsmaß, wenn der Schmerz im grünen Bereich liegt.</p>
+       <p class="txt">Schmerz schlägt Anstrengung. Liegt der Schmerz über 3/10, heißt das Zurücknehmen – auch wenn sich der letzte Satz leicht angefühlt hat. Die Anstrengung wird erst zum Steuerungsmaß, wenn der Schmerz im grünen Bereich liegt.</p>
        <h3>Warnzeichen</h3>
-       <p style="font-size:13.5px;margin:0">Für die rote Karte „Das gehört ärztlich angeschaut“ zählt jeder Morgen der letzten drei Wochen – auch nach Ruhetagen. Gerade in einer Trainingspause zeigt nur der Morgen, ob es schlechter wird.</p>`)}</div>
+       <p class="txt">Für die rote Karte „Das gehört ärztlich angeschaut“ zählt jeder Morgen der letzten drei Wochen – auch nach Ruhetagen. Gerade in einer Trainingspause zeigt nur der Morgen, ob es schlechter wird.</p>`)}</div>
     </div>
     <div class="log-out">
     <div class="o7"><div class="verdict ${a.tone}">
@@ -1938,7 +2028,8 @@ function tabLog() {
       <ul>${a.reasons.map(r => `<li>${esc(r)}</li>`).join('')}</ul>
       <p class="todo">${esc(a.todo)}</p>
     </div></div>
-    <div class="o7b">${backupFaellig() ? `<div class="infobox"><b>Sicherung fällig.</b> ${backupAge() === null
+    <div class="o7b">${safariBrowserModus() && !state.meta.itpSeen && hasData() ? `<div class="infobox"><b>Im Safari-Browser geöffnet.</b> Safari löscht die Daten einer Seite, wenn du sie rund sieben Tage lang nicht benutzt. Als Home-Bildschirm-App (Teilen → „Zum Home-Bildschirm“) gilt das nicht – und die App startet schneller.
+      <div style="margin-top:8px"><button type="button" class="btn quiet small" data-act="dismissItp">Verstanden</button></div></div>` : ''}${backupFaellig() ? `<div class="infobox"><b>Sicherung fällig.</b> ${backupAge() === null
         ? 'Von diesen Daten gibt es noch keine Kopie außerhalb dieses Geräts.'
         : `Die letzte ist ${backupAge()} ${backupAge() === 1 ? 'Tag' : 'Tage'} her (${esc(fmtWhen(state.meta.lastBackup))}).`}
       <div class="btn-row" style="margin-top:8px"><button class="btn small" data-act="backupFile">Jetzt als Datei sichern</button><span class="hint" style="margin:0">Landet in „Dateien“ bzw. im Download-Ordner.</span></div>
@@ -1966,8 +2057,8 @@ function tabData() {
       <p class="lede">Eine vollständige Kopie deiner Einträge als Datei – unabhängig von diesem Gerät und diesem Browser.</p>
       <div class="btn-row">
         <button class="btn" data-act="backupFile">Als Datei sichern</button>
-        <label class="btn ghost" for="impfile" style="display:inline-block">Datei einspielen</label>
         <input type="file" id="impfile" accept="application/json,.json" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">
+        <label class="btn ghost" for="impfile" style="display:inline-block">Datei einspielen</label>
       </div>
       <p class="note" style="margin-top:10px">${
         backupAge() === null ? 'Noch nie gesichert.'
@@ -1984,6 +2075,7 @@ function tabData() {
         : state.persist === 'na'
         ? '<p class="note" style="margin-top:0">Dieser Browser kennt die Anfrage nach dauerhaftem Speicher nicht. Sichere entsprechend häufiger.</p>'
         : '<p class="note" style="margin-top:0">Wird geprüft …</p>'}
+      ${safariBrowserModus() ? '<p class="note" style="margin-top:6px"><b>Im Safari-Browser geöffnet.</b> Safari löscht die Daten einer Seite, wenn du sie rund sieben Tage lang nicht benutzt. Als Home-Bildschirm-App (Teilen → „Zum Home-Bildschirm“) gilt das nicht.</p>' : ''}
 
       <h3 class="kicker">Als Text statt als Datei</h3>
       <p class="hint">Falls der Dateiweg auf deinem Gerät klemmt.</p>
@@ -2028,7 +2120,17 @@ function tabData() {
           <button class="edit" data-act="emptyTrash">endgültig leeren</button>
         </div>
       </div>` : ''}
-      ${!state.snapPrev && !state.snapTrash ? '<p class="empty">Noch nichts aufgefangen – Zwischenstände entstehen ab der ersten Änderung.</p>' : ''}
+      ${state.rescue ? `<div class="row">
+        <div class="row-main">
+          <div class="row-title">Unlesbarer Stand – Rohtext</div>
+          <div class="row-sub">${esc(fmtWhen(state.rescue.at))} · ${state.rescue.raw.length} Zeichen. Ließ sich nicht als Stand lesen; zum Nachsehen kopieren.</div>
+        </div>
+        <div class="rowbtns">
+          <button class="btn quiet small" data-act="copyRescue">Kopieren</button>
+          <button class="edit" data-act="dropRescue">verwerfen</button>
+        </div>
+      </div>` : ''}
+      ${!state.snapPrev && !state.snapTrash && !state.rescue ? '<p class="empty">Noch nichts aufgefangen – Zwischenstände entstehen ab der ersten Änderung.</p>' : ''}
       <p class="note">Zurückholen ist selbst wieder umkehrbar: der jetzige Stand wird dabei zum Zwischenstand.</p>
     </div></div>
     <div class="dg-l"><div class="card">
@@ -2192,7 +2294,7 @@ async function applyBackup(raw) {
 function closeForm() { editingId = null; draft = newDraft(); formOpen = false; whenOpen = false; testDraft = null; }
 // Steht noch nichts im Entwurf, beginnt „Einheit erfassen“ frisch – mit der aktuellen Uhrzeit
 function draftIsEmpty(d) {
-  return d.painDuring == null && d.effort == null && !d.collagen && !d.progressed && !d.note.trim()
+  return d.painDuring == null && d.effort == null && !d.collagen && !d.progressed && !d.progressedWhat.trim() && !d.note.trim()
     && !Object.keys(d.ex).length && !Object.values(d.run).some(v => String(v).trim()) && !Object.values(d.session).some(v => String(v).trim());
 }
 function setPath(path, val) {
@@ -2275,7 +2377,7 @@ document.addEventListener('click', async (ev) => {
       : kind === 'run' ? { ...draft.run } : { ...draft.session };
     const base = { date:draft.date, time:draft.time, type:draft.type, details,
       painDuring:draft.painDuring, effort: draft.type === 'kraft' ? draft.effort : null,
-      collagen:draft.collagen, progressed:draft.progressed, note:draft.note.trim() };
+      collagen:draft.collagen, progressed:draft.progressed, progressedWhat: draft.progressed ? draft.progressedWhat.trim() : '', note:draft.note.trim() };
 
     if (base.painDuring == null || !isIsoDate(base.date)) return;   // der Knopf ist dann ohnehin gesperrt
     const art = typeLabel(base.type);
@@ -2284,7 +2386,8 @@ document.addEventListener('click', async (ev) => {
     if (editingId) {
       // Morgenwerte hängen nicht mehr an der Einheit – Umdatieren ist deshalb unkritisch
       const e = state.entries.find(x => x.id === editingId);
-      if (e) { Object.assign(e, base); text = `Änderung gespeichert: ${art}, ${wann}.`; }
+      // Alteinträge (v1/v2) trugen den Freitext in „detail“; der steht seit dem Öffnen in der Notiz und würde sonst die neuen Felder verdecken
+      if (e) { delete e.detail; Object.assign(e, base); text = `Änderung gespeichert: ${art}, ${wann}.`; }
       else text = null;   // die Einheit gibt es nicht mehr (gelöscht, zurückgeholt, ersetzt)
       editingId = null;
     } else {
@@ -2371,6 +2474,18 @@ document.addEventListener('click', async (ev) => {
   }
   if (act === 'chartRange') { chartRange = t.dataset.range === 'all' ? 'all' : +t.dataset.range; updateChart(); return; }
   if (act === 'dismissMigration') { state.migrationNote = null; return render(); }
+  if (act === 'dismissItp') { state.meta.itpSeen = true; await saveMeta(); return render(); }
+  if (act === 'copyRescue') {
+    if (!state.rescue) return;
+    try { await navigator.clipboard.writeText(state.rescue.raw); t.textContent = 'Kopiert'; announce('Rohtext kopiert.'); setTimeout(() => { t.textContent = 'Kopieren'; }, 1600); }
+    catch (e) { importMsg = { ok:false, text:'Kopieren hat nicht geklappt – der Rohtext bleibt im Sicherheitsnetz liegen.' }; render(); }
+    return;
+  }
+  if (act === 'dropRescue') {
+    if (!confirm('Den unlesbaren Rohtext verwerfen? Danach ist er weg.')) return;
+    await dropSnapshot(KEY_RESCUE); state.rescue = null;
+    return render();
+  }
 
   // Löschen gibt es nur im Bearbeitungsformular – die Zeilen im Verlauf haben alle denselben einen Knopf „ändern“
   if (act === 'del') {
@@ -2474,7 +2589,8 @@ document.addEventListener('click', async (ev) => {
   }
   if (act === 'reset') {
     if (!hasData()) return;
-    if (!confirm('Alle Einträge löschen?\n\nDer Stand wandert in den Papierkorb und lässt sich danach zurückholen – bis du ihn dort endgültig leerst. Ältere Kopien auf diesem Gerät werden entfernt.')) return;
+    const ersetzt = state.snapTrash ? `\n\nAchtung: Im Papierkorb liegt schon ein Stand vom ${fmtWhen(state.snapTrash.at)} – der wird dabei ersetzt.` : '';
+    if (!confirm('Alle Einträge löschen?\n\nDer Stand wandert in den Papierkorb und lässt sich danach zurückholen – bis du ihn dort endgültig leerst. Ältere Kopien auf diesem Gerät werden entfernt.' + ersetzt)) return;
     await writeSnapshot(KEY_TRASH, packState());
     state.entries = []; state.mornings = []; state.tests = []; mEdit = null; morningDraft = {}; state.dataNote = null;
     closeForm(); lastDeleted = null;
@@ -2538,22 +2654,17 @@ function onField(ev) {
   }
   if (ev.target.id === 'impbox') { importBuf = ev.target.value; return; }
   const ep = ev.target.dataset.epath;
-  if (ep) { if (mEdit) mEdit[ep] = ev.target.value; if (ep === 'date' && ev.type === 'change') render(); return; }
+  if (ep) { if (mEdit) { mEdit[ep] = ev.target.value; if (ep === 'date') refreshMorningEdit(); } return; }
   const tp = ev.target.dataset.tpath;
-  if (tp) {
-    if (!testDraft) return;
-    testDraft[tp] = ev.target.value;
-    if (tp === 'date' && ev.type === 'change') render(); else updateTestForm();
-    return;
-  }
+  if (tp) { if (testDraft) { testDraft[tp] = ev.target.value; updateTestForm(); } return; }
   const mp = ev.target.dataset.mpath;
   if (mp) { morningDraft[mp] = ev.target.value; return; }
   const p = ev.target.dataset.path;
   if (!p) return;
   const isCb = ev.target.type === 'checkbox';
   setPath(p, isCb ? ev.target.checked : ev.target.value);
-  // Neu zeichnen erst, wenn das Feld fertig ist – sonst springt der Fokus beim Tippen
-  if (isCb || (ev.type === 'change' && (p === 'time' || p === 'date'))) render();
+  // Kein Neuaufbau beim Tippen – nur die abhängigen Hinweise und der Knopf werden nachgeführt
+  if (isCb || p === 'time' || p === 'date') refreshEntryForm();
 }
 document.addEventListener('input', onField);
 document.addEventListener('change', onField);
@@ -2637,7 +2748,9 @@ const _test = {
   setState(s) { state.entries = s.entries || []; state.mornings = s.mornings || []; state.tests = s.tests || []; state.loaded = true; invalidate(); },
   setDraft(d, editing) { draft = d; editingId = editing ?? null; },
   setTab(t) { tab = t; },
-  ui() { return { tab, formOpen, editingId, testDraft, uiFlash, lastDeleted, draft }; }
+  ui() { return { tab, formOpen, editingId, testDraft, uiFlash, lastDeleted, draft, mEdit }; },
+  setMEdit(m) { mEdit = m; },
+  openForm(on) { formOpen = !!on; }
 };
 
 load();

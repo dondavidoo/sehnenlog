@@ -19,7 +19,7 @@ export const EXPORTS = [
   'sorted', 'entriesOf', 'hasTraining', 'morningOf', 'testOf', 'dayList', 'days', 'pending', 'assess', 'redFlags', 'testFlags', 'testDue',
   'summary', 'collagenGap', 'buildExport', 'backupPayload', 'backupFaellig', 'packState',
   'lastExUse', 'doseParts', 'draftIsEmpty', 'newDraft', 'draftFromEntry',
-  'save', 'load', 'applyBackup', 'readSnapshot', 'render', 'tabLog', 'tabData', 'tabPlan', 'tabEx', 'tabSupp', 'tabScales',
+  'save', 'load', 'applyBackup', 'readSnapshot', 'readRescue', 'checkPersistence', 'safariBrowserModus', 'render', 'tabLog', 'tabData', 'tabPlan', 'tabEx', 'tabSupp', 'tabScales',
   'KEY', 'KEY_PREV', 'KEY_TRASH', 'KEYS_ALT', 'SCHMERZ_MAX', 'EXPORT_TAGE', 'TEST_INTERVALL_TAGE'
 ];
 

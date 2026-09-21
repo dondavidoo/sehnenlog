@@ -331,3 +331,81 @@ describe('Texte und Formular', () => {
     for (const t of ['plan', 'ex', 'supp', 'scale', 'data']) { app._test.setTab(t); app.render(); assert.doesNotMatch(app.__dom.root.innerHTML, /konnte nicht aufgebaut/, t); }
   });
 });
+
+describe('Paket 4: Kadenz, Steigerung, Rettungskopie, Speicher-Zusage, Safari', () => {
+  test('cleanEntry und summary kennen Kadenz und „gesteigert: was“', async () => {
+    const app = await fresh();
+    const c = app.cleanEntry({ id: 'r1', date: T, type: 'lauf', painDuring: 1, progressed: true, progressedWhat: 'Tempo', details: { min: '30', cadence: 172, pace: '5:40' } });
+    assert.equal(c.progressedWhat, 'Tempo');
+    assert.equal(c.details.cadence, '172');
+    assert.equal(app.summary(c), '30 Min. · 5:40 · 172 Schritte/Min.');
+    const d = app.draftFromEntry(c);
+    assert.equal(d.run.cadence, '172');
+    assert.equal(d.progressedWhat, 'Tempo');
+    assert.equal(app.draftIsEmpty(d), false);
+    const leer = app.newDraft(); leer.progressedWhat = 'x';
+    assert.equal(app.draftIsEmpty(leer), false);
+  });
+  test('Verlauf zeigt Kollagen und die Art der Steigerung; Export auch', async () => {
+    const app = await fresh();
+    app._test.setState({ entries: [entry(day(app, -1), 1, { collagen: true, progressed: true, progressedWhat: 'Gewicht 15 → 17,5 kg' })] });
+    app.render();
+    const html = app.__dom.root.innerHTML;
+    assert.match(html, /gesteigert: Gewicht 15 → 17,5 kg/);
+    assert.match(html, /· Kollagen</);
+    assert.match(app.buildExport(), /Steigerung: Gewicht 15 → 17,5 kg/);
+  });
+  test('unlesbarer Stand wird als Rohtext gerettet und überlebt das nächste Speichern', async () => {
+    const app = await fresh();
+    app.__dom.store.set('sehnenlog.local:' + app.KEY, '{"entries": [ kaputt');
+    await app.load();
+    assert.match(app.state.dataNote, /Rohtext/);
+    assert.equal(app.state.rescue.raw, '{"entries": [ kaputt');
+    app.state.entries.push(entry(day(app, -1), 1));
+    await app.save();
+    const r = await app.readRescue();
+    assert.equal(r.raw, '{"entries": [ kaputt');
+    assert.ok(JSON.parse(app.__dom.store.get('sehnenlog.local:' + app.KEY)).entries.length === 1);
+    app._test.setTab('data'); app.render();
+    assert.match(app.__dom.root.innerHTML, /Unlesbarer Stand – Rohtext/);
+  });
+  test('dauerhafter Speicher wird nur einmal von selbst angefragt', async () => {
+    const app = await fresh();
+    let calls = 0;
+    globalThis.navigator.storage = { persisted: async () => false, persist: async () => { calls++; return false; } };
+    await app.load(); await new Promise(r => setTimeout(r, 20));
+    assert.equal(calls, 1);
+    assert.equal(app.state.meta.persistAsked, true);
+    assert.match(app.__dom.store.get('sehnenlog.local:sehnenlog:meta'), /"persistAsked":true/);
+    await app.load(); await new Promise(r => setTimeout(r, 20));
+    assert.equal(calls, 1);                       // beim zweiten Start kein Dialog mehr
+    await app.checkPersistence(true);
+    assert.equal(calls, 2);                       // „Erneut anfragen“ fragt
+    delete globalThis.navigator.storage;
+  });
+  test('Safari-Erkennung: nur Safari im Browser-Modus', async () => {
+    const app = await fresh();
+    const nav = globalThis.navigator;
+    nav.userAgent = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1';
+    assert.equal(app.safariBrowserModus(), true);
+    nav.standalone = true;
+    assert.equal(app.safariBrowserModus(), false);
+    nav.standalone = false;
+    nav.userAgent = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/125.0 Mobile/15E148 Safari/604.1';
+    assert.equal(app.safariBrowserModus(), false);
+    nav.userAgent = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36';
+    assert.equal(app.safariBrowserModus(), false);
+  });
+  test('Formular baut sich mit Hinweis-Containern auf; Alteintrag verliert „detail“ nur beim Speichern', async () => {
+    const app = await fresh();
+    const alt = { id: 'alt', date: day(app, -2), time: '10:00', type: 'lauf', painDuring: 1, detail: 'alter Freitext', details: {} };
+    app._test.setState({ entries: [alt] });
+    assert.equal(app.summary(alt), 'alter Freitext');
+    const d = app.draftFromEntry(alt);
+    assert.match(d.note, /Alteintrag: alter Freitext/);
+    app._test.setDraft(d, 'alt'); app._test.openForm(true); app.render();
+    const html = app.__dom.root.innerHTML;
+    for (const id of ['when-note', 'collagen-note', 'progressed-what', 'save-entry', 'entry-hint']) assert.match(html, new RegExp(`id="${id}"`), id);
+    assert.match(html, /id="progressed-what" hidden/);
+  });
+});
