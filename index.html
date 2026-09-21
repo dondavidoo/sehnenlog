@@ -119,11 +119,6 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
   .row-main { flex: 1; min-width: 0; }
   .row-title { font-size: 14.5px; font-weight: 600; }
   .row-sub { font-size: 12.5px; color: var(--ink-soft); margin-top: 1px; }
-  .nums { display: flex; gap: 6px; flex-shrink: 0; }
-  .num { width: 38px; text-align: center; font-variant-numeric: tabular-nums; }
-  .num b { display: block; font-size: 17px; font-weight: 650; line-height: 1.2; }
-  .num s { display: block; font-size: 10.5px; color: var(--ink-soft); text-decoration: none; }
-  .num.miss b { color: var(--rule); }
   .del { background: none; border: 0; cursor: pointer; color: var(--rule); font-size: 18px;
     line-height: 1; padding: 4px 2px; flex-shrink: 0; font-family: inherit; }
   .del:hover { color: var(--down); }
@@ -137,9 +132,48 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
   .editbar b { color: var(--act); }
   .empty { font-size: 14px; color: var(--ink-soft); padding: 6px 0 2px; }
 
-  .spark { width: 100%; height: 68px; display: block; margin-bottom: 4px; }
-  .spark-legend { font-size: 12px; color: var(--ink-soft); display: flex; gap: 16px; }
-  .spark-legend i { display: inline-block; width: 16px; height: 2px; vertical-align: middle; margin-right: 5px; }
+  /* Diagramm */
+  .chart-head { display: flex; justify-content: space-between; align-items: center; gap: 8px 12px; flex-wrap: wrap; margin: 2px 0 8px; }
+  .chart-title { font-size: 13px; font-weight: 600; color: var(--ink-soft); }
+  .chart-range button { padding: 5px 10px; font-size: 12.5px; }
+  .chart-wrap { position: relative; }
+  .chart-svg { display: block; width: 100%; height: auto; touch-action: pan-y; -webkit-tap-highlight-color: transparent; }
+  .chart-svg:focus { outline: none; }
+  .chart-svg:focus-visible { outline: 2px solid var(--act); outline-offset: 2px; }
+  .chart-axis { font-size: 11px; fill: var(--ink-soft); font-variant-numeric: tabular-nums; }
+  .chart-label { font-size: 11.5px; font-weight: 600; fill: var(--ink); }
+  .chart-halo { paint-order: stroke; stroke: #fff; stroke-width: 3px; stroke-linejoin: round; }
+  .chart-tip { position: absolute; top: 0; left: 0; background: #fff; border: 1px solid var(--rule); border-radius: 6px;
+    padding: 6px 9px; font-size: 12.5px; line-height: 1.35; box-shadow: 0 2px 8px rgba(24,33,31,.10);
+    pointer-events: none; white-space: nowrap; }
+  .chart-tip-date { font-weight: 600; margin-bottom: 3px; }
+  .chart-tip-row { display: flex; align-items: center; gap: 6px; color: var(--ink-soft); }
+  .chart-tip-row i { display: inline-block; width: 12px; height: 2px; border-radius: 1px; }
+  .chart-tip-row b { color: var(--ink); font-size: 14px; font-weight: 650; min-width: 10px; }
+  .chart-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--ink-soft); margin: 6px 0 2px; }
+  .chart-legend span { display: inline-flex; align-items: center; gap: 6px; }
+
+  /* Verlauf: eine Karte pro Tag */
+  .day { border: 1px solid var(--rule-soft); border-radius: 8px; margin-top: 12px; overflow: hidden; }
+  .day-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px;
+    padding: 8px 12px; background: #F7F9F9; border-bottom: 1px solid var(--rule-soft); }
+  .day-date { font-size: 14px; font-weight: 650; }
+  .day-tag { font-size: 12px; color: var(--ink-soft); white-space: nowrap; }
+  .day-row { display: flex; gap: 10px; padding: 10px 12px; align-items: flex-start; }
+  .day-row + .day-row { border-top: 1px solid var(--rule-soft); }
+  .day-row.editing { background: #EAF1F3; }
+  .day-time { flex: 0 0 50px; font-size: 13px; color: var(--ink-soft); font-variant-numeric: tabular-nums; padding-top: 1px; }
+  .day-main { flex: 1; min-width: 0; }
+  .day-title { font-size: 14px; font-weight: 600; }
+  .day-sub { font-size: 12.5px; color: var(--ink-soft); margin-top: 2px; }
+  .day-note { font-style: italic; }
+  .day-missing .day-title { color: var(--ink-soft); font-weight: 500; }
+  .day-side { flex-shrink: 0; text-align: right; }
+  .day-val { font-size: 12.5px; color: var(--ink-soft); white-space: nowrap; }
+  .day-val b { font-size: 16px; color: var(--ink); font-weight: 650; margin-left: 4px; }
+  .day-acts { display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin-top: 3px; }
+  .m-edit { flex: 1; min-width: 0; }
+  .infobox { background: #EAF1F3; border: 1px solid #C4D7DD; border-radius: 8px; padding: 12px 14px; font-size: 13.5px; margin-bottom: 14px; }
 
   .flag { background: var(--down-bg); border: 1px solid #E8C4C0; border-radius: 8px;
     padding: 14px 16px; font-size: 14px; margin-bottom: 14px; }
@@ -238,7 +272,8 @@ window.storage = {
   }
 };
 
-const KEY = 'sehnenlog:v3';
+const KEY = 'sehnenlog:v4';
+const KEYS_ALT = ['sehnenlog:v3', 'sehnenlog:v2', 'sehnenlog:v1'];   // ältere Formate – bleiben beim Umzug unangetastet liegen
 const KEY_PREV  = 'sehnenlog:prev';   // Stand vor der letzten Änderung
 const KEY_TRASH = 'sehnenlog:trash';  // Stand vor „Alles löschen“
 const KEY_META  = 'sehnenlog:meta';   // u. a. wann zuletzt gesichert wurde
@@ -364,7 +399,7 @@ const RUNCTRL = [
 ];
 
 const MARKERS = [
-  ['Woche 4–6','Die Morgensteifigkeit wird kürzer','Nicht weniger Schmerz, sondern kürzere Dauer. Aus 30 Minuten werden 20, dann 10.'],
+  ['Woche 4–6','Die Morgensteifigkeit der Sehne wird kürzer','Nicht weniger Schmerz, sondern kürzere Dauer. Aus 30 Minuten werden 20, dann 10.'],
   ['Woche 4–8','Die Kraft steigt','Anfangs noch Ansteuerung statt Gewebe – trotzdem der verlässlichste frühe Marker, weil objektiv.'],
   ['Woche 8–12','Die Belastungsschwelle verschiebt sich','Derselbe Lauf, der vor drei Monaten Beschwerden gemacht hat, macht heute keine mehr. Ohne Logbuch siehst du das nicht.'],
   ['fortlaufend','Die Erholung wird schneller','Eine Einheit, die dich reizt, klingt in einem Tag ab statt in dreien.']
@@ -427,7 +462,7 @@ const SCALES = [
       ['5',  'Unangenehm genug, dass du den Fuß bewegst oder anders legst.', ''],
       ['6+', 'Weckt dich oder verhindert das Wiedereinschlafen. Ärztlich abklären.', 'down']
     ]},
-  { id:'stiff', title:'Steifigkeit', sub:'Dauer, bis sich das Gehen wieder normal anfühlt.', wide:true,
+  { id:'stiff', title:'Steifigkeit der Sehne', sub:'Das steife, eingerostete Gefühl an der Sehne hinter dem Innenknöchel nach dem Aufstehen – gemessen, bis sich das Gehen wieder normal anfühlt.', wide:true,
     rule:'Über 30 Minuten heißt die Bewertung „Level halten“, über 45 Minuten „Zurücknehmen“.',
     rows:[
       ['unter 15 Min.', 'Nach ein paar Schritten weg. Im Bad schon vergessen.', 'up'],
@@ -450,7 +485,7 @@ const SCALES = [
 ];
 
 /* ============================================ State */
-let state = { entries: [], rest: [], loaded: false, error: null, dataNote: null,
+let state = { entries: [], mornings: [], loaded: false, error: null, dataNote: null, migrationNote: null,
   persist: null, snapPrev: null, snapTrash: null, meta: { lastBackup: null } };
 let tab = 'log';
 let openAcc = null;
@@ -462,8 +497,10 @@ let editingId = null;
 let backupText = null;
 let importBuf = '';
 let importMsg = null;
-let restOpen = false;
-let restDraft = { date:'', pain:null, stiff:null, note:'' };
+let morningOpen = false;   // freiwilliger Morgen: Eingabe aufgeklappt?
+let mEdit = null;          // { date, pain, stiff, note, where:'day'|'free' } – Morgen im Verlauf ändern oder nachtragen
+let histDays = 14;         // so viele Tage zeigt der Verlauf
+let chartRange = 28;       // 28 | 91 | 'all'
 
 function nowTime() { const d = new Date(); return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0'); }
 function today() {
@@ -498,6 +535,21 @@ function draftFromEntry(e) {
   return d;
 }
 function daysBetween(a,b) { return Math.round((new Date(b) - new Date(a)) / 86400000); }
+// Datumsrechnung über UTC, damit die Zeitumstellung keinen Tag verschluckt
+function addDays(iso, n) {
+  const d = new Date(iso + 'T00:00:00Z');
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+function weekday(iso, form) {
+  return new Date(iso + 'T12:00:00Z').toLocaleDateString('de-DE', { weekday: form || 'short', timeZone: 'UTC' }).replace(/\.$/, '');
+}
+function dayLabel(iso) {
+  const base = `${weekday(iso)}, ${fmt(iso)}`;
+  if (iso === today()) return 'Heute · ' + base;
+  if (addDays(iso, 1) === today()) return 'Gestern · ' + base;
+  return base;
+}
 function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 /* ============================================ Storage */
@@ -507,6 +559,10 @@ function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;',
 const isIsoDate = d => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d);
 function validEntry(e) { return !!e && typeof e === 'object' && !!e.id && isIsoDate(e.date); }
 function validRest(r)  { return !!r && typeof r === 'object' && !!r.id && isIsoDate(r.date); }
+function validMorning(m) {
+  return !!m && typeof m === 'object' && isIsoDate(m.date)
+    && (m.skipped === true || (typeof m.pain === 'number' && m.pain >= 0 && m.pain <= 10));
+}
 function keepValid(list, check) {
   const arr = Array.isArray(list) ? list : [];
   const ok = arr.filter(check);
@@ -518,18 +574,67 @@ function noteDropped(n) {
     : null;
 }
 
-function adopt(p) {
-  let rawEntries, rawRest;
-  if (Array.isArray(p)) { rawEntries = p; rawRest = []; }
-  else if (p && Array.isArray(p.entries)) { rawEntries = p.entries; rawRest = p.rest; }
-  else return false;
-  const e = keepValid(rawEntries, validEntry), r = keepValid(rawRest, validRest);
-  state.entries = e.ok;
-  state.rest = r.ok;
-  noteDropped(e.dropped + r.dropped);
-  return state.entries.length > 0 || state.rest.length > 0;
+// Ein Morgen je Kalendertag – an dem Tag, an dem du aufwachst.
+function makeMorning(date, pain, stiff, note) {
+  return { id: 'm' + date, date, pain, stiff: stiff || null, note: String(note || '').trim(), skipped: false };
 }
-function packState() { return { entries: state.entries, rest: state.rest }; }
+function skippedMorning(date) { return { id: 'm' + date, date, pain: null, stiff: null, note: '', skipped: true }; }
+function stripEntry(e) {
+  const c = { ...e };
+  delete c.painMorning; delete c.stiffness; delete c.morningNote; delete c.skipped;
+  return c;
+}
+
+// Bis v3 hing der Morgenwert an den Einheiten des Vortags (Wert an jeder Einheit
+// vom Di = Morgen vom Mi), Morgen nach Ruhetagen lagen getrennt unter „rest“.
+// Beides wird hier zu einem Morgen je Kalendertag.
+function fromLegacy(rawEntries, rawRest) {
+  const e = keepValid(rawEntries, validEntry), r = keepValid(rawRest, validRest);
+  const map = new Map();
+  let dropped = e.dropped + r.dropped, doppelt = 0;
+  [...e.ok].sort((a,b) => String(a.date + (a.time||'')).localeCompare(String(b.date + (b.time||'')))).forEach(x => {
+    const md = addDays(x.date, 1);
+    if (typeof x.painMorning === 'number') map.set(md, makeMorning(md, x.painMorning, x.stiffness, x.morningNote));
+    else if (x.skipped && !map.has(md)) map.set(md, skippedMorning(md));
+  });
+  r.ok.forEach(x => {
+    if (typeof x.pain !== 'number') { dropped++; return; }
+    const cur = map.get(x.date);
+    if (cur && !cur.skipped) {
+      // Doppelt erfasst: der Morgen-Check gewinnt, der zweite Wert bleibt in der Notiz erhalten
+      doppelt++;
+      const st = STIFF.find(s => s.v === x.stiff);
+      const extra = [x.pain !== cur.pain ? 'Schmerz ' + x.pain : '',
+        x.stiff !== cur.stiff && st ? 'Sehne steif ' + st.label : '', String(x.note || '').trim()].filter(Boolean).join(', ');
+      if (extra) cur.note = [cur.note, 'zweiter Eintrag: ' + extra].filter(Boolean).join(' · ');
+    } else map.set(x.date, makeMorning(x.date, x.pain, x.stiff, x.note));
+  });
+  return { entries: e.ok.map(stripEntry), mornings: [...map.values()], dropped, doppelt, legacy: true };
+}
+
+// Nimmt jedes bekannte Format an (v1–v4) und liefert den aktuellen Aufbau – oder null.
+function normalize(p) {
+  if (Array.isArray(p)) return fromLegacy(p, []);
+  if (!p || typeof p !== 'object' || !Array.isArray(p.entries)) return null;
+  if (!Array.isArray(p.mornings)) return fromLegacy(p.entries, p.rest);
+  const e = keepValid(p.entries, validEntry), m = keepValid(p.mornings, validMorning);
+  const map = new Map();
+  m.ok.forEach(x => map.set(x.date, x.skipped ? skippedMorning(x.date) : makeMorning(x.date, x.pain, x.stiff, x.note)));
+  return { entries: e.ok.map(stripEntry), mornings: [...map.values()], dropped: e.dropped + m.dropped, doppelt: 0, legacy: false };
+}
+
+function adopt(n) {
+  if (!n) return false;
+  state.entries = n.entries;
+  state.mornings = n.mornings;
+  noteDropped(n.dropped);
+  return state.entries.length > 0 || state.mornings.length > 0;
+}
+function packState() { return { v: 4, entries: state.entries, mornings: state.mornings }; }
+function migrationText(n) {
+  return 'Morgenwerte stehen jetzt an dem Tag, an dem du aufgewacht bist – nicht mehr beim Training vom Vortag. Deine Daten wurden übernommen, der alte Stand bleibt zusätzlich unverändert gespeichert.'
+    + (n.doppelt ? ` Für ${n.doppelt} Morgen gab es zwei Werte (Morgen-Check und „Morgen ohne Training“). Übernommen wurde der Morgen-Check, der zweite Wert steht in der Notiz.` : '');
+}
 
 // Rueckfallebenen. Duerfen nie das eigentliche Speichern gefaehrden – darum
 // schluckt hier alles seine Fehler und liefert im Zweifel null.
@@ -543,10 +648,9 @@ async function readSnapshot(key) {
     if (!r || !r.value) return null;
     const s = JSON.parse(r.value);
     if (!s || !s.at || !s.payload) return null;
-    const e = keepValid(s.payload.entries, validEntry);
-    const t = keepValid(s.payload.rest, validRest);
-    if (!e.ok.length && !t.ok.length) return null;
-    return { at: s.at, entries: e.ok, rest: t.ok };
+    const n = normalize(s.payload);   // auch Zwischenstände aus der Zeit vor der Umstellung
+    if (!n || (!n.entries.length && !n.mornings.length)) return null;
+    return { at: s.at, entries: n.entries, mornings: n.mornings };
   } catch (e) { return null; }
 }
 async function dropSnapshot(key) {
@@ -571,7 +675,7 @@ function backupAge() {
   return Math.max(0, Math.floor((Date.now() - d.getTime()) / 86400000));
 }
 function backupFaellig() {
-  if (!state.entries.length && !state.rest.length) return false;
+  if (!state.entries.length && !state.mornings.length) return false;
   const a = backupAge();
   return a === null || a >= BACKUP_FAELLIG_TAGE;
 }
@@ -586,20 +690,28 @@ async function checkPersistence(fragen) {
 }
 
 async function load() {
-  try {
-    const r = await window.storage.get(KEY);
-    adopt(r && r.value ? JSON.parse(r.value) : null);
-  } catch (e) { state.entries = []; state.rest = []; }
-
-  if (!state.entries.length) {
-    for (const old of ['sehnenlog:v2','sehnenlog:v1']) {
+  let raw = null;
+  try { const r = await window.storage.get(KEY); raw = r && r.value ? r.value : null; } catch (e) { raw = null; }
+  if (raw) {
+    let n = null;
+    try { n = normalize(JSON.parse(raw)); } catch (e) { n = null; }
+    if (n) adopt(n);
+    else state.dataNote = 'Der gespeicherte Stand ließ sich nicht lesen. Spiel deine letzte Sicherung ein oder hol unten im Sicherheitsnetz einen Zwischenstand zurück.';
+  } else {
+    // Erster Start im neuen Format: ältere Stände übernehmen.
+    // Die alten Schlüssel bleiben unangetastet liegen – als Rückfallebene.
+    for (const old of KEYS_ALT) {
+      let n = null;
       try {
         const r = await window.storage.get(old);
-        if (adopt(r && r.value ? JSON.parse(r.value) : null)) {
-          await window.storage.set(KEY, JSON.stringify({ entries: state.entries, rest: state.rest }));
-          break;
-        }
-      } catch (e) { /* nichts zu übernehmen */ }
+        n = r && r.value ? normalize(JSON.parse(r.value)) : null;
+      } catch (e) { n = null; }
+      if (n && adopt(n)) {
+        state.migrationNote = migrationText(n);
+        try { await window.storage.set(KEY, JSON.stringify(packState())); }
+        catch (e) { state.error = (e && e.message) ? String(e.message) : String(e); }
+        break;
+      }
     }
   }
   await loadMeta();
@@ -617,7 +729,7 @@ async function save() {
       const before = await window.storage.get(KEY);
       if (before && before.value) {
         const b = JSON.parse(before.value);
-        if (b) await writeSnapshot(KEY_PREV, Array.isArray(b) ? { entries: b, rest: [] } : b);
+        if (b) await writeSnapshot(KEY_PREV, b);
       }
     } catch (e) { /* ohne Rückfallebene weiter */ }
     await window.storage.set(KEY, JSON.stringify(packState()));
@@ -680,27 +792,42 @@ function collagenGap() {
 
 function sorted() { return [...state.entries].sort((a,b) => String(a.date + (a.time||'')).localeCompare(String(b.date + (b.time||'')))); }
 
-// Der Morgenwert gehört zum Tag, nicht zur einzelnen Einheit:
-// nach einem Tag mit zwei Einheiten gibt es genau einen Morgen danach.
+function entriesOf(date) { return sorted().filter(e => e.date === date); }
+function hasTraining(date) { return state.entries.some(e => e.date === date); }
+function morningOf(date) { return state.mornings.find(m => m.date === date) || null; }
+function upsertMorning(m) { state.mornings = state.mornings.filter(x => x.date !== m.date).concat([m]); }
+function maxDuring(date) {
+  const v = state.entries.filter(e => e.date === date && typeof e.painDuring === 'number').map(e => e.painDuring);
+  return v.length ? Math.max(...v) : null;
+}
+// Alle Tage mit irgendeinem Eintrag, neueste zuerst
+function dayList() {
+  const s = new Set();
+  state.entries.forEach(e => s.add(e.date));
+  state.mornings.forEach(m => s.add(m.date));
+  return [...s].sort().reverse();
+}
+
+// Trainingstage, jeweils verbunden mit dem Morgen danach – die 24-Stunden-Regel.
+// Der Morgen selbst gehört zu dem Tag, an dem du aufwachst.
 function days() {
   const map = new Map();
   sorted().forEach(e => {
-    if (!map.has(e.date)) map.set(e.date, { date:e.date, n:0, painDuring:null, painMorning:null,
-      stiffness:null, progressed:false, efforts:[], skipped:false, labels:[] });
+    if (!map.has(e.date)) map.set(e.date, { date:e.date, n:0, painDuring:null, progressed:false, efforts:[], labels:[] });
     const d = map.get(e.date);
     d.n++;
     d.labels.push(TYPES[e.type] ? TYPES[e.type].label : e.type);
     if (e.painDuring != null) d.painDuring = d.painDuring == null ? e.painDuring : Math.max(d.painDuring, e.painDuring);
-    if (e.painMorning != null) { d.painMorning = e.painMorning; d.stiffness = e.stiffness; }
-    if (e.skipped) d.skipped = true;
     if (e.progressed) d.progressed = true;
     if (e.effort != null) d.efforts.push(e.effort);
   });
-  return [...map.values()].sort((a,b) => a.date.localeCompare(b.date));
+  return [...map.values()].sort((a,b) => a.date.localeCompare(b.date)).map(d => {
+    const md = addDays(d.date, 1), m = morningOf(md);
+    return { ...d, morningDate: md, skipped: !!(m && m.skipped),
+      painMorning: m && !m.skipped ? m.pain : null, stiffness: m && !m.skipped ? m.stiff : null };
+  });
 }
-function pending() { return days().filter(d => d.painMorning == null && !d.skipped && daysBetween(d.date, today()) >= 1); }
-function restSorted() { return [...state.rest].sort((a,b) => String(a.date).localeCompare(String(b.date))); }
-function hasTrainingMorning(date) { return state.entries.some(e => e.date === date && e.painMorning != null); }
+function pending() { return days().filter(d => d.painMorning == null && !d.skipped && d.morningDate <= today()); }
 
 function assess() {
   const all = days();
@@ -719,8 +846,8 @@ function assess() {
   if (last.painDuring > 3) red.push(`Höchster Schmerzwert an diesem Tag lag bei ${last.painDuring}/10 – über der 3/10-Grenze.`);
   if (delta >= 2) red.push(`Morgenschmerz ist von ${prev.painMorning} auf ${last.painMorning} gestiegen.`);
   else if (delta === 1) amber.push(`Morgenschmerz ist um einen Punkt gestiegen (${prev.painMorning} → ${last.painMorning}).`);
-  if (stiffMins > 45) red.push('Morgensteifigkeit über 45 Minuten.');
-  else if (stiffMins > 30) amber.push('Morgensteifigkeit zwischen 30 und 45 Minuten.');
+  if (stiffMins > 45) red.push('Die Sehne war morgens über 45 Minuten steif.');
+  else if (stiffMins > 30) amber.push('Die Sehne war morgens 30 bis 45 Minuten steif.');
 
   const recent = done.slice(-3);
   const calm = recent.length === 3 && recent.every(d => d.painDuring <= 3)
@@ -731,7 +858,7 @@ function assess() {
   const sinceProgress = lastProgress ? daysBetween(lastProgress.date, today()) : 999;
 
   if (calm) {
-    green.push('Die letzten drei Trainingstage waren ruhig: Schmerz während ≤ 3/10, Steifigkeit unter 30 Minuten, Schmerz am Morgen nicht gestiegen.');
+    green.push('Die letzten drei Trainingstage waren ruhig: Schmerz während ≤ 3/10, Sehne morgens höchstens 30 Minuten steif, Schmerz am Morgen nicht gestiegen.');
     const eff = recent.flatMap(d => d.efforts);
     if (eff.length && Math.max(...eff) <= 6) green.push(`Der letzte Satz fühlte sich zuletzt bei höchstens ${Math.max(...eff)}/10 an – das ist zu leicht.`);
   }
@@ -750,50 +877,52 @@ function assess() {
     todo:'Gleiche Last beibehalten, bis drei Trainingstage in Folge ruhig verlaufen sind.' };
 }
 
+// Warnzeichen zählen jeden erfassten Morgen – auch nach Ruhetagen. Gerade in einer
+// Trainingspause zeigt nur der Morgen, ob es schlechter wird.
 function redFlags() {
-  const done = days().filter(d => d.painMorning != null);
-  const recent = done.filter(d => daysBetween(d.date, today()) <= 21);
+  const t = today();
+  const recent = state.mornings
+    .filter(m => !m.skipped && typeof m.pain === 'number' && m.date <= t && daysBetween(m.date, t) <= 21)
+    .sort((a,b) => a.date.localeCompare(b.date));
   const out = [];
-  if (recent.filter(e => e.painMorning >= 6).length >= 3) out.push('Der Morgenschmerz lag in den letzten drei Wochen mehrfach bei 6/10 oder höher.');
-  if (recent.filter(e => e.stiffness === 'ueber45').length >= 2) out.push('Die Morgensteifigkeit lag mehrfach über 45 Minuten.');
+  if (recent.filter(m => m.pain >= 6).length >= 3) out.push('Der Morgenschmerz lag in den letzten drei Wochen mehrfach bei 6/10 oder höher.');
+  if (recent.filter(m => m.stiff === 'ueber45').length >= 2) out.push('Die Sehne war morgens mehrfach über 45 Minuten steif.');
   if (recent.length >= 4) {
-    const f = recent.slice(0,2).reduce((s,e) => s + e.painMorning, 0) / 2;
-    const l = recent.slice(-2).reduce((s,e) => s + e.painMorning, 0) / 2;
+    const f = (recent[0].pain + recent[1].pain) / 2;
+    const l = (recent[recent.length - 2].pain + recent[recent.length - 1].pain) / 2;
     if (l - f >= 2) out.push('Der Morgenschmerz steigt über die letzten Wochen kontinuierlich an.');
   }
   return out;
 }
 
 function buildExport() {
-  const all = sorted();
-  if (!all.length) return 'Noch keine Einträge.';
+  const dates = dayList();
+  if (!dates.length) return 'Noch keine Einträge.';
   const a = assess();
   const L = ['Sehnenlog – Auswertung bitte', `Stand: ${new Date().toLocaleDateString('de-DE')}`,
-    `Einträge: ${all.length}, davon ${all.filter(e => e.painMorning != null).length} mit Morgen-Check`,
-    `Aktuelle Einschätzung der App: ${a.word}`, '',
-    'Datum | Zeit | Art | Inhalt | Schmerz während | Schmerz morgens | Steifigkeit | Anstrengung | Kollagen | Steigerung'];
-  all.slice(-30).forEach(e => {
-    const s = STIFF.find(x => x.v === e.stiffness);
-    L.push([fmt(e.date), e.time || '–', TYPES[e.type] ? TYPES[e.type].label : e.type, summary(e),
-      e.painDuring != null ? e.painDuring + '/10' : '–',
-      e.painMorning != null ? e.painMorning + '/10' : 'offen',
-      s ? s.label : '–', e.effort != null ? e.effort + '/10' : '–',
-      e.collagen ? 'ja' : 'nein', e.progressed ? 'ja' : 'nein'].join(' | '));
-  });
-  const notes = all.filter(e => e.note).slice(-8);
-  if (notes.length) { L.push('', 'Notizen zur Einheit:'); notes.forEach(e => L.push(`${fmt(e.date)}: ${e.note}`)); }
-  const mnotes = all.filter(e => e.morningNote).slice(-8);
-  if (mnotes.length) { L.push('', 'Notizen zum Morgen danach:'); mnotes.forEach(e => L.push(`${fmt(e.date)}: ${e.morningNote}`)); }
-  const rest = restSorted().slice(-20);
-  if (rest.length) {
-    L.push('', 'Morgenwerte an Ruhetagen (ohne Training am Vortag):');
-    L.push('Datum | Schmerz morgens | Steifigkeit | Notiz');
-    rest.forEach(r => {
-      const st = STIFF.find(x => x.v === r.stiff);
-      L.push([fmt(r.date), r.pain + '/10', st ? st.label : '–', r.note || '–'].join(' | '));
+    `Einheiten: ${state.entries.length}, erfasste Morgen: ${state.mornings.filter(m => !m.skipped).length}`,
+    `Aktuelle Einschätzung der App: ${a.word}`,
+    'Schmerzwerte 0–10. Ein Morgenwert gilt jeweils für das Training vom Vortag (24-Stunden-Regel).', ''];
+  dates.slice(0, 30).reverse().forEach(date => {
+    const list = entriesOf(date), prev = addDays(date, -1), m = morningOf(date);
+    L.push(`${weekday(date)}, ${fmt(date)}${list.length ? '' : ' – Ruhetag'}`);
+    if (m && !m.skipped) {
+      const st = STIFF.find(x => x.v === m.stiff);
+      L.push(`  Morgen: Schmerz ${m.pain}/10, Sehne steif ${st ? st.label : '–'}${hasTraining(prev) ? ` (gilt für das Training vom ${fmt(prev)})` : ''}${m.note ? ' – ' + m.note : ''}`);
+    } else if (m && m.skipped) L.push('  Morgen: übersprungen');
+    else if (hasTraining(prev)) L.push('  Morgen: nicht erfasst');
+    list.forEach(e => {
+      const parts = [`${e.time || '–'} ${TYPES[e.type] ? TYPES[e.type].label : e.type}: ${summary(e)}`,
+        `während ${e.painDuring != null ? e.painDuring + '/10' : '–'}`];
+      if (e.effort != null) parts.push(`Anstrengung ${e.effort}/10`);
+      parts.push(`Kollagen ${e.collagen ? 'ja' : 'nein'}`);
+      if (e.progressed) parts.push('Steigerung');
+      L.push('  ' + parts.join(' | '));
+      if (e.note) L.push(`    Notiz: ${e.note}`);
     });
-  }
-  return L.join('\n');
+    L.push('');
+  });
+  return L.join('\n').trimEnd();
 }
 
 /* ============================================ Render-Bausteine */
@@ -868,19 +997,151 @@ function sessionFieldsHtml() {
     <div class="field"><label for="d-what">Was genau</label>
       <input type="text" id="d-what" data-path="session.what" value="${esc(s.what)}" placeholder="${esc(ph)}"></div>`;
 }
-function sparkHtml() {
-  const done = days().filter(d => d.painMorning != null).slice(-14);
-  if (done.length < 2) return '';
-  const W = 560, H = 68, pad = 6;
-  const step = (W - pad*2) / (done.length - 1);
-  const y = v => H - pad - (v/10) * (H - pad*2);
-  const path = k => done.map((e,i) => `${i?'L':'M'}${(pad+i*step).toFixed(1)},${y(e[k]).toFixed(1)}`).join(' ');
-  const dots = done.map((e,i) => `<circle cx="${(pad+i*step).toFixed(1)}" cy="${y(e.painMorning).toFixed(1)}" r="2.6" fill="#A93B31"/>`).join('');
-  return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Verlauf der Schmerzwerte">
-    <line x1="${pad}" y1="${y(3)}" x2="${W-pad}" y2="${y(3)}" stroke="#C6D0D1" stroke-width="1" stroke-dasharray="4 4"/>
-    <path d="${path('painDuring')}" fill="none" stroke="#5C6A6B" stroke-width="1.8"/>
-    <path d="${path('painMorning')}" fill="none" stroke="#A93B31" stroke-width="2.2"/>${dots}</svg>
-    <div class="spark-legend"><span><i style="background:#A93B31"></i>Schmerz am Morgen</span><span><i style="background:#5C6A6B"></i>Schmerz während</span></div>`;
+/* ============================================ Diagramm */
+// Zwei Reihen, eine Achse (beides Schmerz 0–10). Farben aus einer auf Farbenblindheit
+// geprüften Palette – Rot bleibt in der App dem „Zurücknehmen“ vorbehalten.
+const C_MORNING = '#2a78d6', C_DURING = '#eb6834';
+let chartState = null;   // Geometrie + Tage mit Werten – fürs Antippen, bei jedem Zeichnen neu
+
+function chartWidth() {
+  const root = document.getElementById('root');
+  const w = root && root.clientWidth ? root.clientWidth : 390;
+  // #root: 14px Rand je Seite · .wrap: max. 640px · Karte: 18px Innenabstand + 1px Rand je Seite
+  return Math.max(260, Math.min(w - 28, 640) - 38);
+}
+
+function chartInnerHtml() {
+  const t = today();
+  const morn = state.mornings.filter(m => !m.skipped && typeof m.pain === 'number' && m.date <= t)
+    .sort((a,b) => a.date.localeCompare(b.date));
+  const dur = new Map();
+  state.entries.forEach(e => {
+    if (typeof e.painDuring !== 'number' || e.date > t) return;
+    dur.set(e.date, Math.max(dur.has(e.date) ? dur.get(e.date) : 0, e.painDuring));
+  });
+  const firstDate = [...morn.map(m => m.date), ...dur.keys()].sort()[0];
+  if (!firstDate) { chartState = null; return ''; }
+
+  let start = chartRange === 'all' ? firstDate : addDays(t, -(chartRange - 1));
+  if (daysBetween(start, t) < 13) start = addDays(t, -13);   // mindestens zwei Wochen breit
+  const nDays = daysBetween(start, t) + 1;
+
+  const W = chartWidth(), H = 200, M = { l: 26, r: 8, t: 14, b: 26 };
+  const pw = W - M.l - M.r, ph = H - M.t - M.b;
+  // Jeder Tag bekommt eine Spalte: der Morgen links darin, das Training rechts – so, wie der Tag abläuft
+  const X = (d, f) => M.l + ((daysBetween(start, d) + f) / nDays) * pw;
+  const Y = v => M.t + ph - (v / 10) * ph;
+  const n1 = v => v.toFixed(1);
+
+  const mIn = morn.filter(m => m.date >= start);
+  const dIn = [...dur.entries()].filter(([d]) => d >= start).sort((a,b) => a[0].localeCompare(b[0]));
+
+  // Y-Achse: Raster als feine, durchgezogene Linien
+  let s = '';
+  for (let v = 0; v <= 10; v += 2) {
+    s += `<line x1="${M.l}" x2="${W - M.r}" y1="${n1(Y(v))}" y2="${n1(Y(v))}" stroke="${v ? '#E5EBEC' : '#C9D3D4'}" stroke-width="1"/>`
+       + `<text x="${M.l - 7}" y="${n1(Y(v) + 3.5)}" text-anchor="end" class="chart-axis">${v}</text>`;
+  }
+  // Die Grenze ist eine Schwelle, kein Raster – deshalb gestrichelt und beschriftet
+  s += `<line x1="${M.l}" x2="${W - M.r}" y1="${n1(Y(3))}" y2="${n1(Y(3))}" stroke="#8C9899" stroke-width="1" stroke-dasharray="4 3"/>`
+     + `<text x="${M.l + 4}" y="${n1(Y(3) - 5)}" class="chart-axis chart-halo">Grenze 3</text>`;
+
+  // X-Achse: Montage als Raster, Abstand passend zur verfügbaren Breite
+  const maxTicks = Math.max(2, Math.floor(pw / 58));
+  const step = [7, 14, 28, 56, 91, 182, 364].find(k => nDays / k <= maxTicks) || 364;
+  let tick = start, lastX = -Infinity;
+  while (new Date(tick + 'T12:00:00Z').getUTCDay() !== 1) tick = addDays(tick, 1);
+  for (; tick <= t; tick = addDays(tick, step)) {
+    const x = X(tick, 0.5);
+    s += `<line x1="${n1(x)}" x2="${n1(x)}" y1="${n1(Y(0))}" y2="${n1(Y(0) + 4)}" stroke="#C9D3D4" stroke-width="1"/>`
+       + `<text x="${n1(Math.min(Math.max(x, M.l + 12), W - M.r - 12))}" y="${H - 7}" text-anchor="middle" class="chart-axis">${fmt(tick)}</text>`;
+    lastX = x;
+  }
+  if (W - M.r - lastX > 52) s += `<text x="${W - M.r}" y="${H - 7}" text-anchor="end" class="chart-axis">heute</text>`;
+
+  // Morgen: Linie nur zwischen aufeinanderfolgenden Tagen – eine Lücke bleibt eine Lücke
+  let path = '', prev = null;
+  mIn.forEach(m => {
+    path += `${prev && daysBetween(prev, m.date) === 1 ? 'L' : 'M'}${n1(X(m.date, 0.3))},${n1(Y(m.pain))} `;
+    prev = m.date;
+  });
+  if (path) s += `<path d="${path.trim()}" fill="none" stroke="${C_MORNING}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+  s += mIn.map(m => `<circle cx="${n1(X(m.date, 0.3))}" cy="${n1(Y(m.pain))}" r="4" fill="${C_MORNING}" stroke="#fff" stroke-width="2"/>`).join('');
+  // Während: einzelne Ringe – zwischen zwei Trainingstagen gibt es keinen Verlauf
+  s += dIn.map(([day, v]) => `<circle cx="${n1(X(day, 0.7))}" cy="${n1(Y(v))}" r="4.5" fill="none" stroke="${C_DURING}" stroke-width="2"/>`).join('');
+
+  // Namen am jeweils letzten Punkt – außer sie kämen sich ins Gehege, dann tragen Legende und Antippen
+  const lm = mIn[mIn.length - 1], ld = dIn[dIn.length - 1];
+  const pM = lm && { x: X(lm.date, 0.3), y: Y(lm.pain), text: 'Morgen' };
+  const pD = ld && { x: X(ld[0], 0.7), y: Y(ld[1]), text: 'während' };
+  const eng = pM && pD && Math.abs(pM.x - pD.x) < 64 && Math.abs(pM.y - pD.y) < 16;
+  if (!eng) [pM, pD].filter(Boolean).forEach(q => {
+    const links = q.x - M.l > 64;
+    const y = q.y - M.t < 16 ? q.y + 16 : q.y - 8;
+    s += `<text x="${n1(links ? q.x - 7 : q.x + 7)}" y="${n1(y)}" text-anchor="${links ? 'end' : 'start'}" class="chart-label chart-halo">${q.text}</text>`;
+  });
+
+  if (!mIn.length && !dIn.length) s += `<text x="${n1(M.l + pw / 2)}" y="${n1(M.t + ph / 2)}" text-anchor="middle" class="chart-axis">Keine Werte in diesem Zeitraum</text>`;
+
+  s += `<line class="chart-cross" x1="0" x2="0" y1="${M.t}" y2="${n1(Y(0))}" stroke="#18211F" stroke-width="1" visibility="hidden"/>`
+     + `<rect x="${M.l}" y="0" width="${pw}" height="${H}" fill="transparent"/>`;
+
+  const root = document.getElementById('root');
+  chartState = { W, M, pw, start, nDays, X, sel: null, rootW: root ? root.clientWidth : null,
+    dataDays: [...new Set([...mIn.map(m => m.date), ...dIn.map(([day]) => day)])].sort() };
+
+  const zeitraum = chartRange === 28 ? 'den letzten 4 Wochen' : chartRange === 91 ? 'den letzten 3 Monaten' : `der Zeit seit ${fmt(start)}`;
+  return `<div class="chart-head">
+      <span class="chart-title">Schmerz 0–10</span>
+      <div class="seg chart-range">${[[28, '4 Wochen'], [91, '3 Monate'], ['all', 'alles']].map(([v, l]) =>
+        `<button type="button" data-act="chartRange" data-range="${v}" aria-pressed="${chartRange === v}">${l}</button>`).join('')}</div>
+    </div>
+    <div class="chart-wrap">
+      <svg class="chart-svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" tabindex="0"
+        aria-label="Schmerzverlauf in ${zeitraum}: ${mIn.length} Morgenwerte, ${dIn.length} Trainingstage. Antippen oder Pfeiltasten zeigen die Werte eines Tages; alle Werte stehen auch in der Tagesliste darunter.">${s}</svg>
+      <div class="chart-tip" hidden></div>
+    </div>
+    <div class="chart-legend">
+      <span><svg width="22" height="10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" stroke="${C_MORNING}" stroke-width="2"/><circle cx="11" cy="5" r="3.5" fill="${C_MORNING}" stroke="#fff" stroke-width="1.5"/></svg>Schmerz am Morgen</span>
+      <span><svg width="12" height="12" aria-hidden="true"><circle cx="6" cy="6" r="4.2" fill="none" stroke="${C_DURING}" stroke-width="2"/></svg>Schmerz während (höchster Wert des Tages)</span>
+    </div>`;
+}
+
+function updateChart() {
+  const box = document.getElementById('chartbox');
+  if (box) box.innerHTML = chartInnerHtml();
+}
+
+// Fadenkreuz + Werte eines Tages. Inhalt über textContent – Wert vorne und kräftig.
+function chartShow(date) {
+  const box = document.getElementById('chartbox');
+  if (!box || !chartState) return;
+  const tip = box.querySelector('.chart-tip'), cross = box.querySelector('.chart-cross'), svg = box.querySelector('.chart-svg');
+  if (!tip || !cross || !svg) return;
+  chartState.sel = date || null;
+  if (!date) { tip.hidden = true; cross.setAttribute('visibility', 'hidden'); return; }
+  const x = chartState.X(date, 0.5);
+  cross.setAttribute('x1', x.toFixed(1)); cross.setAttribute('x2', x.toFixed(1)); cross.setAttribute('visibility', 'visible');
+  tip.replaceChildren();
+  const head = document.createElement('div');
+  head.className = 'chart-tip-date';
+  head.textContent = `${weekday(date)}, ${fmt(date)}`;
+  tip.append(head);
+  const m = morningOf(date);
+  [[C_MORNING, m && !m.skipped ? m.pain : null, 'Morgen'], [C_DURING, maxDuring(date), 'während']].forEach(([c, v, name]) => {
+    const row = document.createElement('div');
+    row.className = 'chart-tip-row';
+    const key = document.createElement('i');
+    key.style.background = c;
+    const val = document.createElement('b');
+    val.textContent = v == null ? '–' : String(v);
+    row.append(key, val, document.createTextNode(name));
+    tip.append(row);
+  });
+  tip.hidden = false;
+  const w = svg.getBoundingClientRect().width;
+  const px = x * (w / chartState.W);
+  tip.style.left = Math.min(Math.max(px - tip.offsetWidth / 2, 0), Math.max(0, w - tip.offsetWidth)) + 'px';
 }
 
 /* ============================================ Tabs */
@@ -1015,8 +1276,149 @@ function tabScales() {
     </div>`; }).join('')}`;
 }
 
+// Eingabefelder für einen Morgen; p = 'm' (Karte oben) oder 'e' (im Verlauf)
+function morningFieldsHtml(p, d) {
+  return `<div class="field" id="f-${p}Pain">
+      <span class="field-label">Schmerz</span>
+      <p class="hint">In Ruhe, vor dem ersten Schritt.${scaleLink('morning', `f-${p}Pain`)}</p>
+      ${scaleHtml(p + 'Pain', d.pain ?? null, false)}
+    </div>
+    <div class="field" id="f-${p}Stiff">
+      <span class="field-label">Wie lange war die Sehne steif?</span>
+      <p class="hint">Das steife, eingerostete Gefühl an der Sehne hinter dem Innenknöchel – gemessen, bis sich das Gehen wieder normal anfühlte.${scaleLink('stiff', `f-${p}Stiff`)}</p>
+      ${segHtml(p + 'Stiff', STIFF, d.stiff ?? null)}
+    </div>
+    <div class="field">
+      <label for="${p}-note">Notiz zum Morgen</label>
+      <textarea id="${p}-note" data-${p}path="note" placeholder="Optional – z. B. „beim ersten Aufsetzen ziept es, nach ein paar Schritten weg“">${esc(d.note || '')}</textarea>
+    </div>`;
+}
+
+// Welcher Morgen fehlt? Pflicht, wenn am Vortag trainiert wurde – sonst heute, freiwillig.
+function morningTarget() {
+  const pend = pending();
+  if (pend.length) return { date: pend[0].morningDate, due: true, left: pend.length - 1 };
+  const t = today();
+  return morningOf(t) ? null : { date: t, due: false, left: 0 };
+}
+function morningCardHtml(mt) {
+  const prev = addDays(mt.date, -1);
+  if (!mt.due && !morningOpen) return `<div class="card">
+      <h2>Heute Morgen</h2>
+      <p class="lede">Noch nicht eingetragen. Freiwillig, weil gestern kein Training war – hilft aber später zu sehen, wie schnell sich die Sehne erholt.</p>
+      <button class="btn ghost" data-act="openMorning">Heute Morgen eintragen</button>
+    </div>`;
+  const labels = entriesOf(prev).map(e => TYPES[e.type] ? TYPES[e.type].label : e.type);
+  const title = mt.date === today() ? 'Wie war es heute Morgen?' : `Wie war es am ${weekday(mt.date, 'long')}morgen, ${fmt(mt.date)}?`;
+  const ok = morningDraft.pain != null && !!morningDraft.stiff;
+  return `<div class="card${mt.due ? ' pending' : ''}">
+      <h2>${esc(title)}</h2>
+      <p class="lede">${mt.due
+        ? `Gilt für das Training vom ${esc(weekday(prev, 'long'))}, ${fmt(prev)} (${esc(labels.join(', '))}). Ohne diesen Wert kann die App die Einheit nicht bewerten.`
+        : 'Freiwillig, weil gestern kein Training war.'}</p>
+      ${morningFieldsHtml('m', morningDraft)}
+      <div class="btn-row">
+        <button class="btn" data-act="saveMorning" data-date="${mt.date}" ${ok ? '' : 'disabled'}>Speichern</button>
+        ${mt.due ? `<button class="btn quiet small" data-act="skipMorning" data-date="${mt.date}">Vergessen – überspringen</button>`
+                 : '<button class="btn quiet small" data-act="closeMorning">Abbrechen</button>'}
+        ${mt.left > 0 ? `<span class="hint" style="margin:0">Danach noch ${mt.left} Morgen offen.</span>` : ''}
+      </div>
+    </div>`;
+}
+
+// Morgen ändern oder nachtragen – im Verlauf, direkt am Tag oder mit frei wählbarem Datum
+function morningEditorHtml() {
+  const d = mEdit, frei = d.where === 'free', cur = morningOf(d.date);
+  const zukunft = !!d.date && d.date > today();
+  const ok = isIsoDate(d.date) && !zukunft && d.pain != null && !!d.stiff;
+  return `<div class="m-edit">
+      <div class="day-title" style="margin-bottom:10px">${frei ? 'Morgen nachtragen' : `Morgen vom ${esc(weekday(d.date))}, ${fmt(d.date)}`}</div>
+      ${frei ? `<div class="field"><span class="sublabel">Datum</span>
+          <input type="date" value="${esc(d.date)}" max="${today()}" data-epath="date"></div>
+        ${zukunft ? '<div class="warnbox">Ein Morgen in der Zukunft lässt sich nicht eintragen.</div>' : ''}
+        ${!zukunft && cur && !cur.skipped ? '<div class="warnbox">Für diesen Tag gibt es schon einen Morgenwert. Er wird ersetzt.</div>' : ''}` : ''}
+      ${morningFieldsHtml('e', d)}
+      <div class="btn-row">
+        <button class="btn small" data-act="saveMorningEdit" ${ok ? '' : 'disabled'}>Speichern</button>
+        <button class="btn quiet small" data-act="cancelMorningEdit">Abbrechen</button>
+        ${!frei && cur ? '<button type="button" class="edit" data-act="delMorning" style="margin-left:auto">Morgenwert entfernen</button>' : ''}
+      </div>
+    </div>`;
+}
+
+function morningRowHtml(date) {
+  if (mEdit && mEdit.where === 'day' && mEdit.date === date) return `<div class="day-row editing">${morningEditorHtml()}</div>`;
+  const m = morningOf(date), prev = addDays(date, -1);
+  const bezug = hasTraining(prev) ? `<div class="day-sub">gilt für das Training vom ${esc(weekday(prev))}, ${fmt(prev)}</div>` : '';
+  if (m && !m.skipped) {
+    const st = STIFF.find(x => x.v === m.stiff);
+    return `<div class="day-row">
+        <span class="day-time">Morgen</span>
+        <div class="day-main">
+          <div class="day-title">Sehne steif: ${st ? esc(st.label) : '–'}</div>
+          ${bezug}
+          ${m.note ? `<div class="day-sub day-note">${esc(m.note)}</div>` : ''}
+        </div>
+        <div class="day-side">
+          <div class="day-val">Schmerz<b>${esc(m.pain)}</b></div>
+          <div class="day-acts"><button type="button" class="edit" data-act="editMorning" data-date="${date}" aria-label="Morgen vom ${fmt(date)} ändern">ändern</button></div>
+        </div>
+      </div>`;
+  }
+  return `<div class="day-row day-missing">
+      <span class="day-time">Morgen</span>
+      <div class="day-main">
+        <div class="day-title">${m && m.skipped ? 'übersprungen' : 'nicht erfasst'}</div>
+        ${bezug}
+      </div>
+      <div class="day-side">
+        <div class="day-acts"><button type="button" class="edit" data-act="editMorning" data-date="${date}" aria-label="Morgen vom ${fmt(date)} nachtragen">nachtragen</button></div>
+      </div>
+    </div>`;
+}
+
+function entryRowHtml(e) {
+  const label = TYPES[e.type] ? TYPES[e.type].label : e.type;
+  return `<div class="day-row${editingId === e.id ? ' editing' : ''}">
+      <span class="day-time">${e.time ? esc(e.time) : '–'}</span>
+      <div class="day-main">
+        <div class="day-title">${esc(label)}${e.progressed ? ' · gesteigert' : ''}</div>
+        <div class="day-sub">${esc(summary(e))}${e.effort != null ? ' · Anstrengung ' + esc(e.effort) + '/10' : ''}</div>
+        ${e.note ? `<div class="day-sub day-note">${esc(e.note)}</div>` : ''}
+      </div>
+      <div class="day-side">
+        <div class="day-val">während<b>${e.painDuring != null ? esc(e.painDuring) : '–'}</b></div>
+        <div class="day-acts">
+          <button type="button" class="edit" data-act="edit" data-id="${esc(e.id)}" aria-label="Einheit vom ${fmt(e.date)} bearbeiten">ändern</button>
+          <button type="button" class="del" data-act="del" data-id="${esc(e.id)}" aria-label="Einheit vom ${fmt(e.date)} löschen">×</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function dayCardHtml(date) {
+  const list = entriesOf(date);
+  return `<div class="day">
+      <div class="day-head">
+        <span class="day-date">${esc(dayLabel(date))}</span>
+        <span class="day-tag">${list.length ? `${list.length} ${list.length === 1 ? 'Einheit' : 'Einheiten'}` : 'Ruhetag'}</span>
+      </div>
+      ${morningRowHtml(date)}
+      ${list.map(entryRowHtml).join('')}
+    </div>`;
+}
+
+function historyHtml() {
+  const dates = dayList(), mehr = dates.length - histDays;
+  return dates.slice(0, histDays).map(dayCardHtml).join('')
+    + (mehr > 0 ? `<div class="btn-row" style="margin-top:12px"><button type="button" class="btn quiet small" data-act="moreDays">Ältere Tage anzeigen (${mehr})</button></div>` : '')
+    + (mEdit && mEdit.where === 'free'
+        ? `<div class="day"><div class="day-row editing">${morningEditorHtml()}</div></div>`
+        : '<p class="note"><button type="button" class="sc-link" data-act="addMorning">Morgen für einen anderen Tag nachtragen</button></p>');
+}
+
 function tabLog() {
-  const a = assess(), pend = pending(), flags = redFlags(), all = sorted().reverse();
+  const a = assess(), mt = morningTarget(), flags = redFlags();
   const kind = TYPES[draft.type].kind;
   const gap = collagenGap();
 
@@ -1026,30 +1428,11 @@ function tabLog() {
       <div style="margin-top:6px">Ein Trainingsplan ist hier nicht mehr das richtige Werkzeug.</div>
     </div>` : ''}
 
-    ${pend.length ? `<div class="card pending">
-      <h2>Morgen-Check offen</h2>
-      <p class="lede">Für den ${fmt(pend[0].date)} fehlt der Wert vom Folgemorgen${pend[0].n > 1 ? ` – dieser Tag hatte ${pend[0].n} Einheiten (${esc(pend[0].labels.join(', '))}), der Morgenwert gilt für beide` : ` (${esc(pend[0].labels[0])})`}.</p>
-      <div class="field" id="f-mPain">
-        <span class="field-label">Wie war der Schmerz heute Morgen?</span>
-        <p class="hint">Vor dem Aufstehen, in den ersten Minuten.${scaleLink('morning', 'f-mPain')}</p>
-        ${scaleHtml('mPain', morningDraft.pain ?? null, false)}
-      </div>
-      <div class="field" id="f-mStiff">
-        <span class="field-label">Wie lange war es steif?</span>
-        <p class="hint">Bis es sich beim Gehen wieder normal anfühlte.${scaleLink('stiff', 'f-mStiff')}</p>
-        ${segHtml('mStiff', STIFF, morningDraft.stiff ?? null)}
-      </div>
-      <div class="field">
-        <label for="m-note">Notiz zum Morgen</label>
-        <p class="hint">Optional – wie es sich angefühlt hat, was aufgefallen ist.</p>
-        <textarea id="m-note" data-mpath="note" placeholder="z. B. „beim ersten Aufsetzen ziept es, nach ein paar Schritten weg“">${esc(morningDraft.note || '')}</textarea>
-      </div>
-      <div class="btn-row">
-        <button class="btn" data-act="saveMorning" ${morningDraft.pain == null || !morningDraft.stiff ? 'disabled' : ''}>Morgen-Check speichern</button>
-        <button class="btn quiet small" data-act="skipMorning">Vergessen – überspringen</button>
-        ${pend.length > 1 ? `<span class="hint" style="margin:0">Danach noch ${pend.length - 1} ${pend.length - 1 === 1 ? 'Tag' : 'Tage'} offen.</span>` : ''}
-      </div>
+    ${state.migrationNote ? `<div class="infobox"><b>Umgestellt.</b> ${esc(state.migrationNote)}
+      <div style="margin-top:8px"><button type="button" class="btn quiet small" data-act="dismissMigration">Verstanden</button></div>
     </div>` : ''}
+
+    ${mt && mt.due ? morningCardHtml(mt) : ''}
 
     ${state.error ? `<div class="flag">
       <b>Konnte nicht gespeichert werden</b>
@@ -1078,34 +1461,7 @@ function tabLog() {
       <p class="todo">${esc(a.todo)}</p>
     </div>
 
-    <div class="card">
-      <h2>Morgen ohne Training</h2>
-      <p class="lede">Optional. Nutz das an Ruhetagen, wenn du etwas spürst – so siehst du später, wie schnell sich die Sehne erholt.</p>
-      ${restOpen ? `
-        <div class="field"><span class="sublabel">Datum</span>
-          <input type="date" value="${restDraft.date || today()}" data-rpath="date"></div>
-        ${hasTrainingMorning(restDraft.date || today()) ? '<div class="warnbox">Für diesen Tag gibt es bereits einen Morgen-Check aus einer Einheit. Ein zweiter Eintrag wäre doppelt.</div>' : ''}
-        <div class="field" id="f-rPain">
-          <span class="field-label">Schmerz heute Morgen</span>
-          <p class="hint">${scaleLink('morning', 'f-rPain')}</p>
-          ${scaleHtml('rPain', restDraft.pain, false)}
-        </div>
-        <div class="field" id="f-rStiff">
-          <span class="field-label">Wie lange war es steif?</span>
-          <p class="hint">${scaleLink('stiff', 'f-rStiff')}</p>
-          ${segHtml('rStiff', STIFF, restDraft.stiff)}
-        </div>
-        <div class="field">
-          <label for="r-note">Notiz</label>
-          <textarea id="r-note" data-rpath="note" placeholder="Optional">${esc(restDraft.note)}</textarea>
-        </div>
-        <div class="btn-row">
-          <button class="btn" data-act="saveRest" ${restDraft.pain == null || !restDraft.stiff || hasTrainingMorning(restDraft.date || today()) ? 'disabled' : ''}>Speichern</button>
-          <button class="btn quiet" data-act="closeRest">Abbrechen</button>
-        </div>`
-      : `<button class="btn ghost" data-act="openRest">Morgen ohne Training eintragen</button>`}
-      <p class="note">Diese Einträge fließen nicht in die Bewertung ein – die vergleicht weiterhin Trainingstag mit Trainingstag. Sie landen aber im Verlauf und im Chat-Export.</p>
-    </div>
+    ${mt && !mt.due ? morningCardHtml(mt) : ''}
 
     <div class="card" id="form">
       <h2>${editingId ? 'Einheit bearbeiten' : 'Einheit erfassen'}</h2>
@@ -1113,11 +1469,9 @@ function tabLog() {
       ${editingId ? (() => {
         const e = state.entries.find(x => x.id === editingId);
         if (!e) return '';
-        const hasM = e.painMorning != null;
         return `<div class="editbar">
-          <b>Du bearbeitest den Eintrag vom ${fmt(e.date)}${e.time ? ', ' + esc(e.time) + ' Uhr' : ''}.</b>
-          ${hasM ? ` Für diesen Tag ist bereits ein Morgen-Check hinterlegt (Schmerz ${esc(e.painMorning)}/10). Änderst du das Datum, wird er zurückgesetzt und neu abgefragt.` : ''}
-          ${hasM ? `<div style="margin-top:8px"><button type="button" class="btn quiet small" data-act="resetMorning">Morgen-Check dieses Tages zurücksetzen</button></div>` : ''}
+          <b>Du bearbeitest die Einheit vom ${fmt(e.date)}${e.time ? ', ' + esc(e.time) + ' Uhr' : ''}.</b>
+          Den Morgenwert änderst du direkt im Verlauf – er gehört zum Tag, nicht zur Einheit.
         </div>` })() : ''}
 
       <div class="field"><div class="grid2">
@@ -1169,59 +1523,23 @@ function tabLog() {
     ${acc('howto', 'Wie die Bewertung zustande kommt', 'Erklärung – keine Daten',
       `<h4>Schmerz während der Einheit</h4>
        <p style="font-size:13.5px;margin:0">Trägst du unten im Formular ein, direkt nach dem Training. Bis 3/10 ist erlaubt.</p>
-       <h4>Schmerz am Morgen und Steifigkeit</h4>
-       <p style="font-size:13.5px;margin:0">Der Morgen-Check erscheint am Folgetag automatisch als Karte ganz oben. Diese beiden Werte sind gemeint, wenn in der Bewertung von „Schmerz am Morgen“ die Rede ist.</p>
+       <h4>Schmerz am Morgen und Steifigkeit der Sehne</h4>
+       <p style="font-size:13.5px;margin:0">Jeder Morgen gehört zu dem Tag, an dem du aufwachst. Nach einem Trainingstag fragt die Karte ganz oben danach, weil die Bewertung diesen Wert braucht; an anderen Tagen ist er freiwillig. Ändern oder nachtragen kannst du ihn jederzeit im Verlauf.</p>
        <h4>Der Vergleich</h4>
-       <p style="font-size:13.5px;margin:0">Verglichen wird der Morgenwert des letzten Trainingstags mit dem des vorletzten. Steigt er um zwei Punkte, heißt das Zurücknehmen. Das ist die 24-Stunden-Regel in Zahlen.</p>
+       <p style="font-size:13.5px;margin:0">Verglichen wird der Morgen nach dem letzten Trainingstag mit dem Morgen nach dem vorletzten. Steigt der Schmerz um zwei Punkte, heißt das Zurücknehmen. Das ist die 24-Stunden-Regel in Zahlen.</p>
        <h4>Die Rangfolge</h4>
-       <p style="font-size:13.5px;margin:0">Schmerz schlägt Anstrengung. Liegt der Schmerz über 3/10, heißt das Zurücknehmen – auch wenn sich der letzte Satz leicht angefühlt hat. Die Anstrengung wird erst zum Steuerungsmaß, wenn der Schmerz im grünen Bereich liegt.</p>`)}
+       <p style="font-size:13.5px;margin:0">Schmerz schlägt Anstrengung. Liegt der Schmerz über 3/10, heißt das Zurücknehmen – auch wenn sich der letzte Satz leicht angefühlt hat. Die Anstrengung wird erst zum Steuerungsmaß, wenn der Schmerz im grünen Bereich liegt.</p>
+       <h4>Warnzeichen</h4>
+       <p style="font-size:13.5px;margin:0">Für die rote Karte „Das gehört ärztlich angeschaut“ zählt jeder Morgen der letzten drei Wochen – auch nach Ruhetagen. Gerade in einer Trainingspause zeigt nur der Morgen, ob es schlechter wird.</p>`)}
 
     <div class="card">
       <h2>Verlauf</h2>
-      <p class="lede">${all.length ? `${all.length} ${all.length===1?'Einheit':'Einheiten'} erfasst. Die gestrichelte Linie markiert 3/10.` : 'Noch nichts erfasst.'}</p>
-      ${sparkHtml()}
-      ${(() => {
-        const merged = [
-          ...all.map(e => ({ k:'e', date:e.date, sort:e.date + (e.time||'99:99'), e })),
-          ...restSorted().map(r => ({ k:'r', date:r.date, sort:r.date + '00:00', r }))
-        ].sort((a,b) => b.sort.localeCompare(a.sort)).slice(0,25);
-        return merged.map(row => {
-          if (row.k === 'r') {
-            const rs = STIFF.find(x => x.v === row.r.stiff);
-            return `<div class="row">
-              <div class="row-main">
-                <div class="row-title" style="color:var(--ink-soft)">${fmt(row.r.date)} · Ruhetag</div>
-                <div class="row-sub">nur Morgenwert${rs ? ' · steif ' + esc(rs.label) : ''}${row.r.note ? ' · ' + esc(row.r.note) : ''}</div>
-              </div>
-              <div class="nums">
-                <div class="num miss"><b>–</b><s>währenddessen</s></div>
-                <div class="num"><b>${esc(row.r.pain)}</b><s>morgens</s></div>
-              </div>
-              <div class="rowbtns">
-                <button class="del" data-act="delRest" data-id="${esc(row.r.id)}" aria-label="Ruhetags-Eintrag vom ${fmt(row.r.date)} löschen">×</button>
-              </div>
-            </div>`;
-          }
-          const e = row.e;
-        const s = STIFF.find(x => x.v === e.stiffness);
-        return `<div class="row ${editingId === e.id ? 'editing' : ''}">
-          <div class="row-main">
-            <div class="row-title">${fmt(e.date)}${e.time ? ' · ' + esc(e.time) : ''} · ${esc(TYPES[e.type] ? TYPES[e.type].label : e.type)}</div>
-            <div class="row-sub">${esc(summary(e))}${s ? ' · steif ' + esc(s.label) : ''}${e.progressed ? ' · gesteigert' : ''}</div>
-            ${e.morningNote ? `<div class="row-sub" style="font-style:italic">Morgen: ${esc(e.morningNote)}</div>` : ''}
-          </div>
-          <div class="nums">
-            <div class="num"><b>${esc(e.painDuring)}</b><s>währenddessen</s></div>
-            <div class="num ${e.painMorning == null ? 'miss' : ''}"><b>${e.painMorning == null ? '–' : esc(e.painMorning)}</b><s>morgens</s></div>
-          </div>
-          <div class="rowbtns">
-            <button class="del" data-act="del" data-id="${esc(e.id)}" aria-label="Eintrag vom ${fmt(e.date)} löschen">×</button>
-            <button class="edit" data-act="edit" data-id="${esc(e.id)}" aria-label="Eintrag vom ${fmt(e.date)} bearbeiten">ändern</button>
-          </div>
-        </div>`;
-        }).join('');
-      })()}
-      ${!all.length && !state.rest.length ? '<p class="empty">Der erste Eintrag macht noch keine Aussage. Ab der zweiten bewerteten Einheit wird es aussagekräftig.</p>' : ''}
+      <p class="lede">${state.entries.length || state.mornings.length
+        ? `${state.entries.length} ${state.entries.length === 1 ? 'Einheit' : 'Einheiten'} und ${state.mornings.filter(m => !m.skipped).length} Morgen erfasst.`
+        : 'Noch nichts erfasst.'}</p>
+      <div id="chartbox">${chartInnerHtml()}</div>
+      ${historyHtml()}
+      ${!state.entries.length && !state.mornings.length ? '<p class="empty">Der erste Eintrag macht noch keine Aussage. Ab dem zweiten bewerteten Trainingstag wird es aussagekräftig.</p>' : ''}
     </div>
 
     <div class="card">
@@ -1246,7 +1564,7 @@ function tabLog() {
       <p class="note" style="margin-top:10px">${
         backupAge() === null ? 'Noch nie gesichert.'
         : `Zuletzt gesichert: ${esc(fmtWhen(state.meta.lastBackup))}${backupAge() === 0 ? ' (heute)' : ` – vor ${backupAge()} ${backupAge() === 1 ? 'Tag' : 'Tagen'}`}.`
-      } Beim Einspielen werden Einträge mit gleicher Kennung ersetzt, alles andere kommt dazu – nichts wird gelöscht.</p>
+      } Beim Einspielen werden Einheiten mit gleicher Kennung und Morgen mit gleichem Datum ersetzt, alles andere kommt dazu – nichts wird gelöscht. Sicherungen aus der Zeit vor der Umstellung lassen sich ebenfalls einspielen.</p>
       ${importMsg ? `<p class="${importMsg.ok ? 'note' : 'err'}" style="margin-top:6px">${esc(importMsg.text)}</p>` : ''}
 
       <h4 style="margin:20px 0 6px;font-size:12px;color:var(--ink-soft);font-weight:600;letter-spacing:.04em;text-transform:uppercase">Dauerhafter Speicher</h4>
@@ -1279,14 +1597,14 @@ function tabLog() {
       ${state.snapPrev ? `<div class="row">
         <div class="row-main">
           <div class="row-title">Stand vor der letzten Änderung</div>
-          <div class="row-sub">${esc(fmtWhen(state.snapPrev.at))} · ${state.snapPrev.entries.length} ${state.snapPrev.entries.length === 1 ? 'Einheit' : 'Einheiten'}, ${state.snapPrev.rest.length} Ruhetage</div>
+          <div class="row-sub">${esc(fmtWhen(state.snapPrev.at))} · ${state.snapPrev.entries.length} ${state.snapPrev.entries.length === 1 ? 'Einheit' : 'Einheiten'}, ${state.snapPrev.mornings.filter(m => !m.skipped).length} Morgen</div>
         </div>
         <button class="btn quiet small" data-act="restoreSnap" data-snap="prev">Zurückholen</button>
       </div>` : ''}
       ${state.snapTrash ? `<div class="row">
         <div class="row-main">
           <div class="row-title">Papierkorb – Stand vor „Alles löschen“</div>
-          <div class="row-sub">${esc(fmtWhen(state.snapTrash.at))} · ${state.snapTrash.entries.length} ${state.snapTrash.entries.length === 1 ? 'Einheit' : 'Einheiten'}, ${state.snapTrash.rest.length} Ruhetage</div>
+          <div class="row-sub">${esc(fmtWhen(state.snapTrash.at))} · ${state.snapTrash.entries.length} ${state.snapTrash.entries.length === 1 ? 'Einheit' : 'Einheiten'}, ${state.snapTrash.mornings.filter(m => !m.skipped).length} Morgen</div>
         </div>
         <div class="rowbtns">
           <button class="btn quiet small" data-act="restoreSnap" data-snap="trash">Zurückholen</button>
@@ -1311,7 +1629,7 @@ const TABS = [['log','Logbuch'],['scale','Skalen'],['plan','Plan'],['ex','Übung
 // stehen und ist auch nach dem Neuladen tot. Lieber die Rohdaten zum Sichern anbieten.
 function crashHtml(err) {
   let dump;
-  try { dump = JSON.stringify({ app:'sehnenlog', v:3, exported:new Date().toISOString(), entries:state.entries, rest:state.rest }); }
+  try { dump = backupPayload(); }
   catch (e) { dump = ''; }
   return `<div class="flag">
       <b>Die Ansicht konnte nicht aufgebaut werden</b>
@@ -1344,12 +1662,15 @@ function render() {
     </div>
     ${body}
   </div>`;
+  // Das Diagramm rechnet in echten Pixeln – hat sich die Breite beim Aufbau verschoben, neu zeichnen
+  const root = document.getElementById('root');
+  if (tab === 'log' && chartState && root.clientWidth !== chartState.rootW) updateChart();
 }
 
 /* ============================================ Sicherung */
 function backupPayload() {
-  return JSON.stringify({ app:'sehnenlog', v:3, exported:new Date().toISOString(),
-    entries: state.entries, rest: state.rest });
+  return JSON.stringify({ app:'sehnenlog', v:4, exported:new Date().toISOString(),
+    entries: state.entries, mornings: state.mornings });
 }
 
 // Auf dem Handy ist das Teilen-Blatt der richtige Weg (dort landet OneDrive),
@@ -1381,7 +1702,8 @@ async function saveBackupFile() {
   }
 }
 
-// Gemeinsamer Weg fuer Textfeld und Datei.
+// Gemeinsamer Weg fuer Textfeld und Datei. Nimmt auch Sicherungen aus der Zeit
+// vor der Umstellung an und rechnet sie um.
 async function applyBackup(raw) {
   if (!raw || !raw.trim()) {
     importMsg = { ok:false, text:'Das Feld ist leer. Füg zuerst den Sicherungstext ein oder wähl eine Datei.' };
@@ -1389,33 +1711,28 @@ async function applyBackup(raw) {
   }
   // Erst vollständig einlesen und prüfen, dann anwenden – sonst landen bei einem
   // Fehlschlag halbe Daten im Speicher, während die Meldung „ungültig“ behauptet.
-  let incoming = null, incomingRest = [];
-  try {
-    const parsed = JSON.parse(raw);
-    incoming = Array.isArray(parsed) ? parsed : (parsed && parsed.entries);
-    if (parsed && Array.isArray(parsed.rest)) incomingRest = parsed.rest;
-  } catch (e) { incoming = null; }
-  if (!Array.isArray(incoming)) {
+  let n = null;
+  try { n = normalize(JSON.parse(raw)); } catch (e) { n = null; }
+  if (!n) {
     importMsg = { ok:false, text:'Das war keine gültige Sicherung. Nimm die komplette Datei bzw. den kompletten Text, ohne etwas wegzulassen. Es wurde nichts verändert.' };
     return render();
   }
-  let neu = 0, ersetzt = 0, uebersprungen = 0;
-  incoming.forEach(e => {
-    if (!validEntry(e)) { uebersprungen++; return; }
+  let neu = 0, ersetzt = 0, mNeu = 0, mErsetzt = 0;
+  n.entries.forEach(e => {
     const i = state.entries.findIndex(x => x.id === e.id);
     if (i >= 0) { state.entries[i] = e; ersetzt++; } else { state.entries.push(e); neu++; }
   });
-  let neuRest = 0;
-  incomingRest.forEach(r => {
-    if (!validRest(r)) { uebersprungen++; return; }
-    if (!state.rest.some(x => x.id === r.id)) { state.rest.push(r); neuRest++; }
+  n.mornings.forEach(m => {
+    const cur = morningOf(m.date);
+    if (!cur) { state.mornings.push(m); mNeu++; }
+    else if (m.skipped && !cur.skipped) { /* einen echten Wert nicht durch „übersprungen“ ersetzen */ }
+    else { upsertMorning(m); mErsetzt++; }
   });
-  importBuf = ''; exportText = null; state.dataNote = null;
+  importBuf = ''; exportText = null; state.dataNote = null; mEdit = null;
   importMsg = { ok:true, text:
-    `${neu} ${neu === 1 ? 'Eintrag' : 'Einträge'} hinzugefügt, ${ersetzt} aktualisiert`
-    + (neuRest ? `, ${neuRest} ${neuRest === 1 ? 'Ruhetag' : 'Ruhetage'} übernommen` : '')
-    + `. Insgesamt ${state.entries.length}.`
-    + (uebersprungen ? ` ${uebersprungen} unvollständige ${uebersprungen === 1 ? 'Zeile wurde' : 'Zeilen wurden'} übersprungen.` : '') };
+    `Einheiten: ${neu} neu, ${ersetzt} aktualisiert. Morgen: ${mNeu} neu, ${mErsetzt} aktualisiert. Insgesamt ${state.entries.length} ${state.entries.length === 1 ? 'Einheit' : 'Einheiten'}.`
+    + (n.dropped ? ` ${n.dropped} unvollständige ${n.dropped === 1 ? 'Zeile wurde' : 'Zeilen wurden'} übersprungen.` : '')
+    + (n.doppelt ? ` Bei ${n.doppelt} Morgen gab es zwei Werte – übernommen wurde der Morgen-Check, der zweite steht in der Notiz.` : '') };
   await save();
 }
 
@@ -1428,6 +1745,7 @@ function setPath(path, val) {
 }
 
 document.addEventListener('click', async (ev) => {
+  if (chartState && chartState.sel && !(ev.target.closest && ev.target.closest('.chart-svg'))) chartShow(null);
   const t = ev.target.closest('[data-scale],[data-seg],[data-act],[data-tab],[data-extoggle],[data-acc]');
   if (!t) return;
 
@@ -1441,13 +1759,13 @@ document.addEventListener('click', async (ev) => {
   if (t.dataset.scale) {
     const v = +t.dataset.val;
     if (t.dataset.scale === 'mPain') morningDraft.pain = v;
-    else if (t.dataset.scale === 'rPain') restDraft.pain = v;
+    else if (t.dataset.scale === 'ePain') { if (mEdit) mEdit.pain = v; }
     else draft[t.dataset.scale] = v;
     return render();
   }
   if (t.dataset.seg) {
     if (t.dataset.seg === 'mStiff') morningDraft.stiff = t.dataset.val;
-    else if (t.dataset.seg === 'rStiff') restDraft.stiff = t.dataset.val;
+    else if (t.dataset.seg === 'eStiff') { if (mEdit) mEdit.stiff = t.dataset.val; }
     else { draft.type = t.dataset.val; draft.ex = {}; }
     return render();
   }
@@ -1479,20 +1797,12 @@ document.addEventListener('click', async (ev) => {
       collagen:draft.collagen, progressed:draft.progressed, note:draft.note.trim() };
 
     if (editingId) {
+      // Morgenwerte hängen nicht mehr an der Einheit – Umdatieren ist deshalb unkritisch
       const e = state.entries.find(x => x.id === editingId);
-      if (e) {
-        const moved = e.date !== base.date;
-        Object.assign(e, base);
-        if (moved) {
-          // Morgenwerte gehören zum Tag – beim Umdatieren die des Zieltags übernehmen
-          const twin = state.entries.find(x => x.id !== e.id && x.date === base.date && x.painMorning != null);
-          if (twin) { e.painMorning = twin.painMorning; e.stiffness = twin.stiffness; e.morningNote = twin.morningNote; e.skipped = twin.skipped; }
-          else { e.painMorning = null; e.stiffness = null; e.morningNote = ''; e.skipped = false; }
-        }
-      }
+      if (e) Object.assign(e, base);
       editingId = null;
     } else {
-      state.entries.push({ id:'e'+Date.now(), ...base, painMorning:null, stiffness:null });
+      state.entries.push({ id:'e'+Date.now(), ...base });
     }
     draft = newDraft(); exportText = null; await save();
   }
@@ -1502,27 +1812,49 @@ document.addEventListener('click', async (ev) => {
     return;
   }
   if (act === 'cancelEdit') { editingId = null; draft = newDraft(); return render(); }
-  if (act === 'resetMorning') {
-    const e = state.entries.find(x => x.id === editingId);
-    if (e) state.entries.filter(x => x.date === e.date).forEach(x => {
-      x.painMorning = null; x.stiffness = null; x.morningNote = ''; x.skipped = false;
-    });
-    exportText = null; await save();
-  }
+
   if (act === 'saveMorning') {
-    const p = pending()[0];
-    state.entries.filter(x => x.date === p.date).forEach(e => {
-      e.painMorning = morningDraft.pain;
-      e.stiffness = morningDraft.stiff;
-      e.morningNote = (morningDraft.note || '').trim();
-    });
-    morningDraft = {}; exportText = null; await save();
+    const date = t.dataset.date;
+    if (!isIsoDate(date) || morningDraft.pain == null || !morningDraft.stiff) return;
+    upsertMorning(makeMorning(date, morningDraft.pain, morningDraft.stiff, morningDraft.note));
+    morningDraft = {}; morningOpen = false; exportText = null; await save();
   }
   if (act === 'skipMorning') {
-    const p = pending()[0];
-    state.entries.filter(x => x.date === p.date).forEach(e => { e.skipped = true; });
+    const date = t.dataset.date;
+    if (!isIsoDate(date)) return;
+    upsertMorning(skippedMorning(date));
     morningDraft = {}; await save();
   }
+  if (act === 'openMorning') { morningOpen = true; return render(); }
+  if (act === 'closeMorning') { morningOpen = false; morningDraft = {}; return render(); }
+  if (act === 'editMorning') {
+    const date = t.dataset.date, m = morningOf(date);
+    mEdit = { date, pain: m && !m.skipped ? m.pain : null, stiff: m && !m.skipped ? m.stiff : null,
+      note: m ? m.note || '' : '', where: 'day' };
+    return render();
+  }
+  if (act === 'addMorning') {
+    mEdit = { date: today(), pain: null, stiff: null, note: '', where: 'free' };
+    render();
+    document.querySelector('.m-edit')?.scrollIntoView({ block: 'center' });
+    return;
+  }
+  if (act === 'saveMorningEdit') {
+    if (!mEdit || !isIsoDate(mEdit.date) || mEdit.date > today() || mEdit.pain == null || !mEdit.stiff) return;
+    upsertMorning(makeMorning(mEdit.date, mEdit.pain, mEdit.stiff, mEdit.note));
+    mEdit = null; exportText = null; await save();
+  }
+  if (act === 'cancelMorningEdit') { mEdit = null; return render(); }
+  if (act === 'delMorning') {
+    if (!mEdit || !confirm(`Morgenwert vom ${fmt(mEdit.date)} entfernen?`)) return;
+    const date = mEdit.date;
+    state.mornings = state.mornings.filter(x => x.date !== date);
+    mEdit = null; exportText = null; await save();
+  }
+  if (act === 'moreDays') { histDays += 14; return render(); }
+  if (act === 'chartRange') { chartRange = t.dataset.range === 'all' ? 'all' : +t.dataset.range; updateChart(); return; }
+  if (act === 'dismissMigration') { state.migrationNote = null; return render(); }
+
   if (act === 'del') { if (editingId === t.dataset.id) { editingId = null; draft = newDraft(); } state.entries = state.entries.filter(x => x.id !== t.dataset.id); exportText = null; await save(); }
   if (act === 'export') { exportText = buildExport(); render(); document.getElementById('exportbox')?.scrollIntoView({block:'nearest'}); }
   if (act === 'copy') {
@@ -1534,17 +1866,8 @@ document.addEventListener('click', async (ev) => {
     }
   }
   if (act === 'retrySave') { await save(); return; }
-  if (act === 'openRest') { restOpen = true; restDraft = { date: today(), pain:null, stiff:null, note:'' }; return render(); }
-  if (act === 'closeRest') { restOpen = false; return render(); }
-  if (act === 'saveRest') {
-    state.rest.push({ id:'r'+Date.now(), date: restDraft.date || today(),
-      pain: restDraft.pain, stiff: restDraft.stiff, note: (restDraft.note||'').trim() });
-    restOpen = false; restDraft = { date:'', pain:null, stiff:null, note:'' };
-    exportText = null; await save();
-  }
-  if (act === 'delRest') { state.rest = state.rest.filter(x => x.id !== t.dataset.id); exportText = null; await save(); }
   if (act === 'backup') {
-    backupText = JSON.stringify({ app:'sehnenlog', v:3, exported:new Date().toISOString(), entries:state.entries, rest:state.rest });
+    backupText = backupPayload();
     importMsg = null; render();
     document.getElementById('backupbox')?.scrollIntoView({ block:'nearest' });
     return;
@@ -1566,10 +1889,10 @@ document.addEventListener('click', async (ev) => {
     return;
   }
   if (act === 'reset') {
-    if (!state.entries.length && !state.rest.length) return;
+    if (!state.entries.length && !state.mornings.length) return;
     if (!confirm('Alle Einträge löschen?\n\nDer Stand wandert in den Papierkorb und lässt sich danach zurückholen – bis du ihn dort endgültig leerst.')) return;
     await writeSnapshot(KEY_TRASH, packState());
-    state.entries = []; state.rest = []; exportText = null; state.dataNote = null;
+    state.entries = []; state.mornings = []; mEdit = null; morningDraft = {}; exportText = null; state.dataNote = null;
     await save();
     state.snapTrash = await readSnapshot(KEY_TRASH);
     return render();
@@ -1584,7 +1907,7 @@ document.addEventListener('click', async (ev) => {
     const snap = t.dataset.snap === 'trash' ? state.snapTrash : state.snapPrev;
     if (!snap) return;
     // save() legt den jetzigen Stand automatisch als Vorgänger ab – also umkehrbar
-    state.entries = snap.entries; state.rest = snap.rest;
+    state.entries = snap.entries; state.mornings = snap.mornings; mEdit = null;
     exportText = null; state.dataNote = null; importMsg = null;
     await save();
     return render();
@@ -1620,8 +1943,8 @@ function onField(ev) {
     return;
   }
   if (ev.target.id === 'impbox') { importBuf = ev.target.value; return; }
-  const rp = ev.target.dataset.rpath;
-  if (rp) { restDraft[rp] = ev.target.value; if (rp === 'date' && ev.type === 'change') render(); return; }
+  const ep = ev.target.dataset.epath;
+  if (ep) { if (mEdit) mEdit[ep] = ev.target.value; if (ep === 'date' && ev.type === 'change') render(); return; }
   const mp = ev.target.dataset.mpath;
   if (mp) { morningDraft[mp] = ev.target.value; return; }
   const p = ev.target.dataset.path;
@@ -1633,6 +1956,55 @@ function onField(ev) {
 }
 document.addEventListener('input', onField);
 document.addEventListener('change', onField);
+
+/* Diagramm: Antippen, Maus, Tastatur. Das Fadenkreuz springt zum nächsten Tag mit
+   Werten – man zielt auf ein Datum, nicht auf einen Punkt. */
+function chartPick(ev) {
+  const svg = ev.target && ev.target.closest ? ev.target.closest('.chart-svg') : null;
+  if (!svg || !chartState || !chartState.dataDays.length) return;
+  const r = svg.getBoundingClientRect();
+  const px = (ev.clientX - r.left) * (chartState.W / r.width);
+  const pos = ((px - chartState.M.l) / chartState.pw) * chartState.nDays - 0.5;
+  let best = null, dist = Infinity;
+  chartState.dataDays.forEach(day => {
+    const k = Math.abs(daysBetween(chartState.start, day) - pos);
+    if (k < dist) { dist = k; best = day; }
+  });
+  if (best !== chartState.sel) chartShow(best);
+}
+document.addEventListener('pointermove', chartPick);
+document.addEventListener('pointerdown', chartPick);
+document.addEventListener('pointerout', ev => {
+  if (ev.pointerType !== 'mouse') return;
+  const svg = ev.target && ev.target.closest ? ev.target.closest('.chart-svg') : null;
+  if (svg && !svg.contains(ev.relatedTarget)) chartShow(null);
+});
+document.addEventListener('focusin', ev => {
+  const c = ev.target.classList;
+  if (c && c.contains('chart-svg') && chartState && chartState.dataDays.length && !chartState.sel)
+    chartShow(chartState.dataDays[chartState.dataDays.length - 1]);
+});
+document.addEventListener('keydown', ev => {
+  const c = ev.target.classList;
+  if (!c || !c.contains('chart-svg') || !chartState || !chartState.dataDays.length) return;
+  const list = chartState.dataDays;
+  let i = list.indexOf(chartState.sel);
+  if (ev.key === 'ArrowLeft') i = i < 0 ? list.length - 1 : Math.max(0, i - 1);
+  else if (ev.key === 'ArrowRight') i = i < 0 ? list.length - 1 : Math.min(list.length - 1, i + 1);
+  else if (ev.key === 'Escape') { chartShow(null); return; }
+  else return;
+  ev.preventDefault();
+  chartShow(list[i]);
+});
+// Nur bei geänderter Breite neu zeichnen – die Bildschirmtastatur ändert nur die Höhe
+let resizeTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    const root = document.getElementById('root');
+    if (root && chartState && root.clientWidth !== chartState.rootW) updateChart();
+  }, 150);
+});
 
 /* Offline-Cache. Nur unter http(s) moeglich – wird die Datei direkt vom Dateisystem
    geoeffnet (file://), gibt es keinen Service Worker. Die App laeuft dann trotzdem,
