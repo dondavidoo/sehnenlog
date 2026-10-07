@@ -1712,7 +1712,7 @@ function exFromLadders() {
 }
 
 // Lauf-Leiter: Stufe 0 = Gehen/Laufen 3 × (8/2), Stufe 1 = 30 Min., danach +10 % je Stufe
-const RUN_MAX_STEPS = 17;   // 30 → … → 124 Min., je +10 %
+const RUN_MAX_STEPS = 21;   // 30 → … → 180 Min., je +10 %
 function runStepMin(i) { if (i <= 1) return 30; let m = 30; for (let k = 2; k <= i; k++) m = Math.round(m * (1 + LAUF_SPRUNG)); return m; }
 function runStepText(i) { return i === 0 ? '3 × (8 Min. laufen / 2 Min. gehen), 30 Min. gesamt' : `${runStepMin(i)} Min. locker am Stück`; }
 const RUN_GREEN_NEEDED = 2;
@@ -2142,7 +2142,7 @@ function tabProgress() {
       <p class="hint">Dorsalextension nur auf Hinweis der App (vorne am Sprunggelenk bei zwei Läufen), Isometrie freiwillig an unruhigen Tagen. Beide starten, sobald du sie erfasst.</p>
       ${['b1', 'iso1'].map(k => ladderBarHtml(ladderStatus(k))).join('')}
       <h3 style="margin-top:14px">Laufen</h3>
-      <p class="hint">Jede Stufe ist 10 % länger als die vorige, nach zwei grünen Läufen. Die Stufen reichen bis rund zwei Stunden – das ist die Spanne, die der Halbmarathon-Plan später braucht.</p>
+      <p class="hint">Jede Stufe ist 10 % länger als die vorige, nach zwei grünen Läufen. Die Stufen reichen bis drei Stunden.</p>
       ${runBarHtml()}
       <h3 style="margin-top:14px">Plyometrie (ab Phase 3)</h3>
       ${plyoBarHtml()}
