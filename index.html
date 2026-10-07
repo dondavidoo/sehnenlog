@@ -873,7 +873,13 @@ function cleanEntry(e) {
   if (d.ex && typeof d.ex === 'object') {
     det.ex = {};
     Object.entries(d.ex).forEach(([k, v]) => {
-      if (v && typeof v === 'object') det.ex[k] = { sets: asStr(v.sets), reps: asStr(v.reps), weight: asStr(v.weight) };
+      if (v && typeof v === 'object') {
+        det.ex[k] = { sets: asStr(v.sets), reps: asStr(v.reps), weight: asStr(v.weight) };
+        if (typeof v.v === 'string' && v.v) det.ex[k].v = v.v;
+        if (Number.isInteger(v.band)) det.ex[k].band = v.band;
+        if (Number.isInteger(v.loop)) det.ex[k].loop = v.loop;
+        if (v.doppelt) det.ex[k].doppelt = true;
+      }
     });
   }
   c.details = det;
@@ -1294,8 +1300,7 @@ function assess() {
 
   const levels = done.map((d, i) => ({ d, ...dayLevel(d, i, done) }));
   const last = levels[levels.length - 1];
-  let streak = 0;   // nur Tage ab Programmstart zählen für den Zähler
-  for (let i = levels.length - 1; i >= 0 && levels[i].level === 'gruen' && levels[i].d.date >= PROGRAMM_START; i--) streak++;
+  const streak = greenSince(lastLadderChange());   // Zähler = grüne Sehnenkraft-Einheiten seit der letzten Leiteränderung
   const extra = noRestDay() ? ['In den letzten sieben Tagen gab es keinen Ruhetag.'] : [];
   const kicker = `Nach dem Trainingstag ${fmt(last.d.date)}`;
 
@@ -1308,7 +1313,7 @@ function assess() {
   if (last.level === 'gelb' || extra.length) return { tone:'hold', word:'Gelb – Stufe halten', kicker, reasons: last.amber.concat(extra),
     todo:'Nichts steigern. Gleiche Stufe noch einmal, dann neu bewerten. Zähler auf null.' };
 
-  const reasons = [`${streak} grüne ${streak === 1 ? 'Einheit' : 'Einheiten'} in Folge: Schmerz während ≤ ${SCHMERZ_MAX}, danach ≤ ${DANACH_MAX}, Morgen nicht gestiegen.`];
+  const reasons = [`Letzter Trainingstag grün: Schmerz während ≤ ${SCHMERZ_MAX}, danach ≤ ${DANACH_MAX}, Morgen nicht gestiegen. Sehnenkraft-Zähler: ${streak} grüne ${streak === 1 ? 'Einheit' : 'Einheiten'} in Folge.`];
   if (last.d.painAfter == null) reasons.push('„Schmerz danach“ ist für diesen Tag nicht eingetragen. Leer zählt nicht als Verstoß – trag ihn im Verlauf nach, wenn du ihn weißt.');
   if (streak >= GRUEN_FUER_STEIGERUNG) return { tone:'up', word:'Grün – Steigerung frei', kicker:`${streak} grüne in Folge`, reasons,
     todo:'Genau eine Sache steigern: eine Übung (erst neue Übung, dann Sätze, dann Stufe oder Gewicht) oder der längste Lauf um 10 % – nie beides in derselben Einheit. Hak beim Eintrag „Das war eine Steigerung“ an, dann zählt der Zähler neu.' };
@@ -1427,7 +1432,7 @@ function calfSteps() {
   const s = [
     { sets:1, reps:12, v:'beidbeinig' }, { sets:2, reps:12, v:'beidbeinig' }, { sets:3, reps:12, v:'beidbeinig' },
     { sets:3, reps:12, v:'beidbeinig auf der Stufe' }, { sets:3, reps:8, v:'einbeinig' }, { sets:3, reps:12, v:'einbeinig' } ];
-  for (let w = 5; w <= 30; w += 5) { s.push({ sets:4, reps:8, v:'einbeinig', weight:w }); s.push({ sets:4, reps:12, v:'einbeinig', weight:w }); }
+  for (let w = 1; w <= 6; w++) { s.push({ sets:4, reps:8, v:'einbeinig', wIdx:w }); s.push({ sets:4, reps:12, v:'einbeinig', wIdx:w }); }
   return s;
 }
 function bandSteps() {
@@ -1457,10 +1462,11 @@ const LADDER_ORDER = Object.keys(LADDERS).sort((a, b) => LADDERS[a].order - LADD
 const UNLOCK_STAGES = [['a1', 'a3'], ['a2'], ['hip'], ['a6', 'a5']];   // Reihenfolge, in der Übungen dazukommen
 const GATE_KAHNBEIN_TAGE = 7;   // Ball und Doming erst, wenn Innenfuß/Kahnbein so lange ohne Schmerz war
 
+function stepWeight(step) { return step.wIdx ? step.wIdx * ((state.settings && state.settings.hantelSchritt) || 5) : 0; }
 function stepText(step, unit) {
   const b = [`${step.sets} × ${step.reps}${unit === 'sek' ? ' Sek.' : ''}`];
   if (step.v) b.push(step.v);
-  if (step.weight) b.push(`+${step.weight} kg Kurzhantel`);
+  if (step.wIdx) b.push(`+${stepWeight(step)} kg Kurzhantel`);
   if (step.band != null) b.push(bandText('thera', step.band, step.doppelt));
   if (step.loop != null) b.push(bandText('loop', step.loop));
   return b.join(' · ');
@@ -1468,13 +1474,13 @@ function stepText(step, unit) {
 function stepEquipHtml(step) {
   if (step.band != null) return bandChipHtml('thera', step.band, step.doppelt);
   if (step.loop != null) return bandChipHtml('loop', step.loop);
-  if (step.weight) return `<span class="chip">+${step.weight} kg Kurzhantel</span>`;
+  if (step.wIdx) return `<span class="chip">+${stepWeight(step)} kg Kurzhantel</span>`;
   return '';
 }
 // Was ändert sich von a nach b? „neu“ (Leiter startet), „sätze“, „stufe“ (Variante/Band/Gewicht)
 function stepKind(a, b) {
   if (!a) return 'neu';
-  if (a.v === b.v && a.band === b.band && a.loop === b.loop && a.weight === b.weight && !!a.doppelt === !!b.doppelt) return 'sätze';
+  if (a.v === b.v && a.band === b.band && a.loop === b.loop && a.wIdx === b.wIdx && !!a.doppelt === !!b.doppelt) return 'sätze';
   return 'stufe';
 }
 const KIND_RANK = { neu:0, 'sätze':1, stufe:2 };
@@ -1485,6 +1491,7 @@ function cleanLadders(l) {
     const x = l && typeof l === 'object' && l[k] && typeof l[k] === 'object' ? l[k] : {};
     const step = Number.isInteger(x.step) ? Math.max(-1, Math.min(x.step, LADDERS[k].steps.length - 1)) : -1;
     out[k] = { step, since: isIsoDate(x.since) ? x.since : null };
+    if (x.prev && typeof x.prev === 'object' && Number.isInteger(x.prev.step)) out[k].prev = { step: Math.max(-1, x.prev.step), since: isIsoDate(x.prev.since) ? x.prev.since : null };
   });
   return out;
 }
@@ -1519,10 +1526,32 @@ function exLogged(entries, key) {
   for (const e of entries) for (const id of LADDERS[key].ex) { const v = e.details && e.details.ex && e.details.ex[id]; if (v && (v.sets || v.reps)) return v; }
   return null;
 }
+// Dosis der Stufe erreicht? Sätze, Wiederholungen, Gewicht – und dieselbe Variante bzw. dasselbe Band.
+// Einträge ohne Varianten-Angabe (vor dem Programm oder von Hand gewählt) zählen nur für Stufen ohne Variante.
 function doseMet(v, step) {
   if (!v) return false;
   const sets = +v.sets || 0, reps = +v.reps || 0, w = parseFloat(String(v.weight || '0').replace(',', '.')) || 0;
-  return sets >= step.sets && reps >= step.reps && (!step.weight || w >= step.weight);
+  if (sets < step.sets || reps < step.reps) return false;
+  if (step.wIdx && w < stepWeight(step)) return false;
+  if (step.v != null && v.v !== step.v) return false;
+  if (step.band != null && (v.band !== step.band || !!v.doppelt !== !!step.doppelt)) return false;
+  if (step.loop != null && v.loop !== step.loop) return false;
+  return true;
+}
+// Entwurfs-Dosis aus einer Stufe – mit Variante/Band, damit das Vorrücken sie erkennt
+function doseFromStep(step) {
+  const d = { sets: String(step.sets), reps: String(step.reps), weight: step.wIdx ? String(stepWeight(step)) : '' };
+  if (step.v != null) d.v = step.v;
+  if (step.band != null) { d.band = step.band; if (step.doppelt) d.doppelt = true; }
+  if (step.loop != null) d.loop = step.loop;
+  return d;
+}
+// Vorgabe für eine von Hand gewählte Übung: aktuelle Stufe ihrer Leiter, sonst Stufe 0, sonst leer
+function exDefaults(id) {
+  const key = LADDER_ORDER.find(k => LADDERS[k].ex.includes(id));
+  if (!key) return { sets:'', reps:'', weight:'' };
+  const st = state.ladders[key];
+  return doseFromStep(LADDERS[key].steps[Math.max(0, st.step)]);
 }
 // Grüne Kraft-Einheiten in Folge seit einem Datum (nur Tage ab Programmstart; ein Gelb/Rot setzt auf 0; offene Morgen zählen nicht)
 function greenSince(since, filter) {
@@ -1568,6 +1597,11 @@ function proposal() {
     out.item = { kind:'start', keys: UNLOCK_STAGES[0], text: 'Einheit 1: ' + UNLOCK_STAGES[0].map(k => `${LADDERS[k].name} ${stepText(LADDERS[k].steps[0], LADDERS[k].unit)}`).join(' + ') };
     return (memo.proposal = out);
   }
+  const miss0 = UNLOCK_STAGES[0].filter(k => state.ladders[k].step < 0);
+  if (miss0.length) {   // die zweite Startübung fehlt noch – ohne Zähler nachholen
+    out.item = { kind:'neu', key: miss0[0], step: 0, text: `Noch nicht gestartet: ${LADDERS[miss0[0]].name} ${stepText(LADDERS[miss0[0]].steps[0], LADDERS[miss0[0]].unit)}` };
+    return (memo.proposal = out);
+  }
   if (out.blocked || out.streak < GRUEN_FUER_STEIGERUNG) return (memo.proposal = out);
   // nächste Stufe der Freischaltung: alle Übungen einer Stufe müssen laufen, bevor die nächste kommt
   for (const stage of UNLOCK_STAGES) {
@@ -1587,32 +1621,47 @@ function proposal() {
   return (memo.proposal = out);
 }
 // Nach dem Speichern einer Kraft-Einheit: wurde der Vorschlag umgesetzt? Dann rückt die Leiter vor.
+function entryClean(entry) { return !(entry.painDuring > SCHMERZ_MAX) && !(entry.painAfter > DANACH_MAX) && !entry.allDay; }
 function applyLadderAdvance(entry) {
-  if (entry.type !== 'kraft') return null;
+  if (entry.type !== 'kraft' || !entryClean(entry) || isDeloadWeek(entry.date)) return null;
   const p = proposal();
-  if (!p.item) return null;
+  if (!p.item || p.blocked) return null;
   const changed = [];
-  if (p.item.kind === 'start') {
-    p.item.keys.forEach(k => { if (doseMet(exLogged([entry], k), LADDERS[k].steps[0])) { state.ladders[k] = { step: 0, since: entry.date }; changed.push(LADDERS[k].name); } });
+  const advance = (k, idx) => {
+    if (state.ladders[k].since === entry.date && state.ladders[k].step === idx) return;   // schon vorgerückt (Bearbeitung)
+    const prev = { step: state.ladders[k].step, since: state.ladders[k].since };
+    state.ladders[k] = { step: idx, since: entry.date, prev };
+    changed.push(LADDERS[k].name);
+  };
+  if (p.item.kind === 'start' || p.item.kind === 'neu') {
+    const keys = p.item.kind === 'start' ? p.item.keys : [p.item.key];
+    keys.forEach(k => { if (doseMet(exLogged([entry], k), LADDERS[k].steps[0])) advance(k, 0); });
   } else {
-    const k = p.item.key, step = LADDERS[k].steps[p.item.step];
-    if (doseMet(exLogged([entry], k), step)) { state.ladders[k] = { step: p.item.step, since: entry.date }; changed.push(LADDERS[k].name); }
+    const k = p.item.key;
+    if (doseMet(exLogged([entry], k), LADDERS[k].steps[p.item.step])) advance(k, p.item.step);
   }
   invalidate();
   return changed.length ? changed : null;
+}
+// Die Einheit, die einen Schritt ausgelöst hat, wird gelöscht: Schritt zurücknehmen
+function revertLadderAdvance(entry) {
+  if (!entry || entry.type !== 'kraft') return;
+  LADDER_ORDER.forEach(k => {
+    const st = state.ladders[k];
+    if (st.since === entry.date && st.prev) state.ladders[k] = { step: st.prev.step, since: st.prev.since };
+  });
+  invalidate();
 }
 // Entwurf aus dem Tagesvorschlag: alle laufenden Übungen mit ihrer Stufe, die vorgeschlagene mit der neuen Dosis
 function exFromLadders() {
   const ex = {}, p = proposal();
   LADDER_ORDER.forEach(k => {
     const st = state.ladders[k]; if (st.step < 0) return;
-    const step = LADDERS[k].steps[st.step];
-    const id = LADDERS[k].ex[0];
-    ex[id] = { sets: String(step.sets), reps: String(step.reps), weight: step.weight ? String(step.weight) : '' };
+    ex[LADDERS[k].ex[0]] = doseFromStep(LADDERS[k].steps[st.step]);
   });
   if (p.item && !p.blocked) {
-    if (p.item.kind === 'start') p.item.keys.forEach(k => { const s = LADDERS[k].steps[0]; ex[LADDERS[k].ex[0]] = { sets: String(s.sets), reps: String(s.reps), weight: '' }; });
-    else { const s = LADDERS[p.item.key].steps[p.item.step]; ex[LADDERS[p.item.key].ex[0]] = { sets: String(s.sets), reps: String(s.reps), weight: s.weight ? String(s.weight) : '' }; }
+    if (p.item.kind === 'start') p.item.keys.forEach(k => { ex[LADDERS[k].ex[0]] = doseFromStep(LADDERS[k].steps[0]); });
+    else ex[LADDERS[p.item.key].ex[0]] = doseFromStep(LADDERS[p.item.key].steps[p.item.step]);
   }
   return ex;
 }
@@ -1642,7 +1691,7 @@ function runStatus() {
   return memo.runStatus;
 }
 function applyRunAdvance(entry) {
-  if (entry.type !== 'lauf') return null;
+  if (entry.type !== 'lauf' || !entryClean(entry) || isDeloadWeek(entry.date)) return null;
   const s = runStatus(), min = runMin(entry) || 0;
   if (s.next == null) return null;
   if (s.next === 0 && s.step < 0) { state.run = { step: 0, since: entry.date }; invalidate(); return runStepText(0); }
@@ -1680,10 +1729,15 @@ function testOutcome(t, ph) {
   const m = morningOf(addDays(t.date, 1));
   if (!m || m.skipped || typeof m.pain !== 'number') {
     if (fail.length) return { status:'nicht', reasons: fail };
+    if (daysBetween(t.date, today()) > MORGEN_OFFEN_TAGE + 1) return { status:'nicht', reasons:['Der Morgenwert vom Folgetag fehlt – der Test ist nicht wertbar. Im Verlauf nachtragen, dann zählt er.'] };
     return { status:'offen', reasons:['Der Morgenwert vom Folgetag fehlt noch.'] };
   }
   const m0 = morningOf(t.date);
-  const base = m0 && !m0.skipped && typeof m0.pain === 'number' ? m0.pain : null;
+  let base = m0 && !m0.skipped && typeof m0.pain === 'number' ? m0.pain : null;
+  if (base == null) {   // kein Morgen am Testtag: letzter erfasster Morgen davor
+    const before = state.mornings.filter(x => !x.skipped && typeof x.pain === 'number' && x.date < t.date).sort((a, b) => a.date.localeCompare(b.date));
+    if (before.length) base = before[before.length - 1].pain;
+  }
   if (base != null && m.pain > base) fail.push(`Morgenwert danach ${m.pain} – über dem Ausgangswert ${base}`);
   else if (base == null && m.pain >= MORGEN_ROT) fail.push(`Morgenwert danach ${m.pain}/10`);
   return fail.length ? { status:'nicht', reasons: fail } : { status:'bestanden', reasons: [] };
@@ -1703,6 +1757,7 @@ function phaseState() {
   return (memo.phase = { nr, since, def: PHASEN[nr - 1], passed, lastFailed, pendingTest, tage: Math.max(0, daysBetween(since, today())) });
 }
 function runGreenCount(minMin, since) { return runDays().filter(d => d.level === 'gruen' && d.min >= minMin && (!since || d.date >= since)).length; }
+function ladderAt(s, idx) { return s.step > idx || (s.step === idx && s.counter >= 1); }
 function phaseCriteria(nr) {
   const ph = phaseState(), L = k => ladderStatus(k), r = runStatus();
   const c = [];
@@ -1710,14 +1765,14 @@ function phaseCriteria(nr) {
   if (nr === 1) {
     item('Morgenwert ≤ 2 an 7 Tagen in Folge', morningCalm(7), morningCalm(7) ? 'erfüllt' : 'noch nicht – ein Morgen der letzten 7 Tage fehlt oder liegt über 2');
     const g = greenSince(null); item('3 grüne Sehnenkraft-Einheiten in Folge', g >= 3, `${Math.min(g, 3)} von 3`);
-    const a1 = L('a1'), a2 = L('a2'); item('Wadenheben gestreckt und gebeugt 3 × 12 beidbeinig grün', a1.step >= 2 && a2.step >= 2, `gestreckt Stufe ${a1.step + 1} von 3 · gebeugt Stufe ${a2.step + 1} von 3`);
-    const a3 = L('a3'); item('Band-Adduktion 3 × 15 grün', a3.step >= 2, `Stufe ${a3.step + 1} von 3`);
+    const a1 = L('a1'), a2 = L('a2'); item('Wadenheben gestreckt und gebeugt 3 × 12 beidbeinig grün', ladderAt(a1, 2) && ladderAt(a2, 2), `gestreckt Stufe ${a1.step + 1} von 3 · gebeugt Stufe ${a2.step + 1} von 3`);
+    const a3 = L('a3'); item('Band-Adduktion 3 × 15 grün', ladderAt(a3, 2), `Stufe ${a3.step + 1} von 3`);
     item('Hüfte in der Einheit', L('hip').step >= 0, L('hip').step >= 0 ? 'läuft' : 'noch nicht dazugekommen');
     const ok30 = r.step >= 2 || (r.step === 1 && r.counter >= 2); item('30 Min. am Stück zweimal grün', ok30, r.step < 0 ? 'Laufen noch nicht begonnen' : r.step === 0 ? 'Gehen/Laufen-Phase' : `${Math.min(r.counter, 2)} von 2`);
   }
   if (nr === 2) {
     item('Mindestens 12 Wochen in Phase 2', ph.tage >= 84, `${Math.floor(ph.tage / 7)} von 12 Wochen`);
-    const a1 = L('a1'), a2 = L('a2'); item('Einbeinig 4 × 8 mit +5 kg grün, gestreckt und gebeugt', a1.step >= 6 && a2.step >= 6, `gestreckt ${a1.cur ? stepText(a1.cur, 'wdh') : '–'} · gebeugt ${a2.cur ? stepText(a2.cur, 'wdh') : '–'}`);
+    const a1 = L('a1'), a2 = L('a2'); item('Einbeinig 4 × 8 mit +5 kg grün, gestreckt und gebeugt', ladderAt(a1, 6) && ladderAt(a2, 6), `gestreckt ${a1.cur ? stepText(a1.cur, 'wdh') : '–'} · gebeugt ${a2.cur ? stepText(a2.cur, 'wdh') : '–'}`);
     const n = runGreenCount(44, ph.since); item('Längster Lauf 44 Min. zweimal grün', n >= 2, `${Math.min(n, 2)} von 2 (aktuelle Stufe ${r.text || '–'})`);
     item('Morgenwert in den letzten 14 Tagen nie über 2', morningCalm(14), morningCalm(14) ? 'erfüllt' : 'noch nicht');
   }
@@ -1880,7 +1935,7 @@ function ladderBarHtml(s) {
 }
 function runBarHtml() {
   const r = runStatus();
-  const boxes = Array.from({ length: 12 }, (_, i) => `<i class="lb${i < r.step ? ' done' : i === r.step ? ' cur' : ''}" title="${esc(runStepText(i))}"></i>`).join('');
+  const boxes = Array.from({ length: RUN_MAX_STEPS }, (_, i) => `<i class="lb${i < r.step ? ' done' : i === r.step ? ' cur' : ''}" title="${esc(runStepText(i))}"></i>`).join('');
   return `<div class="ladder">
       <div class="ladder-head"><b>Längster Lauf</b><span class="hint" style="margin:0">${r.step >= 0 ? `Stufe ${r.step + 1} · <span class="dots">${'●'.repeat(Math.min(r.counter, 2))}${'○'.repeat(Math.max(0, 2 - r.counter))}</span>` : 'noch nicht begonnen'}</span></div>
       <div class="lbar">${boxes}</div>
@@ -2018,7 +2073,7 @@ function exPickerHtml() {
     chosen.forEach(id => {
       const ex = EX[id], v = draft.ex[id], last = lastExUse(id), ph = doseParts(ex.dose);
       h += `<div class="exrow">
-        <div class="exrow-top"><span class="exrow-name">${esc(ex.name)}</span><span class="exrow-dose">Ziel: ${esc(ex.dose)}</span></div>
+        <div class="exrow-top"><span class="exrow-name">${esc(ex.name)}</span><span class="exrow-dose">${v.v || v.band != null || v.loop != null ? esc([v.v, v.band != null ? bandText('thera', v.band, v.doppelt) : '', v.loop != null ? bandText('loop', v.loop) : ''].filter(Boolean).join(' · ')) : 'Ziel: ' + esc(ex.dose)}</span></div>
         <div class="exrow-in">
           <div><label for="f-ex-${id}-sets">Sätze</label>${num(`ex.${id}.sets`, v.sets, ph.sets)}</div>
           <div><label for="f-ex-${id}-reps">${UNIT_LABEL[ex.unit]}</label>${num(`ex.${id}.reps`, v.reps, ph.reps)}</div>
@@ -3102,7 +3157,7 @@ document.addEventListener('click', async (ev) => {
   if (t.dataset.acc) { openAcc = openAcc === t.dataset.acc ? null : t.dataset.acc; return render(); }
   if (t.dataset.extoggle) {
     const id = t.dataset.extoggle;
-    if (draft.ex[id]) delete draft.ex[id]; else draft.ex[id] = { sets:'', reps:'', weight:'' };
+    if (draft.ex[id]) delete draft.ex[id]; else draft.ex[id] = exDefaults(id);
     return render();
   }
   if (t.dataset.exblock) {
@@ -3210,7 +3265,12 @@ document.addEventListener('click', async (ev) => {
       // Morgenwerte hängen nicht mehr an der Einheit – Umdatieren ist deshalb unkritisch
       const e = state.entries.find(x => x.id === editingId);
       // Alteinträge (v1/v2) trugen den Freitext in „detail“; der steht seit dem Öffnen in der Notiz und würde sonst die neuen Felder verdecken
-      if (e) { delete e.detail; Object.assign(e, base); text = `Änderung gespeichert: ${art}, ${wann}.`; }
+      if (e) {
+        delete e.detail; Object.assign(e, base); text = `Änderung gespeichert: ${art}, ${wann}.`;
+        invalidate();
+        if (!entryClean(e)) revertLadderAdvance(e);   // nachträglich Schmerz eingetragen: Schritt zurück
+        else { const adv = applyLadderAdvance(e); if (adv) text += ` Leiter vorgerückt: ${adv.join(', ')}.`; }
+      }
       else text = null;   // die Einheit gibt es nicht mehr (gelöscht, zurückgeholt, ersetzt)
       editingId = null;
     } else {
@@ -3252,6 +3312,7 @@ document.addEventListener('click', async (ev) => {
     if (!e || afterEdit.pain == null || needSpots(afterEdit.pain, afterEdit.spots)) return;
     e.painAfter = afterEdit.pain; e.allDay = !!afterEdit.allDay; e.spots = asSpots(afterEdit.spots);
     const wann = fmt(e.date);
+    if (!entryClean(e)) revertLadderAdvance(e);
     afterEdit = null; await save();
     if (!state.error) { uiFlash = { where: 'history', ok: true, text: `Schmerz danach für die Einheit vom ${wann} gespeichert.` }; announce(uiFlash.text); }
     return render();
@@ -3337,6 +3398,7 @@ document.addEventListener('click', async (ev) => {
     closeForm();
     state.entries = state.entries.filter(x => x.id !== e.id);
     lastDeleted = e;
+    revertLadderAdvance(e);
     await save();
     if (!state.error) { uiFlash = { where: 'entry', ok: true, undo: true, text: `Einheit vom ${fmt(e.date)} (${typeLabel(e.type)}) gelöscht.` }; announce(uiFlash.text + ' Rückgängig ist möglich.'); }
     render();
@@ -3349,6 +3411,7 @@ document.addEventListener('click', async (ev) => {
     const e = lastDeleted;
     if (!state.entries.some(x => x.id === e.id)) state.entries.push(e);
     lastDeleted = null;
+    invalidate(); applyLadderAdvance(e); applyRunAdvance(e);
     await save();
     if (!state.error) { uiFlash = { where: 'entry', ok: true, text: `Einheit vom ${fmt(e.date)} wiederhergestellt.` }; announce(uiFlash.text); }
     return render();

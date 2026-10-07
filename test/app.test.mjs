@@ -108,7 +108,7 @@ describe('Ampel (assess)', () => {
   });
   test('2 – ein bewerteter grüner Tag: Grün, 1 von 3', async () => {
     const app = await fresh();
-    app._test.setState({ entries: [entry(day(app, -2), 1, { painAfter: 2, spots: ['knoechel'] })], mornings: [app.makeMorning(day(app, -1), 1, 'unter15', '')] });
+    app._test.setState({ entries: [entry(day(app, -2), 1, { type: 'kraft', painAfter: 2, spots: ['knoechel'] })], mornings: [app.makeMorning(day(app, -1), 1, 'unter15', '')] });
     const a = app.assess();
     assert.equal(a.word, 'Grün');
     assert.equal(a.kicker, '1 von 3 für die nächste Steigerung');
@@ -557,7 +557,13 @@ describe('Paket 6: Leitern, Vorschlag, Lauf-Leiter, Phasen, Austrittstest', () =
     assert.equal(p.item.kind, 'start');
     assert.match(p.item.text, /Wadenheben gestreckt 1 × 12/);
     assert.deepEqual(Object.keys(app.exFromLadders()).sort(), ['a1', 'a3']);
-    const e = kraft('2026-10-08', { a1: { sets: '1', reps: '12', weight: '' }, a3: { sets: '1', reps: '15', weight: '' } });
+    assert.equal(app.exFromLadders().a1.v, 'beidbeinig');
+    assert.equal(app.exFromLadders().a3.band, 0);
+    // ohne Varianten-Angabe rückt nichts vor
+    const e0 = kraft('2026-10-08', { a1: { sets: '1', reps: '12', weight: '' }, a3: { sets: '1', reps: '15', weight: '' } });
+    app._test.setState({ entries: [e0] });
+    assert.equal(app.applyLadderAdvance(e0), null);
+    const e = kraft('2026-10-08', { a1: { sets: '1', reps: '12', weight: '', v: 'beidbeinig' }, a3: { sets: '1', reps: '15', weight: '', band: 0 } });
     app._test.setState({ entries: [e] });
     assert.deepEqual(app.applyLadderAdvance(e), ['Wadenheben gestreckt', 'Band-Adduktion']);
     assert.equal(app.ladderStatus('a1').step, 0);
@@ -565,7 +571,7 @@ describe('Paket 6: Leitern, Vorschlag, Lauf-Leiter, Phasen, Austrittstest', () =
   });
   test('Nach drei grünen Einheiten: genau ein Vorschlag, zuerst die neue Übung', async () => {
     const app = await prog('2026-10-16');
-    const ex = { a1: { sets: '1', reps: '12', weight: '' }, a3: { sets: '1', reps: '15', weight: '' } };
+    const ex = { a1: { sets: '1', reps: '12', weight: '', v: 'beidbeinig' }, a3: { sets: '1', reps: '15', weight: '', band: 0 } };
     const entries = ['2026-10-08', '2026-10-10', '2026-10-13'].map(d => kraft(d, ex));
     const mornings = ['2026-10-08', '2026-10-09', '2026-10-10', '2026-10-11', '2026-10-13', '2026-10-14'].map(d => morn(app, d));
     const ladders = { a1: { step: 0, since: '2026-10-08' }, a3: { step: 0, since: '2026-10-08' } };
@@ -583,7 +589,7 @@ describe('Paket 6: Leitern, Vorschlag, Lauf-Leiter, Phasen, Austrittstest', () =
   });
   test('Alle Übungen drin: Sätze vor Stufe, Ball und Doming nur ohne Innenfuß-Schmerz', async () => {
     const app = await prog('2026-11-10');
-    const ex = { a1: { sets: '2', reps: '12', weight: '' }, a3: { sets: '3', reps: '15', weight: '' }, a2: { sets: '1', reps: '12', weight: '' }, b4: { sets: '1', reps: '12', weight: '' } };
+    const ex = { a1: { sets: '2', reps: '12', weight: '', v: 'beidbeinig' }, a3: { sets: '3', reps: '15', weight: '', band: 0 }, a2: { sets: '1', reps: '12', weight: '', v: 'beidbeinig' }, b4: { sets: '1', reps: '12', weight: '', loop: 1 } };
     const entries = ['2026-11-02', '2026-11-04', '2026-11-07'].map(d => kraft(d, ex));
     const mornings = ['2026-11-02', '2026-11-03', '2026-11-04', '2026-11-05', '2026-11-07', '2026-11-08'].map(d => morn(app, d));
     const ladders = { a1: { step: 1, since: '2026-11-01' }, a3: { step: 2, since: '2026-11-01' }, a2: { step: 0, since: '2026-11-01' }, hip: { step: 0, since: '2026-11-01' } };
@@ -625,7 +631,7 @@ describe('Paket 6: Leitern, Vorschlag, Lauf-Leiter, Phasen, Austrittstest', () =
   });
   test('Phase 1: Kriterien, Austrittstest mit 24-Stunden-Regel, Wiederholung nach 14 Tagen und 4 Einheiten', async () => {
     const app = await prog('2026-12-10');
-    const ex = { a1: { sets: '3', reps: '12', weight: '' }, a2: { sets: '3', reps: '12', weight: '' }, a3: { sets: '3', reps: '15', weight: '' }, b4: { sets: '2', reps: '12', weight: '' } };
+    const ex = { a1: { sets: '3', reps: '12', weight: '', v: 'beidbeinig' }, a2: { sets: '3', reps: '12', weight: '', v: 'beidbeinig' }, a3: { sets: '3', reps: '15', weight: '', band: 0 }, b4: { sets: '2', reps: '12', weight: '', loop: 1 } };
     const run = (date, min) => ({ id: 'r' + date, date, time: '08:00', type: 'lauf', details: { min: String(min), pace: '6:10' }, painDuring: 1, painAfter: 1, spots: ['knoechel'] });
     const entries = ['2026-12-01', '2026-12-03', '2026-12-06'].map(d => kraft(d, ex)).concat([run('2026-11-28', 30), run('2026-12-05', 30)]);
     const mornings = []; for (let i = 0; i <= 20; i++) mornings.push(morn(app, app.addDays('2026-12-10', -i)));
@@ -679,7 +685,7 @@ describe('Paket 6: Leitern, Vorschlag, Lauf-Leiter, Phasen, Austrittstest', () =
   });
   test('Tab „Heute“ und „Fortschritt“ bauen sich auf und zeigen Vorschlag, Chips und Phasenleiste', async () => {
     const app = await prog('2026-10-16');
-    const ex = { a1: { sets: '1', reps: '12', weight: '' }, a3: { sets: '1', reps: '15', weight: '' } };
+    const ex = { a1: { sets: '1', reps: '12', weight: '', v: 'beidbeinig' }, a3: { sets: '1', reps: '15', weight: '', band: 0 } };
     const entries = ['2026-10-08', '2026-10-10', '2026-10-13'].map(d => kraft(d, ex));
     const mornings = ['2026-10-08', '2026-10-09', '2026-10-10', '2026-10-11', '2026-10-13', '2026-10-14'].map(d => morn(app, d));
     app._test.setState({ entries, mornings, ladders: { a1: { step: 0, since: '2026-10-08' }, a3: { step: 0, since: '2026-10-08' } } });
@@ -694,5 +700,63 @@ describe('Paket 6: Leitern, Vorschlag, Lauf-Leiter, Phasen, Austrittstest', () =
     assert.match(f, /von 6 Kriterien erfüllt/);
     assert.match(f, /data-acc="equip"/); assert.match(f, /Theraband gelb → rot → grün → blau/);
     assert.match(f, /data-act="ladderUp" data-key="a1"/);
+  });
+});
+
+describe('Paket 6b: Review-Korrekturen', () => {
+  const P = '2026-10-07';
+  const kraft = (date, ex, extra) => ({ id: 'k' + date, date, time: '18:00', type: 'kraft', details: { ex }, painDuring: 1, painAfter: 1, spots: ['knoechel'], ...extra });
+  const morn = (app, date, pain) => app.makeMorning(date, pain ?? 1, 'unter15', '');
+  async function prog(now) { const app = await loadApp(); app._test.setNow(() => new Date(now + 'T10:00:00')); app._test.setProgrammStart(P); return app; }
+  test('Stufenwechsel verlangt die neue Variante bzw. das neue Band – alte Dosis rückt nicht vor', async () => {
+    const app = await prog('2026-11-10');
+    const ex = { a1: { sets: '3', reps: '12', weight: '', v: 'beidbeinig' }, a3: { sets: '3', reps: '15', weight: '', band: 0 }, a2: { sets: '3', reps: '12', weight: '', v: 'beidbeinig' }, b4: { sets: '3', reps: '15', weight: '', loop: 1 }, a6: { sets: '3', reps: '12', weight: '', v: 'beidbeinig, mittlere Höhe' }, a5: { sets: '3', reps: '5', weight: '', v: 'sitzend, je 5 Sek.' } };
+    const entries = ['2026-11-02', '2026-11-04', '2026-11-07'].map(d => kraft(d, ex));
+    const mornings = ['2026-11-02', '2026-11-03', '2026-11-04', '2026-11-05', '2026-11-07', '2026-11-08'].map(d => morn(app, d));
+    const ladders = { a1: { step: 2, since: '2026-11-01' }, a3: { step: 2, since: '2026-11-01' }, a2: { step: 2, since: '2026-11-01' }, hip: { step: 2, since: '2026-11-01' }, a6: { step: 3, since: '2026-11-01' }, a5: { step: 2, since: '2026-11-01' } };
+    app._test.setState({ entries, mornings, ladders });
+    const p = app.proposal();
+    assert.equal(p.item.kind, 'stufe'); assert.equal(p.item.key, 'a1');
+    assert.match(p.item.text, /3 × 12 · beidbeinig auf der Stufe \(war 3 × 12 · beidbeinig\)/);
+    const same = kraft('2026-11-10', ex);
+    app._test.setState({ entries: entries.concat([same]), mornings, ladders });
+    assert.equal(app.applyLadderAdvance(same), null);   // gleiche Dosis wie bisher: kein Vorrücken
+    assert.equal(app.ladderStatus('a1').step, 2);
+    const neu = kraft('2026-11-10', { ...ex, a1: { sets: '3', reps: '12', weight: '', v: 'beidbeinig auf der Stufe' } });
+    app._test.setState({ entries: entries.concat([neu]), mornings, ladders });
+    assert.deepEqual(app.applyLadderAdvance(neu), ['Wadenheben gestreckt']);
+    assert.equal(app.ladderStatus('a1').step, 3);
+  });
+  test('Vorrücken nur bei sauberer Einheit; Hantelschritt aus den Einstellungen', async () => {
+    const app = await prog('2026-10-08');
+    const bad = kraft('2026-10-08', { a1: { sets: '1', reps: '12', weight: '', v: 'beidbeinig' }, a3: { sets: '1', reps: '15', weight: '', band: 0 } }, { painDuring: 5 });
+    app._test.setState({ entries: [bad] });
+    assert.equal(app.applyLadderAdvance(bad), null);
+    const bad2 = { ...bad, painDuring: 1, allDay: true };
+    assert.equal(app.applyLadderAdvance(bad2), null);
+    app._test.setState({ settings: { hantelSchritt: 2.5 }, ladders: { a1: { step: 5, since: P }, a3: { step: 0, since: P } } });
+    assert.match(app.stepText(app.LADDERS.a1.steps[6], 'wdh'), /\+2\.5 kg Kurzhantel/);
+  });
+  test('Zweite Startübung wird ohne Zähler nachgeholt; Löschen der auslösenden Einheit nimmt den Schritt zurück', async () => {
+    const app = await prog('2026-10-10');
+    app._test.setState({ ladders: { a1: { step: 0, since: '2026-10-08' } } });
+    const p = app.proposal();
+    assert.equal(p.item.kind, 'neu'); assert.equal(p.item.key, 'a3');
+    assert.match(p.item.text, /Noch nicht gestartet/);
+    app._test.setState({ ladders: { a1: { step: 1, since: '2026-10-10', prev: { step: 0, since: '2026-10-08' } } } });
+    app.revertLadderAdvance({ type: 'kraft', date: '2026-10-10' });
+    assert.equal(app.ladderStatus('a1').step, 0);
+    assert.equal(app.ladderStatus('a1').since, '2026-10-08');
+  });
+  test('Offener Test verfällt nach vier Tagen ohne Morgenwert; Basis fällt auf den letzten Morgen davor zurück', async () => {
+    const app = await prog('2026-12-20');
+    const t = app.makeTest('2026-12-10', 15, 20, '', { after: 1 });
+    app._test.setState({ tests: [t], mornings: [morn(app, '2026-12-05', 1)] });
+    const o = app.testOutcome(t, app.PHASEN[0]);
+    assert.equal(o.status, 'nicht'); assert.match(o.reasons[0], /nicht wertbar/);
+    app._test.setState({ tests: [t], mornings: [morn(app, '2026-12-05', 1), morn(app, '2026-12-11', 2)] });
+    assert.equal(app.testOutcome(t, app.PHASEN[0]).status, 'nicht');   // 2 > 1 (letzter Morgen davor)
+    app._test.setState({ tests: [t], mornings: [morn(app, '2026-12-05', 2), morn(app, '2026-12-11', 2)] });
+    assert.equal(app.testOutcome(t, app.PHASEN[0]).status, 'bestanden');
   });
 });
