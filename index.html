@@ -2769,13 +2769,14 @@ function afterEditorHtml(e) {
       <div class="btn-row">
         <button class="btn small" data-act="saveAfter" data-date="${esc(a.date)}" ${ok ? '' : 'disabled'}>Speichern</button>
         <button class="btn quiet small" data-act="cancelAfter">Abbrechen</button>
+        ${entriesOf(a.date).some(x => x.painAfter != null) ? '<button type="button" class="edit" data-act="clearAfter" style="margin-left:auto">Wert entfernen</button>' : ''}
       </div>
     </div>`;
 }
 function entryRowHtml(e) {
   const label = typeLabel(e.type);
   if (afterEdit && afterEdit.date === e.date) return entriesOf(e.date)[0].id === e.id ? `<div class="day-row editing">${afterEditorHtml(e)}</div>` : '';
-  const offen = e.painAfter == null && daysBetween(e.date, today()) <= DANACH_OFFEN_TAGE && e.date <= today();
+  const first = entriesOf(e.date)[0].id === e.id, offen = e.painAfter == null;
   return `<div class="day-row${editingId === e.id ? ' editing' : ''}">
       <span class="day-time">${e.time ? esc(e.time) : '–'}</span>
       <div class="day-main">
@@ -2787,7 +2788,7 @@ function entryRowHtml(e) {
       <div class="day-side">
         <div class="day-val">während<b>${e.painDuring != null ? esc(e.painDuring) : '–'}</b></div>
         <div class="day-val">danach<b>${e.painAfter != null ? esc(e.painAfter) : '–'}</b></div>
-        <div class="day-acts">${offen ? `<button type="button" class="edit" data-act="editAfter" data-id="${esc(e.id)}" aria-label="Schmerz danach für die Einheit vom ${fmt(e.date)} nachtragen">danach eintragen</button>` : ''}<button type="button" class="edit" data-act="edit" data-id="${esc(e.id)}" aria-label="Einheit vom ${fmt(e.date)} bearbeiten">ändern</button></div>
+        <div class="day-acts">${first && e.date <= today() ? `<button type="button" class="edit" data-act="editAfter" data-id="${esc(e.id)}" aria-label="Schmerz danach für den ${fmt(e.date)} ${offen ? 'nachtragen' : 'ändern'}">${offen ? 'danach eintragen' : 'danach ändern'}</button>` : ''}<button type="button" class="edit" data-act="edit" data-id="${esc(e.id)}" aria-label="Einheit vom ${fmt(e.date)} bearbeiten">ändern</button></div>
       </div>
     </div>`;
 }
@@ -3551,6 +3552,15 @@ document.addEventListener('click', async (ev) => {
     return;
   }
   if (act === 'cancelAfter') { afterEdit = null; return render(); }
+  if (act === 'clearAfter') {
+    const es = afterEdit ? entriesOf(afterEdit.date) : [];
+    if (!es.length) return;
+    es.forEach(e => { e.painAfter = null; e.allDay = false; });
+    const wann = fmt(afterEdit.date);
+    afterEdit = null; await save();
+    if (!state.error) { uiFlash = { where: tab === 'heute' ? 'today' : 'history', ok: true, text: `Schmerz danach für den ${wann} entfernt.` }; announce(uiFlash.text); }
+    return render();
+  }
   if (act === 'saveAfter') {
     const es = afterEdit ? entriesOf(afterEdit.date) : [];
     if (!es.length || afterEdit.pain == null || needSpots(afterEdit.pain, afterEdit.spots)) return;
