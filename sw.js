@@ -1,7 +1,7 @@
 /* Sehnenlog – Offline-Cache für die App-Hülle.
    Die Trainingsdaten liegen im localStorage und werden hier nicht angefasst. */
 
-const CACHE = 'sehnenlog-shell-v21';
+const CACHE = 'sehnenlog-shell-v22';
 const NET_TIMEOUT_MS = 3000;   // länger wartet niemand im Bett auf einen Balken LTE
 const SHELL = [
   './',

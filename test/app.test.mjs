@@ -1073,3 +1073,23 @@ describe('Review 8.10.: Paket B – Bedienung und Texte', () => {
     assert.doesNotMatch(plan, /\+5 kg/);
   });
 });
+
+describe('Diagramm: eigene Farbe für Sehnenkraft-Tage', () => {
+  test('Sehnenkraft-Tag Teal, anderes Training Orange, gemischter Tag geteilter Ring; Legende nennt alle drei', async () => {
+    const app = await fresh();
+    const unit = (date, type, time) => ({ id: 'e' + date + type, date, time: time || '18:00', type,
+      details: type === 'kraft' ? { ex: { a1: { sets: '1', reps: '12', weight: '' } } } : { min: '30' }, painDuring: 1, spots: ['knoechel'] });
+    app._test.setState({
+      entries: [unit(day(app, -1), 'kraft'), unit(day(app, -2), 'lauf'), unit(day(app, -3), 'crossfit', '17:00'), unit(day(app, -3), 'kraft', '19:00')],
+      mornings: [app.makeMorning(T, 1, 'unter15', '')] });
+    app._test.setTab('log');
+    const h = app.tabLog();
+    const svg = h.slice(h.indexOf('<svg class="chart-svg"'), h.indexOf('</svg>'));
+    assert.match(svg, /<circle[^>]*fill="none" style="stroke:var\(--c-kraft\)"/);                           // Sehnenkraft-Tag: ganzer Ring in Teal
+    assert.match(svg, /<circle[^>]*fill="none" style="stroke:var\(--c-during\)"/);                          // Lauftag: ganzer Ring in Orange
+    assert.match(svg, /<circle[^>]*stroke-dasharray="[^"]+" style="stroke:var\(--c-kraft\)"/);              // gemischter Tag: Teal-Hälfte
+    assert.match(svg, /<circle[^>]*stroke-dasharray="[^"]+" style="stroke:var\(--c-during\)"/);             // gemischter Tag: Orange-Hälfte
+    assert.match(h, /chart-legend[\s\S]*Sehnenkraft[\s\S]*anderes Training[\s\S]*beides am selben Tag/);
+    assert.match(h, /2 Sehnenkraft-Tage/);   // im Vorlese-Text: der reine und der gemischte Tag
+  });
+});

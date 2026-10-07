@@ -29,7 +29,7 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
     --up-border: #BFDACE; --hold-border: #E3D2AE; --down-border: #E8C4C0;
     --surface-1: #FAFCFC; --surface-2: #F7F9F9; --surface-3: #EDF1F2; --surface-3h: #E2E9EA;
     --tint: #EAF1F3; --tint-border: #C4D7DD;
-    --chart-grid: #E5EBEC; --chart-axis: #C9D3D4; --chart-limit: #8C9899; --c-morning: #2a78d6; --c-during: #eb6834;
+    --chart-grid: #E5EBEC; --chart-axis: #C9D3D4; --chart-limit: #8C9899; --c-morning: #2a78d6; --c-during: #eb6834; --c-kraft: #15907F;
     --sans: ui-sans-serif, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   }
   /* Dunkel: eigene Stufen derselben Töne – gedämpft, nicht schwarz. Zeichnungen bleiben auf Weiß. */
@@ -44,7 +44,7 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
       --up-border: #2F5A45; --hold-border: #5A4A25; --down-border: #5E3330;
       --surface-1: #1F2726; --surface-2: #222B2A; --surface-3: #2A3433; --surface-3h: #33403E;
       --tint: #1E2F35; --tint-border: #2F4A54;
-      --chart-grid: #2A3332; --chart-axis: #3A4645; --chart-limit: #7B8A8B; --c-morning: #5FA0E8; --c-during: #F08A5B;
+      --chart-grid: #2A3332; --chart-axis: #3A4645; --chart-limit: #7B8A8B; --c-morning: #5FA0E8; --c-during: #F08A5B; --c-kraft: #2BB596;
     }
   }
   .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
@@ -2352,7 +2352,25 @@ function sessionFieldsHtml() {
 /* ============================================ Diagramm */
 // Zwei Reihen, eine Achse (beides Schmerz 0–10). Farben aus einer auf Farbenblindheit
 // geprüften Palette – Rot bleibt in der App dem „Zurücknehmen“ vorbehalten.
-const C_MORNING = 'var(--c-morning)', C_DURING = 'var(--c-during)';   // Tokens: passen sich dem Dark Mode an
+const C_MORNING = 'var(--c-morning)', C_DURING = 'var(--c-during)', C_KRAFT = 'var(--c-kraft)';   // Tokens: passen sich dem Dark Mode an
+// Art eines Trainingstags fürs Diagramm: Sehnenkraft, anderes Training oder beides am selben Tag
+function dayKind(date) {
+  const es = entriesOf(date), k = es.some(e => e.type === 'kraft');
+  return k && es.some(e => e.type !== 'kraft') ? 'beides' : k ? 'kraft' : 'anderes';
+}
+// Ring (bei dichter Darstellung ein Strich) für „Schmerz während“ eines Tages, Farbe nach Art des Tags.
+// Gemischte Tage als geteilter Ring: linke Hälfte Sehnenkraft, rechte Hälfte anderes Training.
+function ringHtml(x, y, r, kind, dense) {
+  const f = v => v.toFixed(1), one = kind === 'kraft' ? C_KRAFT : C_DURING;
+  if (dense) {
+    const seg = (y1, y2, c) => `<line x1="${f(x)}" x2="${f(x)}" y1="${f(y1)}" y2="${f(y2)}" style="stroke:${c}" stroke-width="2" stroke-linecap="round"/>`;
+    return kind === 'beides' ? seg(y - 4, y, C_KRAFT) + seg(y, y + 4, C_DURING) : seg(y - 4, y + 4, one);
+  }
+  if (kind !== 'beides') return `<circle cx="${f(x)}" cy="${f(y)}" r="${f(r)}" fill="none" style="stroke:${one}" stroke-width="2"/>`;
+  const half = Math.PI * r;   // halber Umfang; gedreht, damit die Hälften links und rechts liegen statt oben und unten
+  const arc = (c, rot) => `<circle cx="${f(x)}" cy="${f(y)}" r="${f(r)}" fill="none" transform="rotate(${rot} ${f(x)} ${f(y)})" stroke-dasharray="${f(half)} ${f(half)}" style="stroke:${c}" stroke-width="2"/>`;
+  return arc(C_KRAFT, 90) + arc(C_DURING, -90);
+}
 let chartState = null;   // Geometrie + Tage mit Werten – fürs Antippen, bei jedem Zeichnen neu
 
 // Breite des Platzes, den das Diagramm tatsächlich hat – auf dem Desktop steht es in einer Spalte
@@ -2388,7 +2406,8 @@ function chartInnerHtml() {
   const n1 = v => v.toFixed(1);
 
   const mIn = morn.filter(m => m.date >= start);
-  const dIn = dur.filter(d => d.date >= start).map(d => [d.date, d.painDuring]);
+  const dIn = dur.filter(d => d.date >= start).map(d => [d.date, d.painDuring, dayKind(d.date)]);
+  const nKraft = dIn.filter(d => d[2] !== 'anderes').length;
 
   // Y-Achse: Raster als feine, durchgezogene Linien
   let s = '';
@@ -2426,9 +2445,7 @@ function chartInnerHtml() {
   });
   if (path) s += `<path d="${path.trim()}" fill="none" style="stroke:${C_MORNING}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
   if (tier !== 'dense') s += mIn.map(m => `<circle cx="${n1(X(m.date, 0.5))}" cy="${n1(Y(m.pain))}" r="${n1(rM)}" style="fill:${C_MORNING};stroke:var(--card)" stroke-width="${tier === 'dots' ? 2 : 1.5}"/>`).join('');
-  s += dIn.map(([day, v]) => tier === 'dense'
-    ? `<line x1="${n1(X(day, 0.5))}" x2="${n1(X(day, 0.5))}" y1="${n1(Y(v) - 4)}" y2="${n1(Y(v) + 4)}" style="stroke:${C_DURING}" stroke-width="2" stroke-linecap="round"/>`
-    : `<circle cx="${n1(X(day, 0.5))}" cy="${n1(Y(v))}" r="${n1(rD)}" fill="none" style="stroke:${C_DURING}" stroke-width="2"/>`).join('');
+  s += dIn.map(([day, v, kind]) => ringHtml(X(day, 0.5), Y(v), rD, kind, tier === 'dense')).join('');
 
   // Namen am jeweils letzten Punkt – außer sie kämen sich ins Gehege, dann tragen Legende und Antippen
   const lm = mIn[mIn.length - 1], ld = dIn[dIn.length - 1];
@@ -2457,12 +2474,14 @@ function chartInnerHtml() {
     </div>
     <div class="chart-wrap">
       <svg class="chart-svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" tabindex="0"
-        aria-label="Schmerzverlauf in ${zeitraum}: ${mIn.length} Morgenwerte, ${dIn.length} Trainingstage. Antippen oder Pfeiltasten zeigen die Werte eines Tages; alle Werte stehen auch im Verlauf darunter, ältere Tage nach dem Aufklappen.">${s}</svg>
+        aria-label="Schmerzverlauf in ${zeitraum}: ${mIn.length} Morgenwerte, ${dIn.length} Trainingstage, davon ${nKraft} ${nKraft === 1 ? 'Sehnenkraft-Tag' : 'Sehnenkraft-Tage'}. Antippen oder Pfeiltasten zeigen die Werte eines Tages; alle Werte stehen auch im Verlauf darunter, ältere Tage nach dem Aufklappen.">${s}</svg>
       <div class="chart-tip" hidden></div>
     </div>
     <div class="chart-legend">
       <span><svg width="22" height="10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" style="stroke:${C_MORNING}" stroke-width="2"/><circle cx="11" cy="5" r="3.5" style="fill:${C_MORNING};stroke:var(--card)" stroke-width="1.5"/></svg>Schmerz am Morgen</span>
-      <span><svg width="14" height="14" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" style="stroke:${C_DURING}" stroke-width="2"/></svg>Schmerz während (Ring um den Tag, höchster Wert)</span>
+      <span><svg width="14" height="14" aria-hidden="true">${ringHtml(7, 7, 5, 'kraft', false)}</svg>Schmerz während (Ring, höchster Wert) – Sehnenkraft-Tag</span>
+      <span><svg width="14" height="14" aria-hidden="true">${ringHtml(7, 7, 5, 'anderes', false)}</svg>anderes Training</span>
+      <span><svg width="14" height="14" aria-hidden="true">${ringHtml(7, 7, 5, 'beides', false)}</svg>beides am selben Tag</span>
     </div>`;
 }
 
@@ -2491,8 +2510,10 @@ function chartShow(date) {
   tip.append(head);
   const m = morningOf(date);
   const arten = [...new Set(entriesOf(date).map(e => typeLabel(e.type)))].join(', ');
+  const kind = dayKind(date);   // Farbpunkt wie der Ring im Diagramm: Teal, Orange oder halb/halb
+  const cD = kind === 'kraft' ? C_KRAFT : kind === 'beides' ? `linear-gradient(90deg, ${C_KRAFT} 50%, ${C_DURING} 50%)` : C_DURING;
   const rows = [[C_MORNING, m && !m.skipped ? m.pain : null, 'Morgen', m && !m.skipped && m.stiff ? 'steif ' + stiffLabel(m.stiff) : ''],
-                [C_DURING, maxDuring(date), 'während', arten]];
+                [cD, maxDuring(date), 'während', arten]];
   rows.forEach(([c, v, name, extra]) => {
     const row = document.createElement('div');
     row.className = 'chart-tip-row';
