@@ -326,7 +326,7 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
 
   /* Handy: alle sechs Bereiche auf einen Blick – zwei Reihen à drei, nichts zum Wischen */
   @media (max-width: 560px) {
-    .tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+    .tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
     .tabs button { padding: 8px 6px; font-size: 13.5px; }
     .masthead p { display: none; }   /* drei Zeilen Untertitel auf jedem Tab – auf dem Handy entbehrlich */
     .masthead { margin-bottom: 12px; }
@@ -362,6 +362,13 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
   .today-side { flex-shrink: 0; }
   .today-up { background: var(--tint); margin: 0 -10px; padding: 8px 10px; border-radius: 8px; border-top: 0; }
   .arrow { color: var(--act); font-weight: 650; font-size: 13px; }
+  .more { display: flex; flex-direction: column; gap: 6px; }
+  .more-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; width: 100%; text-align: left; font: inherit; padding: 12px 14px; border-radius: 8px; border: 1px solid var(--rule); background: var(--surface-3); color: var(--ink); cursor: pointer; }
+  .more-row:hover { border-color: var(--act); }
+  .more-row > span:first-child { display: flex; flex-direction: column; gap: 2px; }
+  .more-sub { font-size: 12.5px; color: var(--ink-soft); }
+  .morebar { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; font-size: 13.5px; color: var(--ink-soft); }
+  .morebar .sc-link { font-size: 13.5px; }
   .exlink { font: inherit; font-weight: 700; color: var(--ink); background: none; border: 0; padding: 0; text-decoration: underline; text-decoration-color: var(--act); text-underline-offset: 3px; cursor: pointer; }
   .exlink:hover { color: var(--act); }
   .dots { letter-spacing: 2px; color: var(--act); font-size: 13px; }
@@ -2991,7 +2998,28 @@ function tabData() {
 }
 
 /* ============================================ Render */
-const TABS = [['heute','Heute'],['log','Logbuch'],['fort','Fortschritt'],['scale','Skalen'],['plan','Plan'],['ex','Übungen'],['supp','Supplemente'],['data','Daten']];
+const TABS = [['heute','Heute'],['log','Logbuch'],['fort','Fortschritt'],['mehr','Mehr']];
+// Nachschlagen – erreichbar über „Mehr“
+const MORE = [
+  ['plan',  'Plan',               'Regeln, Phasen, Laufregeln, Austrittstest, Warnzeichen'],
+  ['ex',    'Übungen',            'Ausführung, häufige Fehler, Zeichnungen'],
+  ['scale', 'Skalen',             'Was heißt welcher Schmerzwert?'],
+  ['supp',  'Supplemente',        'Kollagen und Vitamin C'],
+  ['data',  'Daten & Sicherung',  'Export fürs Chat, Sicherung, Import, Sicherheitsnetz']
+];
+const MORE_IDS = MORE.map(m => m[0]);
+function mainTab(t) { return MORE_IDS.includes(t) ? 'mehr' : t; }
+function tabMore() {
+  return `<div class="card">
+      <h2>Mehr</h2>
+      <p class="lede">Alles zum Nachschlagen. Das Tägliche steht in Heute, Logbuch und Fortschritt.</p>
+      <div class="more">${MORE.map(([v, l, sub]) => `<button type="button" class="more-row" data-tab="${v}"><span><b>${esc(l)}</b><span class="more-sub">${esc(sub)}</span></span><span class="acc-chev">›</span></button>`).join('')}</div>
+    </div>`;
+}
+function moreBarHtml() {
+  const m = MORE.find(x => x[0] === tab); if (!m) return '';
+  return `<div class="morebar"><button type="button" class="sc-link" data-tab="mehr">← Mehr</button><span>${esc(m[1])}</span></div>`;
+}
 
 // Notausgang: wirft ein Tab beim Aufbau, bleibt die Seite sonst auf dem alten Stand
 // stehen und ist auch nach dem Neuladen tot. Lieber die Rohdaten zum Sichern anbieten.
@@ -3039,7 +3067,8 @@ function render() {
   const focusKey = focusKeyOf(document.activeElement);
   let body;
   try {
-    body = tab === 'heute' ? tabToday() : tab === 'fort' ? tabProgress() : tab === 'plan' ? tabPlan() : tab === 'ex' ? tabEx() : tab === 'supp' ? tabSupp() : tab === 'scale' ? tabScales() : tab === 'data' ? tabData() : tabLog();
+    body = tab === 'heute' ? tabToday() : tab === 'fort' ? tabProgress() : tab === 'mehr' ? tabMore() : tab === 'plan' ? tabPlan() : tab === 'ex' ? tabEx() : tab === 'supp' ? tabSupp() : tab === 'scale' ? tabScales() : tab === 'data' ? tabData() : tabLog();
+    if (MORE_IDS.includes(tab)) body = moreBarHtml() + body;
   } catch (err) {
     body = crashHtml(err);
   }
@@ -3049,7 +3078,7 @@ function render() {
       <p>Trainingstagebuch und kriterienbasiertes Programm für die Tibialis-posterior-Sehne. Offline, gespeichert auf diesem Gerät.</p>
     </header>
     <nav class="tabs" role="tablist" aria-label="Bereiche">
-      ${TABS.map(([v,l]) => `<button role="tab" id="tab-${v}" aria-controls="panel" data-tab="${v}" aria-selected="${tab===v}" tabindex="${tab===v ? 0 : -1}">${l}</button>`).join('')}
+      ${TABS.map(([v,l]) => `<button role="tab" id="tab-${v}" aria-controls="panel" data-tab="${v}" aria-selected="${mainTab(tab)===v}" tabindex="${mainTab(tab)===v ? 0 : -1}">${l}</button>`).join('')}
     </nav>
     ${state.error ? `<div class="flag">
       <b>Konnte nicht gespeichert werden</b>
@@ -3057,7 +3086,7 @@ function render() {
       <div style="margin-top:8px;font-family:ui-monospace,Menlo,monospace;font-size:12px;background:var(--card);border-radius:5px;padding:8px 10px">${esc(state.error)}</div>
       <div class="btn-row" style="margin-top:8px"><button class="btn small" data-act="backupFile">Sicherung als Datei</button><button class="btn quiet small" data-act="retrySave">Speichern erneut versuchen</button></div>
     </div>` : ''}
-    <main id="panel" role="tabpanel" aria-labelledby="tab-${tab}">${body}</main>
+    <main id="panel" role="tabpanel" aria-labelledby="tab-${mainTab(tab)}">${body}</main>
   </div>`;
   // Das Diagramm rechnet in echten Pixeln – hat sich die Breite beim Aufbau verschoben, neu zeichnen
   if (tab === 'log' && chartOutOfDate()) updateChart();
@@ -3066,8 +3095,7 @@ function render() {
 
 /* ============================================ Sicherung */
 function backupPayload() {
-  return JSON.stringify({ app:'sehnenlog', v:4, exported:new Date().toISOString(),
-    entries: state.entries, mornings: state.mornings, tests: state.tests });
+  return JSON.stringify({ app:'sehnenlog', exported:new Date().toISOString(), ...packState() });
 }
 
 // Auf dem Handy ist das Teilen-Blatt der richtige Weg (dort landet OneDrive),
@@ -3108,8 +3136,8 @@ async function applyBackup(raw) {
   }
   // Erst vollständig einlesen und prüfen, dann anwenden – sonst landen bei einem
   // Fehlschlag halbe Daten im Speicher, während die Meldung „ungültig“ behauptet.
-  let n = null;
-  try { n = normalize(JSON.parse(raw)); } catch (e) { n = null; }
+  let n = null, parsed = null;
+  try { parsed = JSON.parse(raw); n = normalize(parsed); } catch (e) { n = null; }
   if (!n) {
     importMsg = { ok:false, text:'Das war keine gültige Sicherung. Nimm die komplette Datei bzw. den kompletten Text, ohne etwas wegzulassen. Es wurde nichts verändert.' };
     return render();
@@ -3128,10 +3156,17 @@ async function applyBackup(raw) {
   n.tests.forEach(x => {
     if (testOf(x.date)) { upsertTest(x); tErsetzt++; } else { state.tests.push(x); invalidate(); tNeu++; }
   });
+  // Programmstand (Leitern, Lauf, Ausrüstung) nur übernehmen, wenn die Sicherung ihn enthält
+  let prog = false;
+  if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+    if (parsed.ladders) { state.ladders = n.ladders; prog = true; }
+    if (parsed.run) { state.run = n.run; prog = true; }
+    if (parsed.settings) { state.settings = n.settings; prog = true; }
+  }
   importBuf = ''; state.dataNote = null; mEdit = null; closeForm();
   await save();
   importMsg = { ok:!state.error, text: state.error ? 'Nicht gespeichert – siehe Fehlermeldung oben.' :
-    `Einheiten: ${neu} neu, ${ersetzt} aktualisiert. Morgen: ${mNeu} neu, ${mErsetzt} aktualisiert.${n.tests.length ? ` Monatstests: ${tNeu} neu, ${tErsetzt} aktualisiert.` : ''} Insgesamt ${state.entries.length} ${state.entries.length === 1 ? 'Einheit' : 'Einheiten'}.`
+    `Einheiten: ${neu} neu, ${ersetzt} aktualisiert. Morgen: ${mNeu} neu, ${mErsetzt} aktualisiert.${n.tests.length ? ` Tests: ${tNeu} neu, ${tErsetzt} aktualisiert.` : ''}${prog ? ' Leitern, Lauf-Stufe und Ausrüstung übernommen.' : ''} Insgesamt ${state.entries.length} ${state.entries.length === 1 ? 'Einheit' : 'Einheiten'}.`
     + (n.dropped ? ` ${n.dropped} unvollständige ${n.dropped === 1 ? 'Zeile wurde' : 'Zeilen wurden'} übersprungen.` : '')
     + (n.doppelt ? ` Bei ${n.doppelt} Morgen gab es zwei Werte – übernommen wurde der Morgen-Check, der zweite steht in der Notiz.` : '') };
   announce(importMsg.text);

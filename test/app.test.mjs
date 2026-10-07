@@ -317,7 +317,8 @@ describe('Speichern, Sicherung, Import', () => {
     assert.equal(prev2.entries.length, 1);                     // Stand vor dem Import
     const payload = JSON.parse(app.backupPayload());
     assert.equal(payload.tests.length, 1);
-    assert.equal(payload.v, 4);
+    assert.equal(payload.v, 5);
+    assert.equal(payload.ladders.a1.step, -1);
   });
   test('load übernimmt einen v3-Stand und lässt den alten Schlüssel liegen', async () => {
     const app = await fresh();
@@ -773,5 +774,29 @@ describe('Paket 7: Kleinkram und Sprung zur Übung', () => {
     assert.match(h, /data-act="gotoEx" data-ex="dehn"/);
     assert.equal(app.proposal('2026-10-29').blocked && /Entlastungswoche/.test(app.proposal('2026-10-29').blocked), true);
     assert.equal(app.proposal('2026-10-16').blocked, null);
+  });
+});
+
+describe('Paket 8: Vier Tabs, Sicherung mit Programmstand', () => {
+  test('Nachschlage-Seiten laufen unter „Mehr“, Sicherung trägt Leitern und Import übernimmt sie', async () => {
+    const app = await fresh();
+    app._test.setTab('plan'); app.render();
+    const html = app.__dom.root.innerHTML;
+    assert.match(html, /id="tab-mehr" aria-controls="panel" data-tab="mehr" aria-selected="true"/);
+    assert.match(html, /class="morebar"/);
+    app._test.setTab('mehr'); app.render();
+    assert.match(app.__dom.root.innerHTML, /class="more-row" data-tab="data"/);
+    app._test.setState({ ladders: { a1: { step: 3, since: '2026-09-10' } }, run: { step: 2, since: '2026-09-12' } });
+    const dump = JSON.parse(app.backupPayload());
+    assert.equal(dump.ladders.a1.step, 3);
+    assert.equal(dump.run.step, 2);
+    const other = await fresh();
+    await other.applyBackup(JSON.stringify(dump));
+    assert.equal(other.ladderStatus('a1').step, 3);
+    assert.equal(other.runStatus().step, 2);
+    const third = await fresh();
+    third._test.setState({ ladders: { a1: { step: 1, since: '2026-09-10' } } });
+    await third.applyBackup(JSON.stringify({ v: 4, entries: [], mornings: [], tests: [] }));   // alte Sicherung ohne Programmstand
+    assert.equal(third.ladderStatus('a1').step, 1);
   });
 });
