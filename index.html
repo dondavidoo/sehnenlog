@@ -1910,6 +1910,27 @@ function ladderLineHtml(s, mark) {
       <div class="today-side">${mark ? `<span class="arrow">⬆ heute steigern${s.cur ? ` (war ${esc(`${s.cur.sets} × ${s.cur.reps}`)})` : ''}</span>` : s.next ? `<span class="dots" aria-label="${s.counter} von 3 grün">${'●'.repeat(Math.min(s.counter, 3))}${'○'.repeat(Math.max(0, 3 - s.counter))}</span>` : ''}</div>
     </div>`;
 }
+// Offene „Schmerz danach“-Werte: alle Einheiten von heute und gestern ohne Wert – wie der Morgen-Check
+function afterOpenEntries() {
+  const t = today();
+  return sorted().filter(e => e.painAfter == null && e.date <= t && daysBetween(e.date, t) <= 1).reverse();
+}
+function afterTodayHtml() {
+  const list = afterOpenEntries();
+  if (!list.length) return '';
+  return `<div class="card pending">
+      <h2>Wie war es danach?</h2>
+      <p class="lede">Die Spitze in den 1–6 Stunden nach der Einheit – und ob die Sehne den Rest des Tages spürbar war. Das ist der Wert, der im September gefehlt hat.</p>
+      ${list.map(e => {
+        if (afterEdit && afterEdit.id === e.id) return `<div class="day-row editing">${afterEditorHtml(e)}</div>`;
+        return `<div class="day-row">
+          <span class="day-time">${e.time ? esc(e.time) : '–'}</span>
+          <div class="day-main"><div class="day-title">${esc(typeLabel(e.type))}${e.date !== today() ? ' · gestern' : ''}</div><div class="day-sub">${esc(summary(e))}</div></div>
+          <div class="day-side"><div class="day-acts"><button type="button" class="btn small" data-act="editAfter" data-id="${esc(e.id)}">eintragen</button></div></div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
 function kraftTodayHtml() {
   const p = proposal(), started = LADDER_ORDER.filter(k => state.ladders[k].step >= 0 && !LADDERS[k].free);
   const lastK = kraftDays().slice(-1)[0] || null;
@@ -2011,6 +2032,8 @@ function tabToday() {
   const flags = redFlags();
   return `<div class="log">
     ${flags.length ? `<div class="flag"><b>Das gehört ärztlich angeschaut</b>${flags.map(f => `<div>${esc(f)}</div>`).join('')}</div>` : ''}
+    ${uiFlash && uiFlash.where === 'today' ? `<div class="infobox">${esc(uiFlash.text)}</div>` : ''}
+    ${afterTodayHtml()}
     <div class="card"><h2>${esc(dayLabel(today()))}</h2>${phaseBarHtml()}
       <p class="hint">Grün zählt den Zähler hoch, Gelb setzt ihn auf null, Rot heißt Stufe wiederholen. Stufenpläne und Kriterien im Tab „Fortschritt“.</p></div>
     ${kraftTodayHtml()}
@@ -2953,12 +2976,12 @@ function tabLog() {
         ${scaleHtml('painDuring', draft.painDuring, true, 'Schmerz während der Einheit, 0 bis 10')}
       </div>
 
-      <div class="field" id="f-painAfter">
+      ${editingId ? `<div class="field" id="f-painAfter">
         <span class="field-label">Schmerz danach</span>
-        <p class="hint">Die Spitze in den 1–6 Stunden nach der Einheit. Weißt du es noch nicht: leer lassen und im Verlauf nachtragen.${scaleLink('after', 'f-painAfter')}</p>
+        <p class="hint">Die Spitze in den 1–6 Stunden nach der Einheit.${scaleLink('after', 'f-painAfter')}</p>
         ${scaleHtml('painAfter', draft.painAfter, true, 'Schmerz danach, 0 bis 10')}
         <label class="check" style="margin-top:8px"><input type="checkbox" data-path="allDay" ${draft.allDay ? 'checked' : ''}><span>Die Sehne war den Rest des Tages spürbar</span></label>
-      </div>
+      </div>` : '<p class="hint">„Schmerz danach“ fragt die App später unter „Heute“ ab – nach jeder Einheit, 1–6 Stunden danach.</p>'}
       ${spotsFieldHtml('spots', draft.spots)}
 
       ${draft.type === 'kraft' ? `<div class="field" id="f-effort">
@@ -2993,7 +3016,7 @@ function tabLog() {
       `<h3>Schmerz während der Einheit</h3>
        <p class="txt">Trägst du unter „Einheit erfassen“ ein, direkt nach dem Training. Bis 3/10 ist grün, darüber Rot.</p>
        <h3>Schmerz danach</h3>
-       <p class="txt">Die Spitze in den ein bis sechs Stunden nach der Einheit. Bis 3 grün; 4 bis 5 oder „den Rest des Tages spürbar“ ist Gelb; über 5 Rot. Nachtragen geht im Verlauf, leer zählt nicht als Verstoß.</p>
+       <p class="txt">Die Spitze in den ein bis sechs Stunden nach der Einheit. Bis 3 grün; 4 bis 5 oder „den Rest des Tages spürbar“ ist Gelb; über 5 Rot. Die App fragt ihn unter „Heute“ ab, nachtragen geht auch im Verlauf; leer zählt nicht als Verstoß.</p>
        <h3>Schmerz am Morgen und Steifigkeit der Sehne</h3>
        <p class="txt">Jeder Morgen gehört zu dem Tag, an dem du aufwachst. Nach einem Trainingstag fragt die Morgen-Karte danach, weil die Bewertung diesen Wert braucht; an anderen Tagen ist er freiwillig. Ändern oder nachtragen kannst du ihn jederzeit im Verlauf.</p>
        <h3>Der Vergleich</h3>
@@ -3507,7 +3530,7 @@ document.addEventListener('click', async (ev) => {
     const wann = fmt(e.date);
     if (!entryClean(e)) revertLadderAdvance(e);
     afterEdit = null; await save();
-    if (!state.error) { uiFlash = { where: 'history', ok: true, text: `Schmerz danach für die Einheit vom ${wann} gespeichert.` }; announce(uiFlash.text); }
+    if (!state.error) { uiFlash = { where: tab === 'heute' ? 'today' : 'history', ok: true, text: `Schmerz danach für die Einheit vom ${wann} gespeichert.` }; announce(uiFlash.text); }
     return render();
   }
   if (act === 'saveMorning') {

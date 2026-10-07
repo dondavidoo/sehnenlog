@@ -867,3 +867,27 @@ describe('Paket 10: Stufenpläne für alle Übungen', () => {
     assert.equal(app.exDefaults('b3').v, 'je Seite');
   });
 });
+
+describe('Paket 11: „Wie war es danach?“ unter Heute', () => {
+  test('offene Werte von heute und gestern erscheinen, egal welche Einheit; Formular fragt nicht mehr', async () => {
+    const app = await fresh();
+    const e1 = entry(T, 1, { type: 'volleyball', time: '18:00', spots: ['knoechel'] });
+    const e2 = entry(day(app, -1), 1, { type: 'kraft', time: '18:00', spots: ['knoechel'] });
+    const e3 = entry(day(app, -2), 1, { type: 'lauf', time: '08:00', spots: ['knoechel'] });
+    app._test.setState({ entries: [e1, e2, e3], mornings: [app.makeMorning(day(app, -1), 1, 'unter15', ''), app.makeMorning(T, 1, 'unter15', '')] });
+    const h = app.tabToday();
+    assert.match(h, /Wie war es danach\?/);
+    assert.match(h, new RegExp(`data-act="editAfter" data-id="${e1.id}"`));
+    assert.match(h, new RegExp(`data-act="editAfter" data-id="${e2.id}"`));
+    assert.doesNotMatch(h, new RegExp(`data-id="${e3.id}"`));   // vorgestern: nur noch im Logbuch
+    app._test.setAfterEdit({ id: e1.id, pain: 2, allDay: false, spots: ['knoechel'] });
+    assert.match(app.tabToday(), /data-scale="aPain" data-val="2" aria-pressed="true"/);
+    const d = app.newDraft(); d.painDuring = 1; d.spots = ['knoechel'];
+    app._test.setDraft(d); app._test.openForm(true); app._test.setTab('log');
+    const f = app.tabLog();
+    assert.doesNotMatch(f, /data-scale="painAfter"/);
+    assert.match(f, /fragt die App später unter „Heute“ ab/);
+    app._test.setDraft(d, e1.id);
+    assert.match(app.tabLog(), /data-scale="painAfter"/);   // beim Bearbeiten bleibt das Feld
+  });
+});
