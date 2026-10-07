@@ -362,6 +362,8 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
   .today-side { flex-shrink: 0; }
   .today-up { background: var(--tint); margin: 0 -10px; padding: 8px 10px; border-radius: 8px; border-top: 0; }
   .arrow { color: var(--act); font-weight: 650; font-size: 13px; }
+  .exlink { font: inherit; font-weight: 700; color: var(--ink); background: none; border: 0; padding: 0; text-decoration: underline; text-decoration-color: var(--act); text-underline-offset: 3px; cursor: pointer; }
+  .exlink:hover { color: var(--act); }
   .dots { letter-spacing: 2px; color: var(--act); font-size: 13px; }
   .phasebar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
   .phase { text-align: center; padding: 8px 4px; border-radius: 8px; border: 1px solid var(--rule); background: var(--surface-3); color: var(--ink-soft); display: flex; flex-direction: column; gap: 2px; }
@@ -726,6 +728,7 @@ let state = { entries: [], mornings: [], tests: [], loaded: false, error: null, 
 let tab = 'heute';
 let openAcc = null;
 let scaleJump = null;   // { sc, from }: Sprung aus dem Formular in den Skalen-Tab und zurück
+let exJump = null;      // { id, from }: Sprung aus „Heute“ in die Übungsbibliothek und zurück
 let draft = newDraft();
 let morningDraft = {};
 let showExport = false;   // Textfassung fürs Chat wird beim Rendern erzeugt – nie veraltet
@@ -1569,10 +1572,10 @@ function lastLadderChange() {
   const dates = LADDER_ORDER.map(k => state.ladders[k].since).filter(Boolean);
   return dates.length ? dates.sort().slice(-1)[0] : null;
 }
-function gateOk(key) {
+function gateOk(key, date) {
   const g = LADDERS[key].gate;
   if (!g) return true;
-  const t = today();
+  const t = isIsoDate(date) ? date : today();
   const spotRecent = (list) => list.some(x => x.date <= t && daysBetween(x.date, t) < GATE_KAHNBEIN_TAGE && (x.spots || []).some(s => s === 'innenfuss' || s === 'spann'));
   return !spotRecent(state.entries) && !spotRecent(state.mornings.filter(m => !m.skipped));
 }
@@ -1584,31 +1587,33 @@ function ladderStatus(key) {
     kind: next ? stepKind(cur, next) : null };
 }
 // Genau ein Vorschlag je Einheit: erst neue Übung, dann Sätze, dann Stufe – frei nach 3 grünen Einheiten seit der letzten Änderung
-function proposal() {
-  if (memo.proposal !== undefined) return memo.proposal;
+function proposal(date) {
+  const day = isIsoDate(date) ? date : today();
+  memo.proposal = memo.proposal || {};
+  if (memo.proposal[day] !== undefined) return memo.proposal[day];
   const started = LADDER_ORDER.filter(k => state.ladders[k].step >= 0);
   const out = { blocked: null, item: null, streak: 0, stages: [] };
-  if (isDeloadWeek()) out.blocked = 'Entlastungswoche – keine Steigerung, 30 % weniger Volumen.';
+  if (isDeloadWeek(day)) out.blocked = 'Entlastungswoche – keine Steigerung, 30 % weniger Volumen.';
   const since = lastLadderChange();
   out.streak = started.length ? greenSince(since) : 0;
   const a = assess();
   if (!out.blocked && a.tone === 'down') out.blocked = a.word + ' – erst wieder grün werden.';
   if (!started.length) {
     out.item = { kind:'start', keys: UNLOCK_STAGES[0], text: 'Einheit 1: ' + UNLOCK_STAGES[0].map(k => `${LADDERS[k].name} ${stepText(LADDERS[k].steps[0], LADDERS[k].unit)}`).join(' + ') };
-    return (memo.proposal = out);
+    return (memo.proposal[day] = out);
   }
   const miss0 = UNLOCK_STAGES[0].filter(k => state.ladders[k].step < 0);
   if (miss0.length) {   // die zweite Startübung fehlt noch – ohne Zähler nachholen
     out.item = { kind:'neu', key: miss0[0], step: 0, text: `Noch nicht gestartet: ${LADDERS[miss0[0]].name} ${stepText(LADDERS[miss0[0]].steps[0], LADDERS[miss0[0]].unit)}` };
-    return (memo.proposal = out);
+    return (memo.proposal[day] = out);
   }
-  if (out.blocked || out.streak < GRUEN_FUER_STEIGERUNG) return (memo.proposal = out);
+  if (out.blocked || out.streak < GRUEN_FUER_STEIGERUNG) return (memo.proposal[day] = out);
   // nächste Stufe der Freischaltung: alle Übungen einer Stufe müssen laufen, bevor die nächste kommt
   for (const stage of UNLOCK_STAGES) {
     const missing = stage.filter(k => state.ladders[k].step < 0);
     if (!missing.length) continue;
-    const ok = missing.filter(gateOk);
-    if (ok.length) { out.item = { kind:'neu', key: ok[0], step: 0, text: `Neu dazu: ${LADDERS[ok[0]].name} ${stepText(LADDERS[ok[0]].steps[0], LADDERS[ok[0]].unit)}` }; return (memo.proposal = out); }
+    const ok = missing.filter(k => gateOk(k, day));
+    if (ok.length) { out.item = { kind:'neu', key: ok[0], step: 0, text: `Neu dazu: ${LADDERS[ok[0]].name} ${stepText(LADDERS[ok[0]].steps[0], LADDERS[ok[0]].unit)}` }; return (memo.proposal[day] = out); }
     out.gated = `${missing.map(k => LADDERS[k].name).join(' und ')} warten, bis Innenfuß/Kahnbein ${GATE_KAHNBEIN_TAGE} Tage ohne Schmerz war.`;
     break;   // gesperrte Übungen überspringen, Sätze/Stufen der laufenden Übungen dürfen weiter
   }
@@ -1618,13 +1623,13 @@ function proposal() {
     const s = cands[0];
     out.item = { kind: s.kind, key: s.key, step: s.step + 1, text: `${s.name}: ${stepText(s.next, LADDERS[s.key].unit)} (war ${stepText(s.cur, LADDERS[s.key].unit)})` };
   }
-  return (memo.proposal = out);
+  return (memo.proposal[day] = out);
 }
 // Nach dem Speichern einer Kraft-Einheit: wurde der Vorschlag umgesetzt? Dann rückt die Leiter vor.
 function entryClean(entry) { return !(entry.painDuring > SCHMERZ_MAX) && !(entry.painAfter > DANACH_MAX) && !entry.allDay; }
 function applyLadderAdvance(entry) {
   if (entry.type !== 'kraft' || !entryClean(entry) || isDeloadWeek(entry.date)) return null;
-  const p = proposal();
+  const p = proposal(entry.date);
   if (!p.item || p.blocked) return null;
   const changed = [];
   const advance = (k, idx) => {
@@ -1824,7 +1829,7 @@ function ladderLineHtml(s, mark) {
   const L = LADDERS[s.key], step = mark ? L.steps[mark.step] : s.cur;
   if (!step) return '';
   return `<div class="today-row${mark ? ' today-up' : ''}">
-      <div class="today-main"><b>${esc(s.name)}</b> ${esc(`${step.sets} × ${step.reps}`)}${step.v ? ` · ${esc(step.v)}` : ''} ${stepEquipHtml(step)}</div>
+      <div class="today-main"><button type="button" class="exlink" data-act="gotoEx" data-ex="${esc(L.ex[0])}" aria-label="${esc(s.name)} – Ausführung nachlesen">${esc(s.name)}</button> ${esc(`${step.sets} × ${step.reps}`)}${step.v ? ` · ${esc(step.v)}` : ''} ${stepEquipHtml(step)}</div>
       <div class="today-side">${mark ? `<span class="arrow">⬆ heute steigern${s.cur ? ` (war ${esc(`${s.cur.sets} × ${s.cur.reps}`)})` : ''}</span>` : `<span class="dots" aria-label="${s.counter} von 3 grün">${'●'.repeat(Math.min(s.counter, 3))}${'○'.repeat(Math.max(0, 3 - s.counter))}</span>`}</div>
     </div>`;
 }
@@ -1834,7 +1839,7 @@ function kraftTodayHtml() {
   const hours = lastK ? (new Date(today() + 'T12:00') - new Date(lastK.date + 'T12:00')) / 3600000 : null;
   const due = hours === null || hours >= KRAFT_ABSTAND_H;
   const faellig = due ? 'Sehnenkraft fällig' : `Sehnenkraft: frühestens ${fmt(addDays(lastK.date, 2))}`;
-  let rows = `<div class="today-row"><div class="today-main"><b>Einbeinstand</b> 2 × 30 Sek. · Aufwärmen, ohne Zähler</div></div>`;
+  let rows = `<div class="today-row"><div class="today-main"><button type="button" class="exlink" data-act="gotoEx" data-ex="bal">Einbeinstand</button> 2 × 30 Sek. · Aufwärmen, ohne Zähler</div></div>`;
   if (!started.length) {
     rows += UNLOCK_STAGES[0].map(k => ladderLineHtml(ladderStatus(k), { step: 0 })).join('');
   } else {
@@ -1844,7 +1849,7 @@ function kraftTodayHtml() {
     });
     if (p.item && !p.blocked && p.item.kind === 'neu') rows += ladderLineHtml(ladderStatus(p.item.key), { step: 0 });
   }
-  rows += `<div class="today-row"><div class="today-main"><b>Wadendehnung</b> gestreckt und gebeugt je 2 × 30 Sek. · Pflicht zum Schluss</div></div>`;
+  rows += `<div class="today-row"><div class="today-main"><button type="button" class="exlink" data-act="gotoEx" data-ex="dehn">Wadendehnung</button> gestreckt und gebeugt je 2 × 30 Sek. · Pflicht zum Schluss</div></div>`;
   const note = p.blocked ? `<div class="warnbox">${esc(p.blocked)}</div>`
     : p.item ? '' : `<p class="hint">Zähler: ${p.streak} von ${GRUEN_FUER_STEIGERUNG} grünen Einheiten seit der letzten Änderung – danach schlägt die App genau eine Steigerung vor.</p>`;
   const gated = p.gated ? `<p class="hint">${esc(p.gated)}</p>` : '';
@@ -1964,9 +1969,9 @@ function testsTableHtml() {
   if (!rows.length) return '<p class="txt">Noch kein Test erfasst.</p>';
   return `<table class="ttab"><thead><tr><th>Datum</th><th>rechts</th><th>links</th><th>%</th><th>Ergebnis</th></tr></thead><tbody>${rows.map(x => {
     const p = ph.passed.find(y => y.test.date === x.date);
-    const nr = p ? p.phase : (x.date >= ph.since ? ph.nr : null);
-    const o = nr ? testOutcome(x, PHASEN[nr - 1]) : null;
-    const res = !o ? 'vor dem Programm' : o.status === 'bestanden' ? `Phase ${nr} bestanden` : o.status === 'offen' ? 'offen' : `nicht bestanden (${o.reasons.join('; ')})`;
+    const nr = p ? p.phase : x.date < PROGRAMM_START ? null : Math.min(4, 1 + ph.passed.filter(y => y.test.date < x.date).length);
+    const o = nr && nr < 4 ? testOutcome(x, PHASEN[nr - 1]) : null;
+    const res = !nr ? 'vor dem Programm' : !o ? 'Phase 4 – Kontrolle' : o.status === 'bestanden' ? `Phase ${nr} bestanden` : o.status === 'offen' ? 'offen' : `nicht bestanden (${o.reasons.join('; ')})`;
     return `<tr><td>${esc(weekday(x.date))}, ${fmtY(x.date)}</td><td>${x.right}</td><td>${x.left}</td><td>${x.left > 0 ? Math.round(x.right / x.left * 100) : '–'}</td><td>${esc(res)}</td></tr>`; }).join('')}</tbody></table>`;
 }
 function tabProgress() {
@@ -2353,10 +2358,11 @@ function tabEx() {
       return `<div class="blockhead">${esc(gr.title)}</div><p class="blocksub">${esc(gr.sub)}</p><div class="acc-grid">` +
         ids.map(id => {
           const ex = EX[id];
+          const back = exJump && exJump.id === id ? `<div class="btn-row" style="margin-bottom:10px"><button type="button" class="btn quiet small" data-act="backFromEx">← Zurück zu „Heute“</button></div>` : '';
           return acc(id, ex.name, ex.dose,
-            `<h3>Ausführung</h3><ul>${ex.how.map(h => `<li>${esc(h)}</li>`).join('')}</ul>
+            `${back}<h3>Ausführung</h3><ul>${ex.how.map(h => `<li>${esc(h)}</li>`).join('')}</ul>
              <div class="acc-err"><b>Häufiger Fehler:</b> ${esc(ex.err)}</div>
-             ${figHtml(ex.fig)}`);
+             ${figHtml(ex.fig)}${back}`);
         }).join('') + '</div>';
     }).join('')}
   </div>`;
@@ -2614,7 +2620,7 @@ function testRowHtml(date) {
   return `<div class="day-row${testDraft && testDraft.orig === date ? ' editing' : ''}">
       <span class="day-time">Test</span>
       <div class="day-main">
-        <div class="day-title">Austrittstest${(() => { const ph = phaseState(); const p = ph.passed.find(y => y.test.date === date); const nr = p ? p.phase : (date >= ph.since ? ph.nr : null); if (!nr) return ''; const o = testOutcome(x, PHASEN[nr - 1]); return o.status === 'bestanden' ? ` · Phase ${nr} bestanden` : o.status === 'offen' ? ' · Ergebnis offen' : ' · nicht bestanden'; })()}</div>
+        <div class="day-title">Austrittstest${(() => { const ph = phaseState(); const p = ph.passed.find(y => y.test.date === date); const nr = p ? p.phase : date < PROGRAMM_START ? null : Math.min(4, 1 + ph.passed.filter(y => y.test.date < date).length); if (!nr || nr >= 4) return ''; const o = testOutcome(x, PHASEN[nr - 1]); return o.status === 'bestanden' ? ` · Phase ${nr} bestanden` : o.status === 'offen' ? ' · Ergebnis offen' : ' · nicht bestanden'; })()}</div>
         <div class="day-sub">rechts ${x.right} · links ${x.left} · ${abstand}${pct !== null ? ` (${pct} % von links)` : ''}${x.jumpR != null && x.jumpL ? ` · Hop ${x.jumpR}/${x.jumpL} cm` : ''}${x.hops != null ? ` · ${x.hops} Hops` : ''}${x.balance ? ' · Einbeinstand ✓' : ''}${x.after != null ? ` · danach ${x.after}` : ''}</div>
         ${x.note ? `<div class="day-sub day-note">${esc(x.note)}</div>` : ''}
       </div>
@@ -3011,7 +3017,7 @@ function focusKeyOf(el) {
   if (!el || el === document.body || !document.getElementById('root').contains(el)) return null;
   if (el.id) return '#' + CSS.escape(el.id);
   if (el.classList.contains('chart-svg')) return '.chart-svg';
-  const attrs = ['data-tab','data-act','data-scale','data-seg','data-chips','data-apath','data-extoggle','data-exblock','data-exlast','data-acc','data-val','data-id','data-date','data-snap','data-type','data-range','data-sc','data-where','data-path','data-mpath','data-epath','data-tpath'];
+  const attrs = ['data-tab','data-act','data-ex','data-key','data-scale','data-seg','data-chips','data-apath','data-extoggle','data-exblock','data-exlast','data-acc','data-val','data-id','data-date','data-snap','data-type','data-range','data-sc','data-where','data-path','data-mpath','data-epath','data-tpath'];
   const parts = attrs.filter(a => el.hasAttribute(a)).map(a => `[${a}="${CSS.escape(el.getAttribute(a))}"]`);
   return parts.length ? parts.join('') : null;
 }
@@ -3153,7 +3159,7 @@ document.addEventListener('click', async (ev) => {
   if (!t) return;
   uiFlash = null;   // Rückmeldungen gelten nur bis zum nächsten Tippen
 
-  if (t.dataset.tab) { tab = t.dataset.tab; openAcc = null; scaleJump = null; window.scrollTo(0,0); return render(); }
+  if (t.dataset.tab) { tab = t.dataset.tab; openAcc = null; scaleJump = null; exJump = null; window.scrollTo(0,0); return render(); }
   if (t.dataset.acc) { openAcc = openAcc === t.dataset.acc ? null : t.dataset.acc; return render(); }
   if (t.dataset.extoggle) {
     const id = t.dataset.extoggle;
@@ -3202,6 +3208,21 @@ document.addEventListener('click', async (ev) => {
     tab = 'scale'; openAcc = null;
     render();
     document.getElementById('sc-' + sc)?.scrollIntoView({ block:'start' });
+    return;
+  }
+  if (act === 'gotoEx') {
+    const id = t.dataset.ex; if (!EX[id]) return;
+    exJump = { id, from: tab };
+    tab = 'ex'; openAcc = id; scaleJump = null;
+    render();
+    document.querySelector(`[data-acc="${CSS.escape(id)}"]`)?.scrollIntoView({ block: 'start' });
+    focusEl(`[data-acc="${CSS.escape(id)}"]`);
+    return;
+  }
+  if (act === 'backFromEx') {
+    const from = exJump && exJump.from;
+    exJump = null; openAcc = null; tab = from === 'log' ? 'log' : 'heute';
+    render(); window.scrollTo(0, 0);
     return;
   }
   if (act === 'backFromScale') {

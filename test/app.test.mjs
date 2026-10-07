@@ -691,7 +691,7 @@ describe('Paket 6: Leitern, Vorschlag, Lauf-Leiter, Phasen, Austrittstest', () =
     app._test.setState({ entries, mornings, ladders: { a1: { step: 0, since: '2026-10-08' }, a3: { step: 0, since: '2026-10-08' } } });
     const h = app.tabToday();
     assert.match(h, /Sehnenkraft fällig/);
-    assert.match(h, /Wadenheben gebeugt<\/b> 1 × 12[\s\S]*⬆ heute steigern/);
+    assert.match(h, /Wadenheben gebeugt<\/button> 1 × 12[\s\S]*⬆ heute steigern/);
     assert.match(h, /Theraband gelb \(4,5 kg\)/);
     assert.match(h, /class="swatch" style="background:#E3B93C"/);
     assert.match(h, /data-act="openFromToday" data-type="kraft"/);
@@ -758,5 +758,20 @@ describe('Paket 6b: Review-Korrekturen', () => {
     assert.equal(app.testOutcome(t, app.PHASEN[0]).status, 'nicht');   // 2 > 1 (letzter Morgen davor)
     app._test.setState({ tests: [t], mornings: [morn(app, '2026-12-05', 2), morn(app, '2026-12-11', 2)] });
     assert.equal(app.testOutcome(t, app.PHASEN[0]).status, 'bestanden');
+  });
+});
+
+describe('Paket 7: Kleinkram und Sprung zur Übung', () => {
+  test('„Heute“ verlinkt jede Übung; Vorschlag rechnet mit dem Eintragsdatum', async () => {
+    const app = await loadApp();
+    app._test.setNow(() => new Date('2026-10-16T10:00:00'));
+    app._test.setProgrammStart('2026-10-07');
+    app._test.setState({ ladders: { a1: { step: 0, since: '2026-10-08' }, a3: { step: 0, since: '2026-10-08' } } });
+    const h = app.tabToday();
+    assert.match(h, /data-act="gotoEx" data-ex="a1"/);
+    assert.match(h, /data-act="gotoEx" data-ex="bal"/);
+    assert.match(h, /data-act="gotoEx" data-ex="dehn"/);
+    assert.equal(app.proposal('2026-10-29').blocked && /Entlastungswoche/.test(app.proposal('2026-10-29').blocked), true);
+    assert.equal(app.proposal('2026-10-16').blocked, null);
   });
 });
