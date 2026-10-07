@@ -1353,8 +1353,9 @@ function redFlags() {
   }
   // Rot-Serie: vier rote Trainingstage in vier Wochen
   const all = days(), done = all.filter(d => d.painMorning != null);
-  const rot = done.filter((d, i) => daysBetween(d.date, t) <= 28 && dayLevel(d, i, done).level === 'rot').length;
-  if (rot >= 4) out.push(`${rot} rote Trainingstage in den letzten vier Wochen – das Programm greift so nicht.`);
+  // Nur Tage ab Programmstart – die Regeln gelten nicht rückwirkend für den September
+  const rotTage = done.filter((d, i) => d.date >= PROGRAMM_START && daysBetween(d.date, t) <= 28 && dayLevel(d, i, done).level === 'rot').map(d => d.date);
+  if (rotTage.length >= 4) out.push(`${rotTage.length} rote Trainingstage in den letzten vier Wochen (${rotTage.map(fmt).join(', ')}) – das Programm greift so nicht.`);
   // Innenfuß/Kahnbein in vier der letzten fünf Kraft-Einheiten
   const kd = kraftDays().slice(-5);
   if (kd.length === 5 && kd.filter(d => d.entries.some(e => (e.spots || []).includes('innenfuss'))).length >= 4) out.push('Schmerz am Innenfuß/Kahnbein in vier der letzten fünf Kraft-Einheiten – Ansatz oder akzessorisches Kahnbein abklären lassen.');
