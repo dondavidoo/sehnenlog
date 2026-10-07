@@ -1006,3 +1006,70 @@ describe('Review 8.10.: Paket A – Programmlogik', () => {
     assert.equal(app.state.ladders.a1.by, e.id);
   });
 });
+
+describe('Review 8.10.: Paket B – Bedienung und Texte', () => {
+  const kraftAt = (date) => ({ id: 'k' + date, date, time: '18:00', type: 'kraft', details: { ex: { a1: { sets: '1', reps: '12', weight: '' } } }, painDuring: 1, painAfter: 1, spots: ['knoechel'] });
+
+  test('B1: 48 Stunden Abstand über die Zeitumstellung bleiben 48 Stunden – Einheit ist fällig', async () => {
+    const app = await loadApp();
+    app._test.setNow(() => new Date('2027-03-29T10:00:00'));   // Sonntag 28.3.2027: Beginn der Sommerzeit
+    app._test.setProgrammStart('2026-10-07');
+    app._test.setState({ entries: [kraftAt('2027-03-27'), kraftAt('2027-03-29')], mornings: [app.makeMorning('2027-03-28', 1, 'unter15', '')] });
+    assert.equal(app.kraftGapHours('2027-03-29'), 48);
+    assert.equal(app.kraftGapHours('2027-03-27'), null);
+    app._test.setState({ entries: [kraftAt('2027-03-27')], mornings: [app.makeMorning('2027-03-28', 1, 'unter15', ''), app.makeMorning('2027-03-29', 1, 'unter15', '')] });
+    assert.match(app.tabToday(), /Sehnenkraft fällig/);
+  });
+
+  test('B2: „Erfassen“ aus Heute verwirft keinen angefangenen Entwurf ohne Rückfrage', async () => {
+    const app = await fresh();
+    const d = app.newDraft(); d.type = 'lauf'; d.run.min = '25'; d.painDuring = 1;
+    app._test.setDraft(d); app._test.setTab('heute');
+    globalThis.confirm = () => false;
+    app.openFromToday('kraft');
+    let ui = app._test.ui();
+    assert.equal(ui.draft.run.min, '25'); assert.equal(ui.draft.type, 'lauf');
+    assert.equal(ui.formOpen, true); assert.equal(ui.tab, 'log');
+    globalThis.confirm = () => true;
+    app.openFromToday('kraft');
+    ui = app._test.ui();
+    assert.equal(ui.draft.type, 'kraft'); assert.equal(ui.draft.run.min, '');
+    assert.equal(ui.draft.ex.a1.sets, '1');   // vorausgefüllt aus den Leitern
+  });
+
+  test('B3: Fokus-Wiederherstellung kennt die Ausrüstungsfelder', async () => {
+    const app = await fresh();
+    const el = { id: '', classList: { contains: () => false }, hasAttribute: a => a === 'data-spath', getAttribute: a => a === 'data-spath' ? 'thera.0.kg' : null };
+    assert.equal(app.focusKeyOf(el), '[data-spath="thera.0.kg"]');
+  });
+
+  test('B4: im Logbuch heißt es überall „Austrittstest“, nicht mehr „Monatstest“', async () => {
+    const app = await fresh();
+    const t = app.makeTest(day(app, -1), 15, 20, '', { after: 1 });
+    app._test.setState({ tests: [t], entries: [entry(day(app, -3), 1, { spots: ['knoechel'] })], mornings: [app.makeMorning(day(app, -2), 1, 'unter15', ''), app.makeMorning(T, 1, 'unter15', '')] });
+    app._test.setTab('log');
+    const h = app.tabLog();
+    assert.doesNotMatch(h, /Monatstest/);
+    assert.match(h, /dazu 1 Austrittstest/);
+    assert.match(h, /class="day-tag">Austrittstest</);
+  });
+
+  test('B5: Umzug aus v3 erklärt beides – verschobene Morgen und die neuen Felder', async () => {
+    const app = await fresh();
+    const legacy = app.migrationText({ legacy: true, doppelt: 0 });
+    assert.match(legacy, /Morgenwerte stehen jetzt/); assert.match(legacy, /Schmerz danach/);
+    const v4 = app.migrationText({ legacy: false, from: 4 });
+    assert.doesNotMatch(v4, /Morgenwerte stehen jetzt/); assert.match(v4, /Schmerz danach/);
+  });
+
+  test('B6: Hantelschritt aus den Einstellungen steht auch im Phase-2-Kriterium und im Plan', async () => {
+    const app = await fresh();
+    app._test.setState({ settings: { hantelSchritt: 2.5 } });
+    const c = app.phaseCriteria(2).find(x => /Einbeinig 4 × 8/.test(x.label));
+    assert.match(c.label, /\+2\.5 kg/);
+    app._test.setAcc('ph1');   // Phase 2 im Plan aufklappen
+    const plan = app.tabPlan();
+    assert.match(plan, /2\.5-kg-Schritten/); assert.match(plan, /\+2\.5 kg grün/);
+    assert.doesNotMatch(plan, /\+5 kg/);
+  });
+});

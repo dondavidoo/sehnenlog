@@ -136,7 +136,7 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
   .exblock-name { font-size: 12.5px; font-weight: 600; color: var(--ink-soft); }
   .exblock .sc-link, .exrow-last .sc-link { font-size: 12.5px; }
   .exrow-last { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 10px; font-size: 12px; color: var(--ink-soft); margin-top: 7px; }
-  /* Monatstest-Tabelle */
+  /* Austrittstest-Tabelle */
   .ttab { width: 100%; border-collapse: collapse; font-size: 13.5px; margin-top: 12px; font-variant-numeric: tabular-nums; }
   .ttab th, .ttab td { text-align: right; padding: 6px 4px; border-bottom: 1px solid var(--rule-soft); }
   .ttab th { font-size: 12px; font-weight: 600; color: var(--ink-soft); }
@@ -616,9 +616,9 @@ const PHASES = [
   { span:'mindestens 12 Wochen', title:'Schwere Kraft und Laufaufbau',
     goal:'Der eigentliche Umbaureiz: Lasten über etwa 70 % des Maximums, langsam ausgeführt, mindestens zwölf Wochen.',
     parts:[
-      ['Sehnenkraft – 2× pro Woche, 20–25 Min.', ['Wadenheben einbeinig auf der Stufe, dann mit Kurzhantel in 5-kg-Schritten: 4 × 8 → 4 × 12 → +5 kg','Band-Adduktion: nächstes Band, sobald 3 × 15 grün','Ball-Wadenheben bis einbeinig, kein Zusatzgewicht; Doming bis stehend','Entlastungswoche alle vier Wochen']],
+      ['Sehnenkraft – 2× pro Woche, 20–25 Min.', [() => `Wadenheben einbeinig auf der Stufe, dann mit Kurzhantel in ${hantelKg()}-kg-Schritten: 4 × 8 → 4 × 12 → +${hantelKg()} kg`,'Band-Adduktion: nächstes Band, sobald 3 × 15 grün','Ball-Wadenheben bis einbeinig, kein Zusatzgewicht; Doming bis stehend','Entlastungswoche alle vier Wochen']],
       ['Laufen – 1–2× pro Woche, alles locker', ['Längster Lauf wächst um 10 % nach zwei grünen Läufen: 30 → 33 → 36 → 40 → 44 Min.','Kein Tempo, keine Hügel, keine Steigerungen','Schmerzort nach jedem Lauf eintragen – Anterior-Symptome hier beobachten']],
-      ['Austritt, wenn alles steht', ['Mindestens 12 Wochen in Phase 2','Einbeinig 4 × 8 mit +5 kg grün, gestreckt und gebeugt','44 Min. zweimal grün','Morgenwert 14 Tage nie über 2','Austrittstest: rechts ≥ 25 Wdh., ≥ 90 % von links, Einbeinstand 30 Sek. Augen zu, Morgen danach nicht höher']]
+      ['Austritt, wenn alles steht', ['Mindestens 12 Wochen in Phase 2',() => `Einbeinig 4 × 8 mit +${hantelKg()} kg grün, gestreckt und gebeugt`,'44 Min. zweimal grün','Morgenwert 14 Tage nie über 2','Austrittstest: rechts ≥ 25 Wdh., ≥ 90 % von links, Einbeinstand 30 Sek. Augen zu, Morgen danach nicht höher']]
     ]},
   { span:'mindestens 4 Wochen', title:'Tempo und Plyometrie',
     goal:'Die Sehne an schnelle, energiespeichernde Lasten gewöhnen. Tempo ist der stärkere Reiz als Distanz, deshalb kommt es zuletzt.',
@@ -962,9 +962,11 @@ function adopt(n) {
   return hasData();
 }
 function packState() { return { v: 5, entries: state.entries, mornings: state.mornings, tests: state.tests, settings: state.settings || cleanSettings(null), ladders: state.ladders || cleanLadders(null), run: state.run || cleanRun(null), plyo: state.plyo || cleanPlyo(null) }; }
+// Hinweis nach dem Umzug: aus v4 nur das Neue, aus v3 und älter zusätzlich die verschobenen Morgenwerte – sonst fehlt beim Sprung über zwei Fassungen eine der beiden Erklärungen
 function migrationText(n) {
-  if (!n.legacy) return 'Neu in dieser Fassung: „Schmerz danach“, Schmerzort und Distanz beim Lauf. Deine Daten wurden übernommen – bei alten Einträgen sind die neuen Felder leer, das zählt nicht als Verstoß. Der alte Stand bleibt zusätzlich gespeichert.';
-  return 'Morgenwerte stehen jetzt an dem Tag, an dem du aufgewacht bist – nicht mehr beim Training vom Vortag. Deine Daten wurden übernommen, der alte Stand bleibt zusätzlich unverändert gespeichert.'
+  const neu = 'Neu in dieser Fassung: „Schmerz danach“, Schmerzort und Distanz beim Lauf – bei alten Einträgen sind die neuen Felder leer, das zählt nicht als Verstoß.';
+  if (!n.legacy) return neu + ' Deine Daten wurden übernommen, der alte Stand bleibt zusätzlich gespeichert.';
+  return 'Morgenwerte stehen jetzt an dem Tag, an dem du aufgewacht bist – nicht mehr beim Training vom Vortag. ' + neu + ' Deine Daten wurden übernommen, der alte Stand bleibt zusätzlich unverändert gespeichert.'
     + (n.doppelt ? ` Für ${n.doppelt} Morgen gab es zwei Werte (Morgen-Check und „Morgen ohne Training“). Übernommen wurde der Morgen-Check, der zweite Wert steht in der Notiz.` : '');
 }
 
@@ -1236,7 +1238,8 @@ function kraftGapHours(date) {
   if (i <= 0) return null;
   const cur = list[i], prev = list[i - 1];
   if (prev.date === cur.date) return null;
-  const a = new Date(prev.date + 'T' + (prev.time || '12:00')), b = new Date(cur.date + 'T' + (cur.time || '12:00'));
+  // UTC wie addDays – mit Ortszeit wären es über die Zeitumstellung 47 bzw. 49 Stunden
+  const a = new Date(prev.date + 'T' + (prev.time || '12:00') + ':00Z'), b = new Date(cur.date + 'T' + (cur.time || '12:00') + ':00Z');
   if (isNaN(a) || isNaN(b)) return daysBetween(prev.date, cur.date) * 24;
   return (b - a) / 3600000;
 }
@@ -1499,7 +1502,8 @@ const GATE_KAHNBEIN_TAGE = 7;   // Ball und Doming erst, wenn Innenfuß/Kahnbein
 // Platz einer Kernübung besetzt? Auch durch die erklärte Alternative (Seitstütz statt Monster Walks)
 function slotFilled(k) { return state.ladders[k].step >= 0 || (LADDERS[k].alt != null && state.ladders[LADDERS[k].alt].step >= 0); }
 
-function stepWeight(step) { return step.wIdx ? step.wIdx * ((state.settings && state.settings.hantelSchritt) || 5) : 0; }
+function hantelKg() { return (state.settings && state.settings.hantelSchritt) || DEFAULT_SETTINGS.hantelSchritt; }
+function stepWeight(step) { return step.wIdx ? step.wIdx * hantelKg() : 0; }
 function stepText(step, unit) {
   const b = [`${step.sets} × ${step.reps}${unit === 'sek' ? ' Sek.' : ''}`];
   if (step.v) b.push(step.v);
@@ -1905,7 +1909,7 @@ function phaseCriteria(nr) {
   }
   if (nr === 2) {
     item('Mindestens 12 Wochen in Phase 2', ph.tage >= 84, `${Math.floor(ph.tage / 7)} von 12 Wochen`);
-    const a1 = L('a1'), a2 = L('a2'); item('Einbeinig 4 × 8 mit +5 kg grün, gestreckt und gebeugt', ladderAt(a1, 6) && ladderAt(a2, 6), `gestreckt ${a1.cur ? stepText(a1.cur, 'wdh') : '–'} · gebeugt ${a2.cur ? stepText(a2.cur, 'wdh') : '–'}`);
+    const a1 = L('a1'), a2 = L('a2'); item(`Einbeinig 4 × 8 mit +${hantelKg()} kg grün, gestreckt und gebeugt`, ladderAt(a1, 6) && ladderAt(a2, 6), `gestreckt ${a1.cur ? stepText(a1.cur, 'wdh') : '–'} · gebeugt ${a2.cur ? stepText(a2.cur, 'wdh') : '–'}`);
     const n = runGreenCount(44, ph.since); item('Längster Lauf 44 Min. zweimal grün', n >= 2, `${Math.min(n, 2)} von 2 (aktuelle Stufe ${r.text || '–'})`);
     item('Morgenwert in den letzten 14 Tagen nie über 2', morningCalm(14), morningCalm(14) ? 'erfüllt' : 'noch nicht');
   }
@@ -1987,7 +1991,7 @@ function afterTodayHtml() {
 function kraftTodayHtml() {
   const p = proposal(), started = LADDER_ORDER.filter(k => state.ladders[k].step >= 0 && !LADDERS[k].free);
   const lastK = kraftDays().slice(-1)[0] || null;
-  const hours = lastK ? (new Date(today() + 'T12:00') - new Date(lastK.date + 'T12:00')) / 3600000 : null;
+  const hours = lastK ? daysBetween(lastK.date, today()) * 24 : null;
   const due = hours === null || hours >= KRAFT_ABSTAND_H;
   const faellig = due ? 'Sehnenkraft fällig' : `Sehnenkraft: frühestens ${fmt(addDays(lastK.date, 2))}`;
   const line = (k, mark) => ladderLineHtml(ladderStatus(k), mark);
@@ -2526,7 +2530,7 @@ function tabPlan() {
       <p class="lede">Jede baut auf der vorherigen auf. Kein Kalender: Die Phase wechselt, wenn die Kriterien und der Austrittstest stehen. Zur Orientierung dauert das etwa Okt–Dez, Dez–März, März–April; der Halbmarathon-Plan beginnt realistisch im Mai 2027.</p>
       ${PHASES.map((p,i) => acc('ph'+i, p.title, `Phase ${i+1} · ${p.span}`,
         `<p class="txt txt-gap">${esc(p.goal)}</p>` +
-        p.parts.map(part => `<h3>${esc(part[0])}</h3><ul>${part[1].map(x => `<li>${esc(x)}</li>`).join('')}</ul>`).join('')
+        p.parts.map(part => `<h3>${esc(part[0])}</h3><ul>${part[1].map(x => `<li>${esc(typeof x === 'function' ? x() : x)}</li>`).join('')}</ul>`).join('')   // Funktion = Text mit Einstellungswert (Hantelschritt)
       )).join('')}
     </div>
 
@@ -2859,7 +2863,7 @@ function dayCardHtml(date) {
   return `<div class="day">
       <div class="day-head">
         <span class="day-date">${esc(dayLabel(date))}</span>
-        <span class="day-tag">${list.length ? `${list.length} ${list.length === 1 ? 'Einheit' : 'Einheiten'}` : testOf(date) ? 'Monatstest' : 'Ruhetag'}</span>
+        <span class="day-tag">${list.length ? `${list.length} ${list.length === 1 ? 'Einheit' : 'Einheiten'}` : testOf(date) ? 'Austrittstest' : 'Ruhetag'}</span>
       </div>
       ${morningRowHtml(date)}
       ${testRowHtml(date)}
@@ -3104,7 +3108,7 @@ function tabLog() {
     <div class="o11"><div class="card">
       <h2>Verlauf</h2>
       <p class="lede">${hasData()
-        ? `${state.entries.length} ${state.entries.length === 1 ? 'Einheit' : 'Einheiten'} und ${state.mornings.filter(m => !m.skipped).length} Morgen erfasst${state.tests.length ? `, dazu ${state.tests.length} ${state.tests.length === 1 ? 'Monatstest' : 'Monatstests'}` : ''}.`
+        ? `${state.entries.length} ${state.entries.length === 1 ? 'Einheit' : 'Einheiten'} und ${state.mornings.filter(m => !m.skipped).length} Morgen erfasst${state.tests.length ? `, dazu ${state.tests.length} ${state.tests.length === 1 ? 'Austrittstest' : 'Austrittstests'}` : ''}.`
         : 'Noch nichts erfasst.'}</p>
       ${uiFlash && uiFlash.where === 'history' ? `<div class="infobox">${esc(uiFlash.text)}</div>` : ''}
       <div id="chartbox">${chartInnerHtml()}</div>
@@ -3265,7 +3269,7 @@ function focusKeyOf(el) {
   if (!el || el === document.body || !document.getElementById('root').contains(el)) return null;
   if (el.id) return '#' + CSS.escape(el.id);
   if (el.classList.contains('chart-svg')) return '.chart-svg';
-  const attrs = ['data-tab','data-act','data-ex','data-key','data-scale','data-seg','data-chips','data-apath','data-extoggle','data-exblock','data-exlast','data-acc','data-val','data-id','data-date','data-snap','data-type','data-range','data-sc','data-where','data-path','data-mpath','data-epath','data-tpath'];
+  const attrs = ['data-tab','data-act','data-ex','data-key','data-scale','data-seg','data-chips','data-apath','data-spath','data-extoggle','data-exblock','data-exlast','data-acc','data-val','data-id','data-date','data-snap','data-type','data-range','data-sc','data-where','data-path','data-mpath','data-epath','data-tpath'];
   const parts = attrs.filter(a => el.hasAttribute(a)).map(a => `[${a}="${CSS.escape(el.getAttribute(a))}"]`);
   return parts.length ? parts.join('') : null;
 }
@@ -3410,6 +3414,21 @@ function setPath(path, val) {
   o[p[p.length-1]] = val;
 }
 
+// „Erfassen“ aus Heute: Formular im Logbuch öffnen, vorausgefüllt aus den Leitern bzw. der Plyo-Stufe.
+// Ein angefangener Entwurf wird nur nach Rückfrage verworfen – wie beim Knopf im Logbuch.
+function openFromToday(type) {
+  const t = TYPES[type] ? type : 'kraft';
+  if (draftIsEmpty(draft) || confirm('Im Logbuch ist noch ein angefangener Eintrag. Verwerfen und neu vorausfüllen?')) {
+    draft = newDraft(); draft.type = t; editingId = null;
+    if (t === 'kraft') draft.ex = exFromLadders();
+    if (t === 'plyo') { const s = plyoStatus(), tgt = s.ready && s.next ? s.next : s.cur; if (tgt) draft.ex = { [tgt.ex]: { sets: String(tgt.sets), reps: String(tgt.reps), weight: '' } }; }
+  }
+  testDraft = null; formOpen = true; tab = 'log';
+  render();
+  document.getElementById('form')?.scrollIntoView(SCROLL);
+  focusEl('#form h2');
+}
+
 document.addEventListener('click', async (ev) => {
   if (chartState && chartState.sel && !(ev.target.closest && ev.target.closest('.chart-svg'))) chartShow(null);
   const t = ev.target.closest('[data-scale],[data-seg],[data-chips],[data-act],[data-tab],[data-extoggle],[data-exblock],[data-exlast],[data-acc]');
@@ -3491,16 +3510,7 @@ document.addEventListener('click', async (ev) => {
     return;
   }
   if (act === 'setToday') { draft.date = today(); draft.time = nowTime(); whenOpen = false; return render(); }
-  if (act === 'openFromToday') {
-    draft = newDraft(); draft.type = TYPES[t.dataset.type] ? t.dataset.type : 'kraft';
-    if (draft.type === 'kraft') draft.ex = exFromLadders();
-    if (draft.type === 'plyo') { const s = plyoStatus(), tgt = s.ready && s.next ? s.next : s.cur; if (tgt) draft.ex = { [tgt.ex]: { sets: String(tgt.sets), reps: String(tgt.reps), weight: '' } }; }
-    testDraft = null; formOpen = true; editingId = null; tab = 'log';
-    render();
-    document.getElementById('form')?.scrollIntoView(SCROLL);
-    focusEl('#form h2');
-    return;
-  }
+  if (act === 'openFromToday') { openFromToday(t.dataset.type); return; }
   if (act === 'ladderUp' || act === 'ladderDown') {
     const k = t.dataset.key, L = LADDERS[k]; if (!L) return;
     const st = state.ladders[k], ns = act === 'ladderUp' ? Math.min(st.step + 1, L.steps.length - 1) : Math.max(-1, st.step - 1);
@@ -3749,12 +3759,12 @@ document.addEventListener('click', async (ev) => {
     return;
   }
   if (act === 'delTest') {
-    if (!testDraft || !testDraft.orig || !confirm(`Monatstest vom ${fmt(testDraft.orig)} entfernen?`)) return;
+    if (!testDraft || !testDraft.orig || !confirm(`Austrittstest vom ${fmt(testDraft.orig)} entfernen?`)) return;
     const date = testDraft.orig;
     state.tests = state.tests.filter(x => x.date !== date);
     testDraft = null;
     await save();
-    announce(`Monatstest vom ${fmt(date)} entfernt.`);
+    announce(`Austrittstest vom ${fmt(date)} entfernt.`);
     return;
   }
   if (act === 'export') { showExport = true; render(); document.getElementById('exportbox')?.scrollIntoView({block:'nearest'}); return; }
@@ -3963,6 +3973,7 @@ const _test = {
     state.settings = cleanSettings(s.settings); state.ladders = cleanLadders(s.ladders); state.run = cleanRun(s.run); state.plyo = cleanPlyo(s.plyo); state.loaded = true; invalidate(); },
   setDraft(d, editing) { draft = d; editingId = editing ?? null; },
   setTab(t) { tab = t; },
+  setAcc(a) { openAcc = a; },
   ui() { return { tab, formOpen, editingId, testDraft, uiFlash, lastDeleted, draft, mEdit }; },
   setMEdit(m) { mEdit = m; },
   setAfterEdit(a) { afterEdit = a; },

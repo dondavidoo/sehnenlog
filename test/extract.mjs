@@ -17,7 +17,7 @@ export const EXPORTS = [
   'state', '_test', 'today', 'addDays', 'daysBetween', 'isIsoDate', 'relDay', 'dayLabel', 'fmt', 'fmtY',
   'normalize', 'fromLegacy', 'cleanEntry', 'validEntry', 'validMorning', 'validTest', 'makeMorning', 'skippedMorning', 'makeTest',
   'sorted', 'entriesOf', 'hasTraining', 'morningOf', 'testOf', 'dayList', 'days', 'pending', 'assess', 'redFlags', 'testFlags', 'testDue',
-  'summary', 'collagenGap', 'buildExport', 'runCheck', 'greenStreak', 'spotsLabel', 'WHERE', 'exitTestStatus', 'phaseState', 'phaseCriteria', 'testOutcome', 'retestStatus', 'ladderStatus', 'proposal', 'applyLadderAdvance', 'applyRunAdvance', 'runStatus', 'exFromLadders', 'isDeloadWeek', 'gateOk', 'LADDERS', 'PHASEN', 'stepText', 'tabToday', 'tabProgress', 'plyoStatus', 'applyPlyoAdvance', 'PLYO_STEPS', 'revertLadderAdvance', 'revertAdvance', 'reapplyAdvances', 'applyAfterEdit', 'doseFromStep', 'exDefaults', 'backupPayload', 'backupFaellig', 'packState',
+  'summary', 'collagenGap', 'buildExport', 'runCheck', 'greenStreak', 'spotsLabel', 'WHERE', 'exitTestStatus', 'phaseState', 'phaseCriteria', 'testOutcome', 'retestStatus', 'ladderStatus', 'proposal', 'applyLadderAdvance', 'applyRunAdvance', 'runStatus', 'exFromLadders', 'isDeloadWeek', 'gateOk', 'LADDERS', 'PHASEN', 'stepText', 'tabToday', 'tabProgress', 'plyoStatus', 'applyPlyoAdvance', 'PLYO_STEPS', 'revertLadderAdvance', 'revertAdvance', 'reapplyAdvances', 'applyAfterEdit', 'kraftGapHours', 'openFromToday', 'focusKeyOf', 'migrationText', 'doseFromStep', 'exDefaults', 'backupPayload', 'backupFaellig', 'packState',
   'lastExUse', 'doseParts', 'draftIsEmpty', 'newDraft', 'draftFromEntry',
   'save', 'load', 'applyBackup', 'readSnapshot', 'readRescue', 'checkPersistence', 'safariBrowserModus', 'render', 'tabLog', 'tabData', 'tabPlan', 'tabEx', 'tabSupp', 'tabScales',
   'KEY', 'KEY_PREV', 'KEY_TRASH', 'KEYS_ALT', 'SCHMERZ_MAX', 'EXPORT_TAGE', 'TEST_INTERVALL_TAGE'
@@ -26,7 +26,7 @@ export const EXPORTS = [
 // Attrappen für alles, was der Code vom Browser anfasst. Der Speicher ist eine Map je Modul.
 const STUBS = `
 const __store = new Map();
-const __root = { innerHTML: '', clientWidth: 390, contains() { return false; } };
+const __root = { innerHTML: '', clientWidth: 390, contains(el) { return el != null; } };
 Object.defineProperty(globalThis, 'localStorage', { configurable: true, writable: true, value: {
   getItem: k => (__store.has(k) ? __store.get(k) : null),
   setItem: (k, v) => { __store.set(k, String(v)); },
