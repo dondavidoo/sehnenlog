@@ -525,10 +525,10 @@ describe('Paket 5: Schmerz danach, Schmerzort, Distanz, Speicherformat v5', () =
     assert.doesNotMatch(html, /Der Schmerzort fehlt noch/);
     assert.match(html, /data-chips="spots" data-val="knoechel" aria-pressed="true"/);
     assert.match(html, /data-act="editAfter" data-id="x"/);
-    app._test.setAfterEdit({ id: 'x', pain: 2, allDay: false, spots: ['knoechel'] });
+    app._test.setAfterEdit({ date: e.date, pain: 2, allDay: false, spots: ['knoechel'] });
     html = app.tabLog();
     assert.match(html, /data-scale="aPain" data-val="2" aria-pressed="true"/);
-    assert.match(html, /data-act="saveAfter" data-id="x" >/);
+    assert.match(html, new RegExp(`data-act="saveAfter" data-date="${e.date}" >`));
   });
   test('Lauf-Formular zeigt Distanz und die Laufhinweise', async () => {
     const app = await fresh();
@@ -872,16 +872,19 @@ describe('Paket 11: „Wie war es danach?“ unter Heute', () => {
   test('offene Werte von heute und gestern erscheinen, egal welche Einheit; Formular fragt nicht mehr', async () => {
     const app = await fresh();
     const e1 = entry(T, 1, { type: 'volleyball', time: '18:00', spots: ['knoechel'] });
+    const e1b = entry(T, 1, { type: 'kraft', time: '20:00', spots: ['knoechel'] });
     const e2 = entry(day(app, -1), 1, { type: 'kraft', time: '18:00', spots: ['knoechel'] });
     const e3 = entry(day(app, -2), 1, { type: 'lauf', time: '08:00', spots: ['knoechel'] });
-    app._test.setState({ entries: [e1, e2, e3], mornings: [app.makeMorning(day(app, -1), 1, 'unter15', ''), app.makeMorning(T, 1, 'unter15', '')] });
+    app._test.setState({ entries: [e1, e1b, e2, e3], mornings: [app.makeMorning(day(app, -1), 1, 'unter15', ''), app.makeMorning(T, 1, 'unter15', '')] });
     const h = app.tabToday();
     assert.match(h, /Wie war es danach\?/);
-    assert.match(h, new RegExp(`data-act="editAfter" data-id="${e1.id}"`));
+    assert.match(h, /Volleyball \+ Sehnenkraft/);   // ein Eintrag pro Tag, nicht pro Einheit
+    assert.equal((h.match(/data-act="editAfter"/g) || []).length, 2);
     assert.match(h, new RegExp(`data-act="editAfter" data-id="${e2.id}"`));
     assert.doesNotMatch(h, new RegExp(`data-id="${e3.id}"`));   // vorgestern: nur noch im Logbuch
-    app._test.setAfterEdit({ id: e1.id, pain: 2, allDay: false, spots: ['knoechel'] });
+    app._test.setAfterEdit({ date: T, pain: 2, allDay: false, spots: ['knoechel'] });
     assert.match(app.tabToday(), /data-scale="aPain" data-val="2" aria-pressed="true"/);
+    assert.match(app.tabToday(), /Volleyball \+ Sehnenkraft vom|Sehnenkraft vom|Volleyball vom/);
     const d = app.newDraft(); d.painDuring = 1; d.spots = ['knoechel'];
     app._test.setDraft(d); app._test.openForm(true); app._test.setTab('log');
     const f = app.tabLog();

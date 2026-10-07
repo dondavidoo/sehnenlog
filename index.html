@@ -1911,22 +1911,24 @@ function ladderLineHtml(s, mark) {
     </div>`;
 }
 // Offene „Schmerz danach“-Werte: alle Einheiten von heute und gestern ohne Wert – wie der Morgen-Check
-function afterOpenEntries() {
+function afterOpenDays() {
   const t = today();
-  return sorted().filter(e => e.painAfter == null && e.date <= t && daysBetween(e.date, t) <= 1).reverse();
+  const dates = [...new Set(sorted().filter(e => e.painAfter == null && e.date <= t && daysBetween(e.date, t) <= 1).map(e => e.date))];
+  return dates.sort().reverse();
 }
 function afterTodayHtml() {
-  const list = afterOpenEntries();
+  const list = afterOpenDays();
   if (!list.length) return '';
   return `<div class="card pending">
       <h2>Wie war es danach?</h2>
-      <p class="lede">Die Spitze in den 1–6 Stunden nach der Einheit – und ob die Sehne den Rest des Tages spürbar war. Das ist der Wert, der im September gefehlt hat.</p>
-      ${list.map(e => {
-        if (afterEdit && afterEdit.id === e.id) return `<div class="day-row editing">${afterEditorHtml(e)}</div>`;
+      <p class="lede">Ein Wert pro Tag: die Spitze in den 1–6 Stunden nach der letzten Einheit – und ob die Sehne den Rest des Tages spürbar war.</p>
+      ${list.map(date => {
+        const es = entriesOf(date);
+        if (afterEdit && afterEdit.date === date) return `<div class="day-row editing">${afterEditorHtml(es[0])}</div>`;
         return `<div class="day-row">
-          <span class="day-time">${e.time ? esc(e.time) : '–'}</span>
-          <div class="day-main"><div class="day-title">${esc(typeLabel(e.type))}${e.date !== today() ? ' · gestern' : ''}</div><div class="day-sub">${esc(summary(e))}</div></div>
-          <div class="day-side"><div class="day-acts"><button type="button" class="btn small" data-act="editAfter" data-id="${esc(e.id)}">eintragen</button></div></div>
+          <span class="day-time">${date === today() ? 'heute' : 'gestern'}</span>
+          <div class="day-main"><div class="day-title">${esc(es.map(e => typeLabel(e.type)).join(' + '))}</div><div class="day-sub">${esc(es.map(e => (e.time ? e.time + ' ' : '') + summary(e)).join(' · '))}</div></div>
+          <div class="day-side"><div class="day-acts"><button type="button" class="btn small" data-act="editAfter" data-id="${esc(es[0].id)}">eintragen</button></div></div>
         </div>`;
       }).join('')}
     </div>`;
@@ -2734,8 +2736,10 @@ function morningRowHtml(date) {
 // „Schmerz danach“ nachtragen – direkt in der Zeile, ohne das ganze Formular
 function afterEditorHtml(e) {
   const a = afterEdit, ok = a.pain != null && !needSpots(a.pain, a.spots);
+  const labels = entriesOf(a.date).map(x => typeLabel(x.type)).join(', ');
   return `<div class="m-edit">
-      <div class="day-title" style="margin-bottom:10px">Schmerz danach – ${esc(typeLabel(e.type))} vom ${fmt(e.date)}${e.time ? ', ' + esc(e.time) + ' Uhr' : ''}</div>
+      <div class="day-title" style="margin-bottom:10px">Schmerz danach – ${esc(labels)} vom ${fmt(a.date)}</div>
+      <p class="hint">Ein Wert für den ganzen Tag: die Spitze nach der letzten Einheit.</p>
       <div class="field" id="f-aPain">
         <span class="field-label">Spitze in den 1–6 Stunden danach</span>
         <p class="hint">Nicht während, nicht am nächsten Morgen.${scaleLink('after', 'f-aPain')}</p>
@@ -2744,14 +2748,14 @@ function afterEditorHtml(e) {
       <label class="check"><input type="checkbox" data-apath="allDay" ${a.allDay ? 'checked' : ''}><span>Die Sehne war den Rest des Tages spürbar</span></label>
       ${spotsFieldHtml('aSpots', a.spots)}
       <div class="btn-row">
-        <button class="btn small" data-act="saveAfter" data-id="${esc(e.id)}" ${ok ? '' : 'disabled'}>Speichern</button>
+        <button class="btn small" data-act="saveAfter" data-date="${esc(a.date)}" ${ok ? '' : 'disabled'}>Speichern</button>
         <button class="btn quiet small" data-act="cancelAfter">Abbrechen</button>
       </div>
     </div>`;
 }
 function entryRowHtml(e) {
   const label = typeLabel(e.type);
-  if (afterEdit && afterEdit.id === e.id) return `<div class="day-row editing">${afterEditorHtml(e)}</div>`;
+  if (afterEdit && afterEdit.date === e.date) return entriesOf(e.date)[0].id === e.id ? `<div class="day-row editing">${afterEditorHtml(e)}</div>` : '';
   const offen = e.painAfter == null && daysBetween(e.date, today()) <= DANACH_OFFEN_TAGE && e.date <= today();
   return `<div class="day-row${editingId === e.id ? ' editing' : ''}">
       <span class="day-time">${e.time ? esc(e.time) : '–'}</span>
@@ -3519,18 +3523,17 @@ document.addEventListener('click', async (ev) => {
 
   if (act === 'editAfter') {
     const e = state.entries.find(x => x.id === t.dataset.id);
-    if (e) { afterEdit = { id: e.id, pain: e.painAfter ?? null, allDay: !!e.allDay, spots: asSpots(e.spots) }; render(); focusEl('#f-aPain button'); }
+    if (e) { const withVal = entriesOf(e.date).find(x => x.painAfter != null) || e; afterEdit = { date: e.date, pain: withVal.painAfter ?? null, allDay: !!withVal.allDay, spots: asSpots(withVal.spots) }; render(); focusEl('#f-aPain button'); }
     return;
   }
   if (act === 'cancelAfter') { afterEdit = null; return render(); }
   if (act === 'saveAfter') {
-    const e = afterEdit && state.entries.find(x => x.id === afterEdit.id);
-    if (!e || afterEdit.pain == null || needSpots(afterEdit.pain, afterEdit.spots)) return;
-    e.painAfter = afterEdit.pain; e.allDay = !!afterEdit.allDay; e.spots = asSpots(afterEdit.spots);
-    const wann = fmt(e.date);
-    if (!entryClean(e)) revertLadderAdvance(e);
+    const es = afterEdit ? entriesOf(afterEdit.date) : [];
+    if (!es.length || afterEdit.pain == null || needSpots(afterEdit.pain, afterEdit.spots)) return;
+    es.forEach(e => { e.painAfter = afterEdit.pain; e.allDay = !!afterEdit.allDay; e.spots = asSpots([...(e.spots || []), ...afterEdit.spots]); if (!entryClean(e)) revertLadderAdvance(e); });
+    const wann = fmt(afterEdit.date);
     afterEdit = null; await save();
-    if (!state.error) { uiFlash = { where: tab === 'heute' ? 'today' : 'history', ok: true, text: `Schmerz danach für die Einheit vom ${wann} gespeichert.` }; announce(uiFlash.text); }
+    if (!state.error) { uiFlash = { where: tab === 'heute' ? 'today' : 'history', ok: true, text: `Schmerz danach für den ${wann} gespeichert.` }; announce(uiFlash.text); }
     return render();
   }
   if (act === 'saveMorning') {
