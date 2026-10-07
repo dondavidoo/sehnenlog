@@ -1464,7 +1464,18 @@ const LADDERS = {
   a1:  { name:'Wadenheben gestreckt', ex:['a1'], order:0, unlock:0, unit:'wdh', steps: calfSteps() },
   a3:  { name:'Band-Adduktion',       ex:['a3'], order:1, unlock:0, unit:'wdh', steps: bandSteps() },
   a2:  { name:'Wadenheben gebeugt',   ex:['a2'], order:2, unlock:1, unit:'wdh', steps: calfSteps() },
-  hip: { name:'Hüfte',                ex:['b4','b3'], order:3, unlock:2, unit:'wdh', steps: hipSteps() },
+  hip: { name:'Monster Walks (Hüfte)', ex:['b4'], order:3, unlock:2, unit:'wdh', steps: hipSteps() },
+  // Freie Stufenpläne: kein Teil der Freischalt-Reihenfolge. Starten, sobald du die Übung erfasst; steigern nach derselben Zählerregel, aber nur, wenn keine Kernübung an der Reihe ist.
+  b3:  { name:'Seitstütz mit Beinheben (Hüfte, Alternative)', ex:['b3'], order:10, free:true, unit:'wdh', steps:[
+    { sets:1, reps:12, v:'je Seite' }, { sets:2, reps:12, v:'je Seite' }, { sets:3, reps:12, v:'je Seite' }, { sets:3, reps:15, v:'je Seite' }, { sets:3, reps:15, v:'je Seite', loop:1 }, { sets:3, reps:15, v:'je Seite', loop:2 } ] },
+  bal: { name:'Einbeinstand (Aufwärmen)', ex:['bal'], order:11, free:true, always:true, unit:'sek', steps:[
+    { sets:2, reps:30, v:'je Seite, Augen offen' }, { sets:3, reps:30, v:'je Seite, Augen offen' }, { sets:3, reps:30, v:'je Seite, Augen zu' }, { sets:3, reps:30, v:'je Seite, weiche Unterlage' }, { sets:3, reps:30, v:'je Seite, weiche Unterlage, Augen zu' } ] },
+  dehn: { name:'Wadendehnung', ex:['dehn'], order:12, free:true, always:true, unit:'sek', steps:[
+    { sets:2, reps:30, v:'gestreckt und gebeugt, je Variante' } ] },
+  b1:  { name:'Band-Dorsalextension (nur auf Hinweis)', ex:['b1'], order:13, free:true, unit:'wdh', steps:[
+    { sets:1, reps:15, band:0 }, { sets:2, reps:15, band:0 }, { sets:3, reps:15, band:0 }, { sets:2, reps:15, band:1 }, { sets:3, reps:15, band:1 }, { sets:3, reps:15, band:2 } ] },
+  iso1: { name:'Wadenheben halten (freiwillig)', ex:['iso1'], order:14, free:true, unit:'sek', steps:[
+    { sets:3, reps:30, v:'beidbeinig, mittlere Höhe' } ] },
   a6:  { name:'Wadenheben mit Ball',  ex:['a6'], order:4, unlock:3, gate:'kahnbein', unit:'wdh', steps:[
     { sets:1, reps:10, v:'beidbeinig, mittlere Höhe' }, { sets:2, reps:10, v:'beidbeinig, mittlere Höhe' }, { sets:3, reps:10, v:'beidbeinig, mittlere Höhe' }, { sets:3, reps:12, v:'beidbeinig, mittlere Höhe' },
     { sets:2, reps:8, v:'einbeinig, mittlere Höhe' }, { sets:3, reps:8, v:'einbeinig, mittlere Höhe' }, { sets:3, reps:12, v:'einbeinig, mittlere Höhe' } ] },
@@ -1503,8 +1514,8 @@ function cleanLadders(l) {
   const out = {};
   LADDER_ORDER.forEach(k => {
     const x = l && typeof l === 'object' && l[k] && typeof l[k] === 'object' ? l[k] : {};
-    const step = Number.isInteger(x.step) ? Math.max(-1, Math.min(x.step, LADDERS[k].steps.length - 1)) : -1;
-    out[k] = { step, since: isIsoDate(x.since) ? x.since : null };
+    const step = Number.isInteger(x.step) ? Math.max(-1, Math.min(x.step, LADDERS[k].steps.length - 1)) : (LADDERS[k].always ? 0 : -1);
+    out[k] = { step, since: isIsoDate(x.since) ? x.since : (LADDERS[k].always ? PROGRAMM_START : null) };
     if (x.prev && typeof x.prev === 'object' && Number.isInteger(x.prev.step)) out[k].prev = { step: Math.max(-1, x.prev.step), since: isIsoDate(x.prev.since) ? x.prev.since : null };
   });
   return out;
@@ -1613,7 +1624,8 @@ function proposal(date) {
   const day = isIsoDate(date) ? date : today();
   memo.proposal = memo.proposal || {};
   if (memo.proposal[day] !== undefined) return memo.proposal[day];
-  const started = LADDER_ORDER.filter(k => state.ladders[k].step >= 0);
+  const started = LADDER_ORDER.filter(k => state.ladders[k].step >= 0 && !LADDERS[k].free);
+  const startedFree = LADDER_ORDER.filter(k => state.ladders[k].step >= 0 && LADDERS[k].free);
   const out = { blocked: null, item: null, streak: 0, stages: [] };
   if (isDeloadWeek(day)) out.blocked = 'Entlastungswoche – keine Steigerung, 30 % weniger Volumen.';
   const since = lastLadderChange();
@@ -1639,7 +1651,7 @@ function proposal(date) {
     out.gated = `${missing.map(k => LADDERS[k].name).join(' und ')} warten, bis Innenfuß/Kahnbein ${GATE_KAHNBEIN_TAGE} Tage ohne Schmerz war.`;
     break;   // gesperrte Übungen überspringen, Sätze/Stufen der laufenden Übungen dürfen weiter
   }
-  const cands = started.map(ladderStatus).filter(s => s.next && s.counter >= GRUEN_FUER_STEIGERUNG)
+  const cands = started.concat(startedFree).map(ladderStatus).filter(s => s.next && s.counter >= GRUEN_FUER_STEIGERUNG)
     .sort((x, y) => (KIND_RANK[x.kind] - KIND_RANK[y.kind]) || (LADDERS[x.key].order - LADDERS[y.key].order));
   if (cands.length) {
     const s = cands[0];
@@ -1650,10 +1662,15 @@ function proposal(date) {
 // Nach dem Speichern einer Kraft-Einheit: wurde der Vorschlag umgesetzt? Dann rückt die Leiter vor.
 function entryClean(entry) { return !(entry.painDuring > SCHMERZ_MAX) && !(entry.painAfter > DANACH_MAX) && !entry.allDay; }
 function applyLadderAdvance(entry) {
-  if (entry.type !== 'kraft' || !entryClean(entry) || isDeloadWeek(entry.date)) return null;
-  const p = proposal(entry.date);
-  if (!p.item || p.blocked) return null;
+  if (entry.type !== 'kraft' || !entryClean(entry)) return null;
   const changed = [];
+  // Freie Stufenpläne starten mit dem ersten Eintrag der Übung – ohne Vorschlag, ohne Zähler
+  LADDER_ORDER.filter(k => LADDERS[k].free && state.ladders[k].step < 0).forEach(k => {
+    if (doseMet(exLogged([entry], k), LADDERS[k].steps[0])) { state.ladders[k] = { step: 0, since: entry.date, prev: { step: -1, since: null } }; changed.push(LADDERS[k].name); }
+  });
+  if (isDeloadWeek(entry.date)) { invalidate(); return changed.length ? changed : null; }
+  const p = proposal(entry.date);
+  if (!p.item || p.blocked) { invalidate(); return changed.length ? changed : null; }
   const advance = (k, idx) => {
     if (state.ladders[k].since === entry.date && state.ladders[k].step === idx) return;   // schon vorgerückt (Bearbeitung)
     const prev = { step: state.ladders[k].step, since: state.ladders[k].since };
@@ -1888,17 +1905,18 @@ function ladderLineHtml(s, mark) {
   const L = LADDERS[s.key], step = mark ? L.steps[mark.step] : s.cur;
   if (!step) return '';
   return `<div class="today-row${mark ? ' today-up' : ''}">
-      <div class="today-main"><button type="button" class="exlink" data-act="gotoEx" data-ex="${esc(L.ex[0])}" aria-label="${esc(s.name)} – Ausführung nachlesen">${esc(s.name)}</button> ${esc(`${step.sets} × ${step.reps}`)}${step.v ? ` · ${esc(step.v)}` : ''} ${stepEquipHtml(step)}</div>
-      <div class="today-side">${mark ? `<span class="arrow">⬆ heute steigern${s.cur ? ` (war ${esc(`${s.cur.sets} × ${s.cur.reps}`)})` : ''}</span>` : `<span class="dots" aria-label="${s.counter} von 3 grün">${'●'.repeat(Math.min(s.counter, 3))}${'○'.repeat(Math.max(0, 3 - s.counter))}</span>`}</div>
+      <div class="today-main"><button type="button" class="exlink" data-act="gotoEx" data-ex="${esc(L.ex[0])}" aria-label="${esc(s.name)} – Ausführung nachlesen">${esc(s.name.replace(/ \(.*\)$/, ''))}</button> ${esc(`${step.sets} × ${step.reps}${L.unit === 'sek' ? ' Sek.' : ''}`)}${step.v ? ` · ${esc(step.v)}` : ''} ${stepEquipHtml(step)}${L.always ? ` · <span class="hint" style="margin:0">${s.key === 'bal' ? 'Aufwärmen' : 'Pflicht zum Schluss'}</span>` : ''}</div>
+      <div class="today-side">${mark ? `<span class="arrow">⬆ heute steigern${s.cur ? ` (war ${esc(`${s.cur.sets} × ${s.cur.reps}`)})` : ''}</span>` : s.next ? `<span class="dots" aria-label="${s.counter} von 3 grün">${'●'.repeat(Math.min(s.counter, 3))}${'○'.repeat(Math.max(0, 3 - s.counter))}</span>` : ''}</div>
     </div>`;
 }
 function kraftTodayHtml() {
-  const p = proposal(), started = LADDER_ORDER.filter(k => state.ladders[k].step >= 0);
+  const p = proposal(), started = LADDER_ORDER.filter(k => state.ladders[k].step >= 0 && !LADDERS[k].free);
   const lastK = kraftDays().slice(-1)[0] || null;
   const hours = lastK ? (new Date(today() + 'T12:00') - new Date(lastK.date + 'T12:00')) / 3600000 : null;
   const due = hours === null || hours >= KRAFT_ABSTAND_H;
   const faellig = due ? 'Sehnenkraft fällig' : `Sehnenkraft: frühestens ${fmt(addDays(lastK.date, 2))}`;
-  let rows = `<div class="today-row"><div class="today-main"><button type="button" class="exlink" data-act="gotoEx" data-ex="bal">Einbeinstand</button> 2 × 30 Sek. · Aufwärmen, ohne Zähler</div></div>`;
+  const line = (k, mark) => ladderLineHtml(ladderStatus(k), mark);
+  let rows = line('bal');
   if (!started.length) {
     rows += UNLOCK_STAGES[0].map(k => ladderLineHtml(ladderStatus(k), { step: 0 })).join('');
   } else {
@@ -1908,7 +1926,11 @@ function kraftTodayHtml() {
     });
     if (p.item && !p.blocked && p.item.kind === 'neu') rows += ladderLineHtml(ladderStatus(p.item.key), { step: 0 });
   }
-  rows += `<div class="today-row"><div class="today-main"><button type="button" class="exlink" data-act="gotoEx" data-ex="dehn">Wadendehnung</button> gestreckt und gebeugt je 2 × 30 Sek. · Pflicht zum Schluss</div></div>`;
+  LADDER_ORDER.filter(k => LADDERS[k].free && !LADDERS[k].always && state.ladders[k].step >= 0).forEach(k => {
+    const mark = p.item && !p.blocked && p.item.kind !== 'start' && p.item.key === k ? { step: p.item.step } : null;
+    rows += line(k, mark);
+  });
+  rows += line('dehn');
   const note = p.blocked ? `<div class="warnbox">${esc(p.blocked)}</div>`
     : p.item ? '' : `<p class="hint">Zähler: ${p.streak} von ${GRUEN_FUER_STEIGERUNG} grünen Einheiten seit der letzten Änderung – danach schlägt die App genau eine Steigerung vor.</p>`;
   const gated = p.gated ? `<p class="hint">${esc(p.gated)}</p>` : '';
@@ -1994,6 +2016,10 @@ function tabToday() {
     ${runTodayHtml()}
     ${plyoTodayHtml()}
     ${testTodayHtml()}
+    <div class="card"><h2>Andere Einheit erfassen</h2>
+      <p class="lede">CrossFit und Volleyball zählen als Belastungstage und gehen in die Ampel ein – darum bitte immer eintragen.</p>
+      <div class="btn-row"><button class="btn quiet small" data-act="openFromToday" data-type="crossfit">CrossFit</button><button class="btn quiet small" data-act="openFromToday" data-type="volleyball">Volleyball</button><button class="btn quiet small" data-act="openFromToday" data-type="lauf">Lauf</button></div>
+    </div>
     ${adviceHtml()}
   </div>`;
 }
@@ -2081,7 +2107,14 @@ function tabProgress() {
       <p class="hint">Drei grüne Einheiten seit der letzten Änderung, dann schlägt die App genau eine Steigerung vor – erst neue Übung, dann Sätze, dann Stufe.</p>
       ${['a1', 'a2', 'a6', 'a3', 'a5'].map(k => ladderBarHtml(ladderStatus(k))).join('')}
       <h3 style="margin-top:14px">Hüfte</h3>
-      ${ladderBarHtml(ladderStatus('hip'))}
+      <p class="hint">Monster Walks sind der Standard; Seitstütz ist die Alternative, wenn du ihn erfasst, läuft sein Stufenplan mit.</p>
+      ${['hip', 'b3'].map(k => ladderBarHtml(ladderStatus(k))).join('')}
+      <h3 style="margin-top:14px">In jeder Einheit</h3>
+      <p class="hint">Einbeinstand als Aufwärmen, Dehnung zum Schluss – kein Zähler, der Einbeinstand hat trotzdem Stufen.</p>
+      ${['bal', 'dehn'].map(k => ladderBarHtml(ladderStatus(k))).join('')}
+      <h3 style="margin-top:14px">Geparkt</h3>
+      <p class="hint">Dorsalextension nur auf Hinweis der App (vorne am Sprunggelenk bei zwei Läufen), Isometrie freiwillig an unruhigen Tagen. Beide starten, sobald du sie erfasst.</p>
+      ${['b1', 'iso1'].map(k => ladderBarHtml(ladderStatus(k))).join('')}
       <h3 style="margin-top:14px">Laufen</h3>
       <p class="hint">Jede Stufe ist 10 % länger als die vorige, nach zwei grünen Läufen. Die Stufen reichen bis rund zwei Stunden – das ist die Spanne, die der Halbmarathon-Plan später braucht.</p>
       ${runBarHtml()}

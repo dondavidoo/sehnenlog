@@ -557,7 +557,7 @@ describe('Paket 6: Leitern, Vorschlag, Lauf-Leiter, Phasen, Austrittstest', () =
     const p = app.proposal();
     assert.equal(p.item.kind, 'start');
     assert.match(p.item.text, /Wadenheben gestreckt 1 × 12/);
-    assert.deepEqual(Object.keys(app.exFromLadders()).sort(), ['a1', 'a3']);
+    assert.deepEqual(Object.keys(app.exFromLadders()).sort(), ['a1', 'a3', 'bal', 'dehn']);
     assert.equal(app.exFromLadders().a1.v, 'beidbeinig');
     assert.equal(app.exFromLadders().a3.band, 0);
     // ohne Varianten-Angabe rückt nichts vor
@@ -836,5 +836,34 @@ describe('Paket 9: Plyometrie-Leiter ab Phase 3', () => {
     assert.equal(s.ready, true); assert.equal(s.next.ex, 'p2');
     assert.match(app.tabToday(), /Plyometrie[\s\S]*Seilspringen/);
     assert.equal(app.packState().plyo.step, 0);
+  });
+});
+
+describe('Paket 10: Stufenpläne für alle Übungen', () => {
+  test('Einbeinstand und Dehnung laufen ab Start; Seitstütz und Dorsalextension starten mit dem ersten Eintrag', async () => {
+    const app = await loadApp();
+    app._test.setNow(() => new Date('2026-10-16T10:00:00'));
+    app._test.setProgrammStart('2026-10-07');
+    app._test.setState({ ladders: { a1: { step: 0, since: '2026-10-08' }, a3: { step: 0, since: '2026-10-08' } } });
+    assert.equal(app.ladderStatus('bal').step, 0);
+    assert.equal(app.ladderStatus('dehn').step, 0);
+    assert.equal(app.ladderStatus('b3').step, -1);
+    assert.equal(app.ladderStatus('b1').step, -1);
+    const h = app.tabToday();
+    assert.match(h, /Einbeinstand<\/button> 2 × 30 Sek\. · je Seite, Augen offen/);
+    assert.match(h, /Wadendehnung<\/button> 2 × 30 Sek\./);
+    assert.match(h, /data-type="crossfit"/);
+    const e = { id: 'k1', date: '2026-10-16', time: '18:00', type: 'kraft', painDuring: 1, painAfter: 1, spots: ['knoechel'],
+      details: { ex: { a1: { sets: '1', reps: '12', weight: '', v: 'beidbeinig' }, b3: { sets: '1', reps: '12', weight: '', v: 'je Seite' }, b1: { sets: '1', reps: '15', weight: '', band: 0 } } } };
+    app._test.setState({ entries: [e], ladders: { a1: { step: 0, since: '2026-10-08' }, a3: { step: 0, since: '2026-10-08' } } });
+    const adv = app.applyLadderAdvance(e);
+    assert.ok(adv.includes('Seitstütz mit Beinheben (Hüfte, Alternative)'));
+    assert.ok(adv.includes('Band-Dorsalextension (nur auf Hinweis)'));
+    assert.equal(app.ladderStatus('b3').step, 0);
+    assert.equal(app.ladderStatus('a1').step, 0);   // Kernübung ohne Vorschlag rückt nicht vor
+    const f = app.tabProgress();
+    assert.match(f, /In jeder Einheit/); assert.match(f, /Geparkt/);
+    assert.match(f, /data-act="ladderUp" data-key="bal"/);
+    assert.equal(app.exDefaults('b3').v, 'je Seite');
   });
 });
