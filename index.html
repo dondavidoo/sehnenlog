@@ -1474,7 +1474,7 @@ const LADDERS = {
   a1:  { name:'Wadenheben gestreckt', ex:['a1'], order:0, unlock:0, unit:'wdh', steps: calfSteps() },
   a3:  { name:'Band-Adduktion',       ex:['a3'], order:1, unlock:0, unit:'wdh', steps: bandSteps() },
   a2:  { name:'Wadenheben gebeugt',   ex:['a2'], order:2, unlock:1, unit:'wdh', steps: calfSteps() },
-  hip: { name:'Monster Walks', ex:['b4'], order:3, unlock:2, unit:'wdh', steps: hipSteps() },
+  hip: { name:'Monster Walks', ex:['b4'], alt:'b3', order:3, unlock:2, unit:'wdh', steps: hipSteps() },   // alt: Seitstütz ersetzt Monster Walks und füllt denselben Platz
   // Freie Stufenpläne: kein Teil der Freischalt-Reihenfolge. Starten, sobald du die Übung erfasst; steigern nach derselben Zählerregel, aber nur, wenn keine Kernübung an der Reihe ist.
   b3:  { name:'Seitstütz (Alternative)', ex:['b3'], order:10, free:true, unit:'wdh', steps:[
     { sets:1, reps:12, v:'je Seite' }, { sets:2, reps:12, v:'je Seite' }, { sets:3, reps:12, v:'je Seite' }, { sets:3, reps:15, v:'je Seite' }, { sets:3, reps:15, v:'je Seite', loop:1 }, { sets:3, reps:15, v:'je Seite', loop:2 } ] },
@@ -1496,6 +1496,8 @@ const LADDERS = {
 const LADDER_ORDER = Object.keys(LADDERS).sort((a, b) => LADDERS[a].order - LADDERS[b].order);
 const UNLOCK_STAGES = [['a1', 'a3'], ['a2'], ['hip'], ['a6', 'a5']];   // Reihenfolge, in der Übungen dazukommen
 const GATE_KAHNBEIN_TAGE = 7;   // Ball und Doming erst, wenn Innenfuß/Kahnbein so lange ohne Schmerz war
+// Platz einer Kernübung besetzt? Auch durch die erklärte Alternative (Seitstütz statt Monster Walks)
+function slotFilled(k) { return state.ladders[k].step >= 0 || (LADDERS[k].alt != null && state.ladders[LADDERS[k].alt].step >= 0); }
 
 function stepWeight(step) { return step.wIdx ? step.wIdx * ((state.settings && state.settings.hantelSchritt) || 5) : 0; }
 function stepText(step, unit) {
@@ -1527,7 +1529,14 @@ function cleanLadders(l) {
     const step = Number.isInteger(x.step) ? Math.max(-1, Math.min(x.step, LADDERS[k].steps.length - 1)) : (LADDERS[k].always ? 0 : -1);
     out[k] = { step, since: isIsoDate(x.since) ? x.since : (LADDERS[k].always ? PROGRAMM_START : null) };
     if (x.prev && typeof x.prev === 'object' && Number.isInteger(x.prev.step)) out[k].prev = { step: Math.max(-1, x.prev.step), since: isIsoDate(x.prev.since) ? x.prev.since : null };
+    if (typeof x.by === 'string' && x.by) out[k].by = x.by;   // Einheit, die den letzten Schritt ausgelöst hat
   });
+  return out;
+}
+// prev/by einer Lauf- oder Plyometrie-Stufe aus Fremddaten übernehmen – nur, wenn sie brauchbar sind
+function keepPrev(out, x, maxStep) {
+  if (x.prev && typeof x.prev === 'object' && Number.isInteger(x.prev.step) && x.prev.step >= -1 && (maxStep == null || x.prev.step < maxStep)) out.prev = { step: x.prev.step, since: isIsoDate(x.prev.since) ? x.prev.since : null };
+  if (typeof x.by === 'string' && x.by) out.by = x.by;
   return out;
 }
 // Plyometrie (ab Phase 3): drei Stufen, je mindestens 14 Tage und 4 grüne Einheiten
@@ -1539,11 +1548,11 @@ const PLYO_STEPS = [
 const PLYO_TAGE = 14, PLYO_EINHEITEN = 4;
 function cleanPlyo(r) {
   const x = r && typeof r === 'object' ? r : {};
-  return { step: Number.isInteger(x.step) && x.step >= -1 && x.step < PLYO_STEPS.length ? x.step : -1, since: isIsoDate(x.since) ? x.since : null };
+  return keepPrev({ step: Number.isInteger(x.step) && x.step >= -1 && x.step < PLYO_STEPS.length ? x.step : -1, since: isIsoDate(x.since) ? x.since : null }, x, PLYO_STEPS.length);
 }
 function cleanRun(r) {
   const x = r && typeof r === 'object' ? r : {};
-  return { step: Number.isInteger(x.step) && x.step >= -1 ? x.step : -1, since: isIsoDate(x.since) ? x.since : null };
+  return keepPrev({ step: Number.isInteger(x.step) && x.step >= -1 ? x.step : -1, since: isIsoDate(x.since) ? x.since : null }, x, null);
 }
 
 // Entlastungswoche: jede vierte Woche ab Programmstart ohne Steigerung, 30 % weniger
@@ -1611,8 +1620,9 @@ function greenSince(since, filter) {
   }
   return n;
 }
+// Letzte Änderung an einer Kernübung – freie Stufenpläne (Einbeinstand, Seitstütz …) zählen nicht, sonst setzt ein Aufwärm-Schritt den Zähler zurück
 function lastLadderChange() {
-  const dates = LADDER_ORDER.map(k => state.ladders[k].since).filter(Boolean);
+  const dates = LADDER_ORDER.filter(k => !LADDERS[k].free).map(k => state.ladders[k].since).filter(Boolean);
   return dates.length ? dates.sort().slice(-1)[0] : null;
 }
 function gateOk(key, date) {
@@ -1654,7 +1664,7 @@ function proposal(date) {
   if (out.blocked || out.streak < GRUEN_FUER_STEIGERUNG) return (memo.proposal[day] = out);
   // nächste Stufe der Freischaltung: alle Übungen einer Stufe müssen laufen, bevor die nächste kommt
   for (const stage of UNLOCK_STAGES) {
-    const missing = stage.filter(k => state.ladders[k].step < 0);
+    const missing = stage.filter(k => !slotFilled(k));
     if (!missing.length) continue;
     const ok = missing.filter(k => gateOk(k, day));
     if (ok.length) { out.item = { kind:'neu', key: ok[0], step: 0, text: `Neu dazu: ${LADDERS[ok[0]].name} ${stepText(LADDERS[ok[0]].steps[0], LADDERS[ok[0]].unit)}` }; return (memo.proposal[day] = out); }
@@ -1676,7 +1686,7 @@ function applyLadderAdvance(entry) {
   const changed = [];
   // Freie Stufenpläne starten mit dem ersten Eintrag der Übung – ohne Vorschlag, ohne Zähler
   LADDER_ORDER.filter(k => LADDERS[k].free && state.ladders[k].step < 0).forEach(k => {
-    if (doseMet(exLogged([entry], k), LADDERS[k].steps[0])) { state.ladders[k] = { step: 0, since: entry.date, prev: { step: -1, since: null } }; changed.push(LADDERS[k].name); }
+    if (doseMet(exLogged([entry], k), LADDERS[k].steps[0])) { state.ladders[k] = { step: 0, since: entry.date, prev: { step: -1, since: null }, by: entry.id }; changed.push(LADDERS[k].name); }
   });
   if (isDeloadWeek(entry.date)) { invalidate(); return changed.length ? changed : null; }
   const p = proposal(entry.date);
@@ -1684,7 +1694,7 @@ function applyLadderAdvance(entry) {
   const advance = (k, idx) => {
     if (state.ladders[k].since === entry.date && state.ladders[k].step === idx) return;   // schon vorgerückt (Bearbeitung)
     const prev = { step: state.ladders[k].step, since: state.ladders[k].since };
-    state.ladders[k] = { step: idx, since: entry.date, prev };
+    state.ladders[k] = { step: idx, since: entry.date, prev, by: entry.id };
     changed.push(LADDERS[k].name);
   };
   if (p.item.kind === 'start' || p.item.kind === 'neu') {
@@ -1697,15 +1707,46 @@ function applyLadderAdvance(entry) {
   invalidate();
   return changed.length ? changed : null;
 }
-// Die Einheit, die einen Schritt ausgelöst hat, wird gelöscht: Schritt zurücknehmen
+// Hat diese Einheit den letzten Schritt ausgelöst? Alte Stände ohne „by“ fallen auf das Datum zurück
+function triggeredBy(st, entry) { return !!st && !!st.prev && (st.by ? st.by === entry.id : st.since === entry.date); }
+// Die Einheit, die einen Schritt ausgelöst hat, wird gelöscht oder schmerzhaft: Schritt zurücknehmen
 function revertLadderAdvance(entry) {
   if (!entry || entry.type !== 'kraft') return;
   LADDER_ORDER.forEach(k => {
     const st = state.ladders[k];
-    if (st.since === entry.date && st.prev) state.ladders[k] = { step: st.prev.step, since: st.prev.since };
+    if (triggeredBy(st, entry)) state.ladders[k] = { step: st.prev.step, since: st.prev.since };
   });
   invalidate();
 }
+function revertStepAdvance(field, entry) {
+  const st = state[field];
+  if (!triggeredBy(st, entry)) return;
+  state[field] = { step: st.prev.step, since: st.prev.since };
+  invalidate();
+}
+// Rücknahme für jede Art von Einheit: Kraft → Leitern, Lauf → Lauf-Stufe, Plyometrie → Plyo-Stufe
+function revertAdvance(entry) {
+  if (!entry) return;
+  if (entry.type === 'kraft') revertLadderAdvance(entry);
+  else if (entry.type === 'lauf') revertStepAdvance('run', entry);
+  else if (entry.type === 'plyo') revertStepAdvance('plyo', entry);
+}
+// Nach dem Bearbeiten: erst zurücknehmen, was diese Einheit ausgelöst hat, dann mit den neuen Werten neu prüfen
+function reapplyAdvances(entry) {
+  revertAdvance(entry);
+  if (!entryClean(entry)) return { ladders: null, run: null, plyo: null };
+  return { ladders: applyLadderAdvance(entry), run: applyRunAdvance(entry), plyo: applyPlyoAdvance(entry) };
+}
+// „Wie war es danach?“ für alle Einheiten eines Tages: Wert, ganztägig, Orte (ersetzen, nicht vereinigen – sonst kommt ein abgewählter Ort zurück)
+function applyAfterEdit(a) {
+  const es = a && isIsoDate(a.date) ? entriesOf(a.date) : [];
+  if (!es.length) return false;
+  const spots = asSpots(a.spots || []);
+  es.forEach(e => { e.painAfter = a.pain; e.allDay = !!a.allDay; if (spots.length) e.spots = spots.slice(); if (!entryClean(e)) revertAdvance(e); });
+  invalidate();
+  return true;
+}
+
 // Entwurf aus dem Tagesvorschlag: alle laufenden Übungen mit ihrer Stufe, die vorgeschlagene mit der neuen Dosis
 function exFromLadders() {
   const ex = {}, p = proposal();
@@ -1778,15 +1819,16 @@ function applyPlyoAdvance(entry) {
   if (!s.ready || !s.next) return null;
   const v = plyoLogged([entry], s.next.ex);
   if (!v || (+v.sets || 0) < s.next.sets || (+v.reps || 0) < s.next.reps) return null;
-  state.plyo = { step: s.step + 1, since: entry.date }; invalidate();
+  state.plyo = { step: s.step + 1, since: entry.date, prev: { step: s.step, since: s.since }, by: entry.id }; invalidate();
   return s.next.label;
 }
 function applyRunAdvance(entry) {
   if (entry.type !== 'lauf' || !entryClean(entry) || isDeloadWeek(entry.date)) return null;
   const s = runStatus(), min = runMin(entry) || 0;
   if (s.next == null) return null;
-  if (s.next === 0 && s.step < 0) { state.run = { step: 0, since: entry.date }; invalidate(); return runStepText(0); }
-  if (s.next >= 1 && min >= runStepMin(s.next) * 0.95) { state.run = { step: s.next, since: entry.date }; invalidate(); return runStepText(s.next); }
+  const prev = { step: state.run.step, since: state.run.since };
+  if (s.next === 0 && s.step < 0) { state.run = { step: 0, since: entry.date, prev, by: entry.id }; invalidate(); return runStepText(0); }
+  if (s.next >= 1 && min >= runStepMin(s.next) * 0.95) { state.run = { step: s.next, since: entry.date, prev, by: entry.id }; invalidate(); return runStepText(s.next); }
   return null;
 }
 // Läufe in der laufenden Woche (Mo–So) und Volleyball-Einheiten – für die Regel „ein Lauf, solange Volleyball 3–4×“
@@ -1858,7 +1900,7 @@ function phaseCriteria(nr) {
     const g = greenSince(null); item('3 grüne Sehnenkraft-Einheiten in Folge', g >= 3, `${Math.min(g, 3)} von 3`);
     const a1 = L('a1'), a2 = L('a2'); item('Wadenheben gestreckt und gebeugt 3 × 12 beidbeinig grün', ladderAt(a1, 2) && ladderAt(a2, 2), `gestreckt Stufe ${a1.step + 1} von 3 · gebeugt Stufe ${a2.step + 1} von 3`);
     const a3 = L('a3'); item('Band-Adduktion 3 × 15 grün', ladderAt(a3, 2), `Stufe ${a3.step + 1} von 3`);
-    item('Hüfte in der Einheit', L('hip').step >= 0, L('hip').step >= 0 ? 'läuft' : 'noch nicht dazugekommen');
+    const hipOk = slotFilled('hip'); item('Hüfte in der Einheit', hipOk, L('hip').step >= 0 ? 'läuft' : hipOk ? 'läuft (Seitstütz statt Monster Walks)' : 'noch nicht dazugekommen');
     const ok30 = r.step >= 2 || (r.step === 1 && r.counter >= 2); item('30 Min. am Stück zweimal grün', ok30, r.step < 0 ? 'Laufen noch nicht begonnen' : r.step === 0 ? 'Gehen/Laufen-Phase' : `${Math.min(r.counter, 2)} von 2`);
   }
   if (nr === 2) {
@@ -3512,8 +3554,10 @@ document.addEventListener('click', async (ev) => {
       if (e) {
         delete e.detail; Object.assign(e, base); text = `Änderung gespeichert: ${art}, ${wann}.`;
         invalidate();
-        if (!entryClean(e)) revertLadderAdvance(e);   // nachträglich Schmerz eingetragen: Schritt zurück
-        else { const adv = applyLadderAdvance(e); if (adv) text += ` Neue Stufe: ${adv.join(', ')}.`; }
+        const r = reapplyAdvances(e);   // erst zurück, was diese Einheit ausgelöst hat, dann mit den neuen Werten neu prüfen
+        if (r.ladders) text += ` Neue Stufe: ${r.ladders.join(', ')}.`;
+        if (r.run) text += ` Laufstufe: ${r.run}.`;
+        if (r.plyo) text += ` Plyometrie: ${r.plyo}.`;
       }
       else text = null;   // die Einheit gibt es nicht mehr (gelöscht, zurückgeholt, ersetzt)
       editingId = null;
@@ -3564,7 +3608,7 @@ document.addEventListener('click', async (ev) => {
   if (act === 'saveAfter') {
     const es = afterEdit ? entriesOf(afterEdit.date) : [];
     if (!es.length || afterEdit.pain == null || needSpots(afterEdit.pain, afterEdit.spots)) return;
-    es.forEach(e => { e.painAfter = afterEdit.pain; e.allDay = !!afterEdit.allDay; e.spots = asSpots([...(e.spots || []), ...afterEdit.spots]); if (!entryClean(e)) revertLadderAdvance(e); });
+    applyAfterEdit(afterEdit);
     const wann = fmt(afterEdit.date);
     afterEdit = null; await save();
     if (!state.error) { uiFlash = { where: tab === 'heute' ? 'today' : 'history', ok: true, text: `Schmerz danach für den ${wann} gespeichert.` }; announce(uiFlash.text); }
@@ -3651,7 +3695,7 @@ document.addEventListener('click', async (ev) => {
     closeForm();
     state.entries = state.entries.filter(x => x.id !== e.id);
     lastDeleted = e;
-    revertLadderAdvance(e);
+    revertAdvance(e);
     await save();
     if (!state.error) { uiFlash = { where: 'entry', ok: true, undo: true, text: `Einheit vom ${fmt(e.date)} (${typeLabel(e.type)}) gelöscht.` }; announce(uiFlash.text + ' Rückgängig ist möglich.'); }
     render();

@@ -914,3 +914,95 @@ describe('Paket 12: Formular und Navigation', () => {
     assert.match(app.tabLog(), /<details class="exopt" open>/);
   });
 });
+
+describe('Review 8.10.: Paket A – Programmlogik', () => {
+  const P = '2026-10-07';
+  const kraft = (date, ex, extra) => ({ id: 'k' + date, date, time: '18:00', type: 'kraft', details: { ex }, painDuring: 1, painAfter: 1, spots: ['knoechel'], ...extra });
+  const run = (date, min) => ({ id: 'r' + date, date, time: '08:00', type: 'lauf', details: { min: String(min), pace: '6:10' }, painDuring: 1, painAfter: 1, spots: ['knoechel'] });
+  const morn = (app, date, pain) => app.makeMorning(date, pain ?? 1, 'unter15', '');
+  async function prog(now) { const app = await loadApp(); app._test.setNow(() => new Date(now + 'T10:00:00')); app._test.setProgrammStart(P); return app; }
+  const EX3 = { a1: { sets: '3', reps: '12', weight: '', v: 'beidbeinig' }, a3: { sets: '3', reps: '15', weight: '', band: 0 }, a2: { sets: '3', reps: '12', weight: '', v: 'beidbeinig' } };
+  const GREEN3 = (app) => ({
+    entries: ['2026-11-02', '2026-11-04', '2026-11-07'].map(d => kraft(d, { ...EX3, b3: { sets: '1', reps: '12', weight: '', v: 'je Seite' } })),
+    mornings: ['2026-11-02', '2026-11-03', '2026-11-04', '2026-11-05', '2026-11-07', '2026-11-08'].map(d => morn(app, d))
+  });
+
+  test('A1: Seitstütz füllt den Hüft-Platz – Freischaltung geht zu Ball/Doming weiter, Phase-1-Kriterium erfüllt', async () => {
+    const app = await prog('2026-11-10');
+    const ladders = { a1: { step: 2, since: '2026-11-01' }, a3: { step: 2, since: '2026-11-01' }, a2: { step: 2, since: '2026-11-01' }, b3: { step: 0, since: '2026-11-02' } };
+    app._test.setState({ ...GREEN3(app), ladders });
+    const p = app.proposal();
+    assert.equal(p.streak, 3);
+    assert.equal(p.item.kind, 'neu');
+    assert.ok(['a6', 'a5'].includes(p.item.key), 'erwartet Ball oder Doming, bekam ' + JSON.stringify(p.item));
+    const hip = app.phaseCriteria(1).find(c => /Hüfte/.test(c.label));
+    assert.equal(hip.ok, true);
+    assert.match(hip.text, /Seitstütz/);
+  });
+
+  test('A2: Lauf- und Plyo-Stufe werden zurückgenommen und beim Bearbeiten neu vergeben', async () => {
+    const app = await prog('2026-10-20');
+    const mornings = []; for (let i = 0; i <= 13; i++) mornings.push(morn(app, app.addDays('2026-10-20', -i)));
+    const e = run('2026-10-20', 33);
+    app._test.setState({ mornings, entries: [run('2026-10-12', 30), run('2026-10-15', 30), e], run: { step: 1, since: '2026-10-12' } });
+    assert.equal(app.applyRunAdvance(e), '33 Min. locker am Stück');
+    assert.equal(app.runStatus().step, 2);
+    // Sicherung und Normalisierung behalten die Rücknahme-Information
+    const n = app.normalize(JSON.parse(app.backupPayload()));
+    assert.equal(n.run.prev.step, 1); assert.equal(n.run.by, e.id);
+    // andere Einheit: nichts passiert; die auslösende: Schritt zurück
+    app.revertAdvance(run('2026-10-15', 30));
+    assert.equal(app.runStatus().step, 2);
+    app.revertAdvance(e);
+    assert.equal(app.runStatus().step, 1); assert.equal(app.state.run.since, '2026-10-12');
+    // Bearbeiten: Tippfehler 3 → 33 vergibt die Stufe, 33 → 3 nimmt sie zurück
+    const typo = run('2026-10-20', 3);
+    app._test.setState({ mornings, entries: [run('2026-10-12', 30), run('2026-10-15', 30), typo], run: { step: 1, since: '2026-10-12' } });
+    assert.equal(app.applyRunAdvance(typo), null);
+    typo.details.min = '33'; app.reapplyAdvances(typo);
+    assert.equal(app.runStatus().step, 2);
+    typo.details.min = '3'; app.reapplyAdvances(typo);
+    assert.equal(app.runStatus().step, 1);
+    // Plyometrie: gespeicherte Rücknahme-Information überlebt cleanPlyo und wirkt
+    app._test.setState({ plyo: { step: 1, since: '2027-03-28', prev: { step: 0, since: '2027-03-10' }, by: 'pX' } });
+    app.revertAdvance({ id: 'pY', type: 'plyo', date: '2027-03-28' });
+    assert.equal(app.plyoStatus().step, 1);
+    app.revertAdvance({ id: 'pX', type: 'plyo', date: '2027-03-28' });
+    assert.equal(app.plyoStatus().step, 0); assert.equal(app.state.plyo.since, '2027-03-10');
+  });
+
+  test('A3: „Wie war es danach?“ ersetzt die Schmerzorte statt sie zu vereinigen', async () => {
+    const app = await fresh();
+    const e = entry(T, 1, { type: 'kraft', time: '18:00', spots: ['innenfuss'] });
+    app._test.setState({ entries: [e] });
+    assert.equal(app.applyAfterEdit({ date: T, pain: 2, allDay: false, spots: ['knoechel'] }), true);
+    assert.deepEqual(app.state.entries[0].spots, ['knoechel']);
+    assert.equal(app.state.entries[0].painAfter, 2);
+    // ohne Schmerz danach und ohne Ort bleiben die Orte der Einheit stehen
+    assert.equal(app.applyAfterEdit({ date: T, pain: 0, allDay: false, spots: [] }), true);
+    assert.deepEqual(app.state.entries[0].spots, ['knoechel']);
+    assert.equal(app.applyAfterEdit({ date: day(app, -3), pain: 1, allDay: false, spots: ['knoechel'] }), false);   // kein Eintrag an dem Tag
+  });
+
+  test('A4: freie Stufenpläne (Einbeinstand, Seitstütz) setzen den Drei-Grün-Zähler nicht zurück', async () => {
+    const app = await prog('2026-11-10');
+    const ladders = { a1: { step: 0, since: '2026-11-01' }, a3: { step: 0, since: '2026-11-01' }, bal: { step: 1, since: '2026-11-09' }, b3: { step: 0, since: '2026-11-09' } };
+    app._test.setState({ ...GREEN3(app), ladders });
+    assert.equal(app.proposal().streak, 3);
+    assert.equal(app.proposal().item.key, 'a2');
+  });
+
+  test('A5: Rücknahme trifft nur die auslösende Einheit, nicht jede Kraft-Einheit desselben Tages', async () => {
+    const app = await prog('2026-11-10');
+    app._test.setState({ ladders: { a1: { step: 1, since: '2026-11-10', prev: { step: 0, since: '2026-11-08' }, by: 'kB' }, a3: { step: 0, since: '2026-11-01' } } });
+    app.revertLadderAdvance({ id: 'kA', type: 'kraft', date: '2026-11-10' });
+    assert.equal(app.ladderStatus('a1').step, 1);
+    app.revertLadderAdvance({ id: 'kB', type: 'kraft', date: '2026-11-10' });
+    assert.equal(app.ladderStatus('a1').step, 0); assert.equal(app.ladderStatus('a1').since, '2026-11-08');
+    // Vorrücken merkt sich die auslösende Einheit
+    const e = kraft('2026-11-10', { a1: { sets: '1', reps: '12', weight: '', v: 'beidbeinig' }, a3: { sets: '1', reps: '15', weight: '', band: 0 } });
+    app._test.setState({ entries: [e] });
+    assert.deepEqual(app.applyLadderAdvance(e), ['Wadenheben gestreckt', 'Band-Adduktion']);
+    assert.equal(app.state.ladders.a1.by, e.id);
+  });
+});
