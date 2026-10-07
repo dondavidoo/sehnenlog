@@ -63,7 +63,7 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
   .txt.soft { color: var(--ink-soft); }
 
   .tabs { display: flex; gap: 5px; margin-bottom: 16px; flex-wrap: wrap; }
-  .tabs button { font-family: inherit; font-size: 14px; font-weight: 600; padding: 9px 14px; min-height: 40px;
+  .tabs button { font-family: inherit; font-size: 14px; font-weight: 600; padding: 9px 14px; min-height: 44px;
     border-radius: 7px; border: 1px solid var(--rule); background: var(--card); color: var(--ink-soft); cursor: pointer; }
   .tabs button[aria-selected="true"] { background: var(--ink); border-color: var(--ink); color: var(--on-ink); }
   .tabs button[data-tab="mehr"] { border-style: dashed; background: transparent; color: var(--ink-soft); font-weight: 600; }
@@ -85,11 +85,11 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
   .verdict.down .verdict-word { color: var(--down); }
   .verdict ul { margin: 12px 0 0; padding-left: 18px; font-size: 14px; }
   .verdict li { margin-bottom: 5px; }
-  .verdict .todo { margin: 14px 0 0; padding-top: 12px; border-top: 1px solid rgba(0,0,0,0.09); font-size: 14px; }
+  .verdict .todo { margin: 14px 0 0; padding-top: 12px; border-top: 1px solid var(--rule); font-size: 14px; }
 
   .field { margin-bottom: 18px; }
   .field > label, .field-label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 3px; }
-  .hint { font-size: 12.5px; color: var(--ink-soft); margin: 0 0 8px; }
+  .hint { font-size: 13px; color: var(--ink-soft); margin: 0 0 8px; }
 
   .scale { display: grid; grid-template-columns: repeat(11, 1fr); gap: 3px; }
   .scale button { min-width: 0; height: 42px; font-family: inherit; font-size: 14px;
@@ -99,10 +99,10 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
   .scale button[aria-pressed="true"] { background: var(--ink); color: var(--on-ink); font-weight: 650; }
   .scale button.ok { box-shadow: inset 0 -3px 0 var(--up); }
   .scale button.ok[aria-pressed="true"] { box-shadow: none; }
-  .scale-note { font-size: 12px; color: var(--ink-soft); margin: 5px 0 0; }
+  .scale-note { font-size: 13px; color: var(--ink-soft); margin: 5px 0 0; }
 
   .seg { display: flex; flex-wrap: wrap; gap: 6px; }
-  .seg button { font-family: inherit; font-size: 13.5px; padding: 8px 13px; min-height: 36px; border-radius: 6px;
+  .seg button { font-family: inherit; font-size: 13.5px; padding: 8px 13px; min-height: 44px; border-radius: 6px;
     border: 1px solid var(--rule); background: var(--card); color: var(--ink); cursor: pointer; }
   .seg button:hover { border-color: var(--act); }
   .seg button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--on-ink); font-weight: 600; }
@@ -125,7 +125,7 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
   .exrow { background: var(--surface-2); border: 1px solid var(--rule-soft); border-radius: 7px; padding: 10px 11px; margin-bottom: 8px; }
   .exrow-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 7px; }
   .exrow-name { font-size: 14px; font-weight: 600; }
-  .exrow-dose { font-size: 11.5px; color: var(--ink-soft); white-space: nowrap; }
+  .exrow-dose { font-size: 12.5px; color: var(--ink-soft); white-space: normal; text-align: right; }
   .exrow-in { display: flex; gap: 7px; }
   .exrow-in > div { flex: 1; min-width: 0; }
   .exrow-in input { padding: 7px 6px; font-size: 16px; text-align: center; }
@@ -166,7 +166,7 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
   .row-sub { font-size: 12.5px; color: var(--ink-soft); margin-top: 1px; }
   .rowbtns { display: flex; flex-direction: column; gap: 2px; flex-shrink: 0; }
   .edit { background: none; border: 0; cursor: pointer; color: var(--ink-soft); font-size: 13px;
-    padding: 6px 8px; min-height: 32px; font-family: inherit; text-decoration: underline; }
+    padding: 6px 8px; min-height: 44px; font-family: inherit; text-decoration: underline; }
   .edit:hover { color: var(--act); }
   .editbar { background: var(--tint); border: 1px solid var(--tint-border); border-radius: 7px;
     padding: 10px 12px; font-size: 13px; margin-bottom: 14px; }
@@ -176,7 +176,7 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
   /* Diagramm */
   .chart-head { display: flex; justify-content: space-between; align-items: center; gap: 8px 12px; flex-wrap: wrap; margin: 2px 0 8px; }
   .chart-title { font-size: 13px; font-weight: 600; color: var(--ink-soft); }
-  .chart-range button { padding: 6px 12px; min-height: 32px; font-size: 12.5px; }
+  .chart-range button { padding: 6px 12px; min-height: 40px; font-size: 12.5px; }
   .chart-wrap { position: relative; }
   .chart-svg { display: block; width: 100%; height: auto; touch-action: pan-y; -webkit-tap-highlight-color: transparent; }
   .chart-svg:focus { outline: none; }
@@ -209,10 +209,10 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
   .day-sub { font-size: 12.5px; color: var(--ink-soft); margin-top: 2px; }
   .day-note { font-style: italic; }
   .day-missing .day-title { color: var(--ink-soft); font-weight: 500; }
-  .day-side { flex-shrink: 0; text-align: right; }
+  .day-side { flex-shrink: 0; text-align: right; max-width: 40%; }
   .day-val { font-size: 12.5px; color: var(--ink-soft); white-space: nowrap; }
   .day-val b { font-size: 16px; color: var(--ink); font-weight: 650; margin-left: 4px; }
-  .day-acts { display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin-top: 3px; }
+  .day-acts { display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-end; gap: 0; margin-top: 3px; }
   .m-edit { flex: 1; min-width: 0; }
   .when { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; font-size: 14px; }
   .flash { margin: 0 0 12px; font-size: 13.5px; font-weight: 600; color: var(--up); }
@@ -282,7 +282,7 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
   .sc-val.hold { background: var(--hold-bg); color: var(--hold-ink); }
   .sc-val.down { background: var(--down-bg); color: var(--down); }
   .sc-val.act { background: var(--tint); color: var(--act-ink); }
-  .sc-link { background: none; border: 0; padding: 0; font: inherit; color: var(--act-ink);
+  .sc-link { background: none; border: 0; padding: 0 4px; margin: -10px 0; min-height: 44px; display: inline-flex; align-items: center; font: inherit; color: var(--act-ink);
     text-decoration: underline; cursor: pointer; white-space: nowrap; }
   .card.sc-target { border-color: var(--act); }
 
@@ -294,6 +294,7 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
   .o1 { order: 1; } .o2 { order: 2; } .o3 { order: 3; } .o5 { order: 5; } .o7 { order: 7; } .o7b { order: 8; }
   .o8 { order: 9; } .o9 { order: 10; } .o10 { order: 11; } .o11 { order: 12; }
   .h3 { margin: 14px 0 6px; font-size: 14px; font-weight: 650; }
+  .card h3 { font-size: 14px; font-weight: 650; margin: 16px 0 4px; letter-spacing: 0; }
   .kicker { margin: 20px 0 6px; }
 
   @media (min-width: 700px) {
@@ -356,8 +357,8 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
   }
 
   /* Programm 2.0 */
-  .chip { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; padding: 2px 8px; border-radius: 999px; background: var(--surface-3); border: 1px solid var(--rule); vertical-align: middle; }
-  .swatch { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 1px solid rgba(0,0,0,.25); flex-shrink: 0; }
+  .chip { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; padding: 2px 8px; border-radius: 999px; background: var(--surface-3); border: 0; vertical-align: middle; }
+  .swatch { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 1px solid var(--rule); flex-shrink: 0; }
   .today-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--rule); }
   .today-row:first-of-type { border-top: 0; }
   .today-main { min-width: 0; line-height: 1.4; }
@@ -371,11 +372,11 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
   .more-sub { font-size: 12.5px; color: var(--ink-soft); }
   .morebar { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; font-size: 13.5px; color: var(--ink-soft); }
   .morebar .sc-link { font-size: 13.5px; }
-  .exlink { font: inherit; font-weight: 700; color: var(--ink); background: none; border: 0; padding: 0; text-decoration: underline; text-decoration-color: var(--act); text-underline-offset: 3px; cursor: pointer; }
+  .exlink { font: inherit; font-weight: 700; color: var(--ink); background: none; border: 0; padding: 0 2px; margin: -10px 0; min-height: 44px; display: inline-flex; align-items: center; text-decoration: underline; text-decoration-color: var(--act); text-underline-offset: 3px; cursor: pointer; }
   .exlink:hover { color: var(--act); }
   .dots { letter-spacing: 2px; color: var(--act); font-size: 13px; }
   .phasebar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
-  .phase { text-align: center; padding: 8px 4px; border-radius: 8px; border: 1px solid var(--rule); background: var(--surface-3); color: var(--ink-soft); display: flex; flex-direction: column; gap: 2px; }
+  .phase { text-align: center; padding: 8px 4px; border-radius: 8px; border: 1px solid transparent; background: var(--surface-3); color: var(--ink-soft); display: flex; flex-direction: column; gap: 2px; }
   .phase b { font-size: 16px; }
   .phase span { font-size: 12.5px; }
   .phase.cur { background: var(--ink); color: var(--on-ink); border-color: var(--ink); }
@@ -383,11 +384,14 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
   .crit-row { display: flex; gap: 10px; padding: 7px 0; border-top: 1px solid var(--rule); align-items: flex-start; }
   .crit-row:first-child { border-top: 0; }
   .crit-mark { width: 20px; flex-shrink: 0; text-align: center; color: var(--ink-soft); font-weight: 700; }
-  .crit-row.ok .crit-mark { color: var(--up-border); }
+  .crit-row.ok .crit-mark { color: var(--up); font-weight: 800; }
+  .crit-row.ok > div > div:first-child { color: var(--ink-soft); }
   .crit-row.ready { background: var(--tint); margin: 0 -10px; padding: 7px 10px; border-radius: 8px; }
   .ladder { padding: 10px 0; border-top: 1px solid var(--rule); }
   .ladder:first-of-type { border-top: 0; }
-  .ladder-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .ladder-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .ladder-head b { flex: 1; min-width: 0; }
+  .ladder-head > .hint { flex-shrink: 0; white-space: nowrap; }
   .lbar { display: flex; gap: 3px; margin: 6px 0; flex-wrap: wrap; }
   .lb { display: inline-block; width: 14px; height: 10px; border-radius: 2px; background: var(--surface-3); border: 1px solid var(--rule); }
   .lb.done { background: var(--up-border); border-color: var(--up-border); }
@@ -2058,7 +2062,7 @@ function ladderBarHtml(s) {
   const cur = s.cur ? stepText(s.cur, L.unit) : (gateOk(s.key) ? 'noch nicht dabei' : 'wartet, bis Innenfuß/Kahnbein 7 Tage ohne Schmerz war');
   const nextLabel = s.step < 0 ? 'Start' : s.kind === 'sätze' ? 'Nächste Stufe (mehr Sätze)' : 'Nächste Stufe (neue Variante)';
   return `<div class="ladder">
-      <div class="ladder-head"><b>${esc(s.name)}</b><span class="hint" style="margin:0">${s.step < 0 ? `${s.total} Stufen` : `Stufe ${s.step + 1} von ${s.total}`}${s.step >= 0 ? ` · <span class="dots">${'●'.repeat(Math.min(s.counter, 3))}${'○'.repeat(Math.max(0, 3 - s.counter))}</span>` : ''}</span></div>
+      <div class="ladder-head"><b>${esc(s.name)}</b><span class="hint" style="margin:0">${s.step < 0 ? (s.total === 1 ? '1 Stufe' : `${s.total} Stufen`) : `Stufe ${s.step + 1} von ${s.total}`}${s.step >= 0 && s.next ? ` · <span class="dots" aria-label="${s.counter} von 3 grünen Einheiten seit der letzten Steigerung">${'●'.repeat(Math.min(s.counter, 3))}${'○'.repeat(Math.max(0, 3 - s.counter))}</span>` : ''}</span></div>
       <div class="lbar">${boxes}</div>
       <div class="ladder-cur"><span class="lbl">Aktuell</span> ${esc(cur)} ${s.cur ? stepEquipHtml(s.cur) : ''}</div>
       ${s.next ? `<div class="ladder-cur"><span class="lbl">${esc(nextLabel)}</span> ${esc(stepText(s.next, L.unit))} ${stepEquipHtml(s.next)}<span class="hint" style="margin:0"> – ${s.step < 0 ? 'wenn die App sie vorschlägt' : 'nach 3 grünen Einheiten, wenn diese Übung an der Reihe ist'}</span></div>` : '<div class="ladder-cur"><span class="lbl">Nächste Stufe</span> keine – Endstufe erreicht</div>'}
@@ -3204,6 +3208,7 @@ function focusKeyOf(el) {
   const parts = attrs.filter(a => el.hasAttribute(a)).map(a => `[${a}="${CSS.escape(el.getAttribute(a))}"]`);
   return parts.length ? parts.join('') : null;
 }
+const SCROLL = { block: 'start', behavior: (window.matchMedia && matchMedia('(prefers-reduced-motion: no-preference)').matches) ? 'smooth' : 'auto' };
 function focusEl(sel) {
   const el = sel && document.querySelector(sel);
   if (el) el.focus({ preventScroll: true });
@@ -3431,7 +3436,7 @@ document.addEventListener('click', async (ev) => {
     if (draft.type === 'plyo') { const s = plyoStatus(), tgt = s.ready && s.next ? s.next : s.cur; if (tgt) draft.ex = { [tgt.ex]: { sets: String(tgt.sets), reps: String(tgt.reps), weight: '' } }; }
     testDraft = null; formOpen = true; editingId = null; tab = 'log';
     render();
-    document.getElementById('form')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    document.getElementById('form')?.scrollIntoView(SCROLL);
     focusEl('#form h2');
     return;
   }
@@ -3464,7 +3469,7 @@ document.addEventListener('click', async (ev) => {
     if (draft.type !== t.dataset.type) { draft.type = t.dataset.type; draft.ex = {}; }
     testDraft = null; formOpen = true;
     render();
-    document.getElementById('form')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    document.getElementById('form')?.scrollIntoView(SCROLL);
     focusEl('#form h2');
     return;
   }
@@ -3517,7 +3522,7 @@ document.addEventListener('click', async (ev) => {
   }
   if (act === 'edit') {
     const e = state.entries.find(x => x.id === t.dataset.id);
-    if (e) { editingId = e.id; draft = draftFromEntry(e); formOpen = true; render(); document.getElementById('form')?.scrollIntoView({ block:'start', behavior:'smooth' }); focusEl('#form h2'); }
+    if (e) { editingId = e.id; draft = draftFromEntry(e); formOpen = true; render(); document.getElementById('form')?.scrollIntoView(SCROLL); focusEl('#form h2'); }
     return;
   }
   if (act === 'cancelEdit') { closeForm(); return render(); }
@@ -3641,7 +3646,7 @@ document.addEventListener('click', async (ev) => {
     closeForm();
     testDraft = { date: today(), right: '', left: '', note: '', jumpR: '', jumpL: '', hops: '', balance: false, after: null, orig: null };
     render();
-    document.getElementById('form')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    document.getElementById('form')?.scrollIntoView(SCROLL);
     focusEl('#form h2');
     return;
   }
@@ -3651,7 +3656,7 @@ document.addEventListener('click', async (ev) => {
     closeForm();
     testDraft = { date: x.date, right: String(x.right), left: String(x.left), note: x.note || '', jumpR: x.jumpR ?? '', jumpL: x.jumpL ?? '', hops: x.hops ?? '', balance: !!x.balance, after: x.after ?? null, orig: x.date };
     render();
-    document.getElementById('form')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    document.getElementById('form')?.scrollIntoView(SCROLL);
     focusEl('#form h2');
     return;
   }
