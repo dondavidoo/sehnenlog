@@ -80,6 +80,7 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
   .verdict.none { background: var(--card); }
   .verdict-kicker { font-size: 13px; color: var(--ink-soft); margin: 0 0 6px; }
   .verdict-word { margin: 0; font-size: 32px; font-weight: 680; letter-spacing: -0.03em; line-height: 1.1; }
+  .verdict.none .verdict-word { font-size: 20px; }
   .verdict.up .verdict-word { color: var(--up); }
   .verdict.hold .verdict-word { color: var(--hold-ink); }
   .verdict.down .verdict-word { color: var(--down); }
@@ -1931,7 +1932,7 @@ function afterTodayHtml() {
         if (afterEdit && afterEdit.date === date) return `<div class="day-row editing">${afterEditorHtml(es[0])}</div>`;
         return `<div class="day-row">
           <span class="day-time">${date === today() ? 'heute' : 'gestern'}</span>
-          <div class="day-main"><div class="day-title">${esc(es.map(e => typeLabel(e.type)).join(' + '))}</div><div class="day-sub">${esc(es.map(e => (e.time ? e.time + ' ' : '') + summary(e)).join(' · '))}</div></div>
+          <div class="day-main"><div class="day-title">${esc(es.map(e => typeLabel(e.type)).join(' + '))}</div><div class="day-sub">${esc(es.map(e => (e.time ? e.time + ' Uhr ' : '') + typeLabel(e.type)).join(' · '))}</div></div>
           <div class="day-side"><div class="day-acts"><button type="button" class="btn small" data-act="editAfter" data-id="${esc(es[0].id)}">eintragen</button></div></div>
         </div>`;
       }).join('')}
@@ -1966,7 +1967,7 @@ function kraftTodayHtml() {
       <h2>${esc(faellig)}</h2>
       <p class="lede">${lastK ? `Letzte Einheit: ${esc(relDay(lastK.date).replace(/\.$/, ''))}.` : 'Noch keine Einheit erfasst.'} Mindestens 48 Stunden Abstand. An CrossFit-Tagen direkt danach.</p>
       ${rows}${note}${gated}
-      <div class="btn-row" style="margin-top:12px"><button class="btn small" data-act="openFromToday" data-type="kraft">Einheit erfassen – Übungen sind vorausgefüllt</button></div>
+      ${due ? '<div class="btn-row" style="margin-top:12px"><button class="btn small" data-act="openFromToday" data-type="kraft">Sehnenkraft erfassen – vorausgefüllt</button></div>' : ''}
     </div>`;
 }
 function runTodayHtml() {
@@ -1975,7 +1976,8 @@ function runTodayHtml() {
     return `<div class="card"><h2>Laufen</h2>
       <p class="lede">${r.gate ? 'Laufeinstieg frei: der Morgenwert lag 7 Tage in Folge bei höchstens 2.' : 'Noch nicht: Der Morgenwert muss 7 Tage in Folge bei höchstens 2 liegen.'}</p>
       ${r.gate ? `<div class="today-row today-up"><div class="today-main"><b>Erster Lauf</b> ${esc(runStepText(0))}</div></div>
-      <p class="hint">Kadenz 5 % über gewohnt, flach, mit Einlagen. Die ersten drei Läufe setzen die Referenz für Pace und Kadenz.</p>` : ''}
+      <p class="hint">Kadenz 5 % über gewohnt, flach, mit Einlagen. Die ersten drei Läufe setzen die Referenz für Pace und Kadenz.</p>
+      <div class="btn-row"><button class="btn small" data-act="openFromToday" data-type="lauf">Lauf erfassen</button></div>` : ''}
     </div>`;
   }
   const due = r.sinceLast === null || r.sinceLast >= 2;
@@ -1987,10 +1989,11 @@ function runTodayHtml() {
   return `<div class="card${due ? ' pending' : ''}">
       <h2>${due ? 'Lauf möglich' : `Lauf: frühestens ${fmt(addDays(r.lastRun.date, 2))}`}</h2>
       <p class="lede">${r.lastRun ? `Letzter Lauf: ${esc(relDay(r.lastRun.date).replace(/\.$/, ''))}.` : ''} Mindestens ein Tag Pause zwischen Läufen; nicht am Tag nach einem Turnier.</p>
-      <div class="today-row${r.next != null && !isDeloadWeek() ? ' today-up' : ''}"><div class="today-main"><b>Ziel</b> ${esc(target)}${r.next != null && !isDeloadWeek() ? ` <span class="arrow">⬆ nächste Stufe (war ${esc(runStepText(r.step))})</span>` : ''}</div>
+      <div class="today-row${r.next != null && !isDeloadWeek() ? ' today-up' : ''}"><div class="today-main"><b>Ziel</b> ${esc(target)}${r.next != null && !isDeloadWeek() ? ` <span class="arrow">⬆ neue Stufe (bisher ${runStepMin(r.step)} Min.)</span>` : ''}</div>
         <div class="today-side"><span class="dots" aria-label="${r.counter} von 2 grün">${'●'.repeat(Math.min(r.counter, 2))}${'○'.repeat(Math.max(0, 2 - r.counter))}</span></div></div>
       <p class="hint">${esc(pace)}${esc(cad)}</p>
       ${limitNote}${isDeloadWeek() ? '<div class="warnbox">Entlastungswoche: 30 % kürzer, keine Steigerung.</div>' : ''}${wk}
+      ${due ? '<div class="btn-row"><button class="btn small" data-act="openFromToday" data-type="lauf">Lauf erfassen</button></div>' : ''}
     </div>`;
 }
 function plyoTodayHtml() {
@@ -2009,7 +2012,7 @@ function plyoTodayHtml() {
 }
 function testTodayHtml() {
   const ph = phaseState(), st = exitTestStatus();
-  if (ph.nr >= 4) return '';
+  if (ph.nr >= 4 || !(st.ready || st.pending)) return '';
   return `<div class="card${st.ready ? ' pending' : ''}">
       <h2>${st.ready ? 'Austrittstest jetzt machen' : `Austrittstest Phase ${ph.nr}`}</h2>
       <p class="lede">${esc(st.text)}</p>
@@ -2029,6 +2032,12 @@ function adviceHtml() {
   if (!out.length) return '';
   return `<div class="card"><h2>Hinweise</h2>${out.map(x => `<div class="warnbox">${esc(x)}</div>`).join('')}</div>`;
 }
+// Heute: eine Zeile zur Phase mit Sprung in den Fortschritt
+function phaseLineHtml() {
+  const ph = phaseState(), crit = phaseCriteria(ph.nr), ok = crit.filter(c => c.ok).length, st = exitTestStatus();
+  const test = ph.nr >= 4 ? '' : st.ready ? ' · Austrittstest bereit' : st.pending ? ' · Austrittstest offen' : '';
+  return `<p class="lede" style="margin:0 0 6px">Phase ${ph.nr} · ${esc(ph.def.kurz)}${ph.nr < 4 ? ` · ${ok} von ${crit.length} Kriterien` : ''}${test}${isDeloadWeek() ? ' · <b>Entlastungswoche</b>' : ''} <button type="button" class="sc-link" data-tab="fort">Fortschritt</button></p>`;
+}
 function phaseBarHtml() {
   const ph = phaseState(), crit = phaseCriteria(ph.nr), ok = crit.filter(c => c.ok).length;
   return `<div class="phasebar" role="list">${PHASEN.map(p => `<div class="phase${p.nr === ph.nr ? ' cur' : p.nr < ph.nr ? ' done' : ''}" role="listitem"><b>${p.nr}</b><span>${esc(p.kurz)}</span></div>`).join('')}</div>
@@ -2040,11 +2049,10 @@ function tabToday() {
     ${flags.length ? `<div class="flag"><b>Das gehört ärztlich angeschaut</b>${flags.map(f => `<div>${esc(f)}</div>`).join('')}</div>` : ''}
     ${uiFlash && uiFlash.where === 'today' ? `<div class="infobox">${esc(uiFlash.text)}</div>` : ''}
     ${afterTodayHtml()}
-    <div class="card"><h2>${esc(dayLabel(today()))}</h2>${phaseBarHtml()}
-      <p class="hint">Grün zählt den Zähler hoch, Gelb setzt ihn auf null, Rot heißt Stufe wiederholen. Stufenpläne und Kriterien im Tab „Fortschritt“.</p></div>
-    <div class="card"><h2>Einheit erfassen</h2>
-      <p class="lede">CrossFit und Volleyball zählen als Belastungstage und gehen in die Ampel ein – darum bitte immer eintragen.</p>
-      <div class="btn-row"><button class="btn small" data-act="openFromToday" data-type="kraft">Sehnenkraft</button><button class="btn quiet small" data-act="openFromToday" data-type="crossfit">CrossFit</button><button class="btn quiet small" data-act="openFromToday" data-type="volleyball">Volleyball</button><button class="btn quiet small" data-act="openFromToday" data-type="lauf">Lauf</button></div>
+    <div class="card"><h2>${esc(dayLabel(today()))}</h2>${phaseLineHtml()}
+      <h3>Einheit erfassen</h3>
+      <p class="hint">Auch CrossFit und Volleyball – sie zählen als Belastungstage.</p>
+      <div class="btn-row"><button class="btn small" data-act="openFromToday" data-type="kraft">Sehnenkraft</button><button class="btn quiet small" data-act="openFromToday" data-type="lauf">Lauf</button><button class="btn quiet small" data-act="openFromToday" data-type="crossfit">CrossFit</button><button class="btn quiet small" data-act="openFromToday" data-type="volleyball">Volleyball</button>${phaseState().nr >= 3 ? '<button class="btn quiet small" data-act="openFromToday" data-type="plyo">Plyometrie</button>' : ''}</div>
     </div>
     ${kraftTodayHtml()}
     ${runTodayHtml()}
@@ -2076,7 +2084,7 @@ function plyoBarHtml() {
   const s = plyoStatus();
   const boxes = PLYO_STEPS.map((st, i) => `<i class="lb${i < s.step ? ' done' : i === s.step ? ' cur' : ''}" title="${esc(st.label)}"></i>`).join('');
   return `<div class="ladder">
-      <div class="ladder-head"><b>Plyometrie</b><span class="hint" style="margin:0">${s.step >= 0 ? `Stufe ${s.step + 1} von ${PLYO_STEPS.length} · <span class="dots">${'●'.repeat(Math.min(s.counter, PLYO_EINHEITEN))}${'○'.repeat(Math.max(0, PLYO_EINHEITEN - s.counter))}</span>` : 'ab Phase 3'}</span></div>
+      <div class="ladder-head"><b>Plyometrie</b><span class="hint" style="margin:0">${s.step >= 0 ? `Stufe ${s.step + 1} von ${PLYO_STEPS.length} · <span class="dots" aria-label="${s.counter} von ${PLYO_EINHEITEN} grünen Einheiten">${'●'.repeat(Math.min(s.counter, PLYO_EINHEITEN))}${'○'.repeat(Math.max(0, PLYO_EINHEITEN - s.counter))}</span>` : `${PLYO_STEPS.length} Stufen`}</span></div>
       <div class="lbar">${boxes}</div>
       <div class="ladder-cur"><span class="lbl">Aktuell</span> ${esc(s.cur ? s.cur.label : s.active ? 'noch nicht begonnen' : 'ab Phase 3')}</div>
       <div class="ladder-cur"><span class="lbl">${s.step < 0 ? 'Start' : 'Nächste Stufe'}</span> ${esc(s.next ? s.next.label : 'keine – Endstufe erreicht')}${s.next && s.step >= 0 ? `<span class="hint" style="margin:0"> – nach ${PLYO_TAGE} Tagen und ${PLYO_EINHEITEN} grünen Einheiten</span>` : ''}</div>
@@ -2149,7 +2157,7 @@ function tabProgress() {
       <h3 style="margin-top:14px">Laufen</h3>
       <p class="hint">Jede Stufe ist 10 % länger als die vorige, nach zwei grünen Läufen. Die Stufen reichen bis drei Stunden.</p>
       ${runBarHtml()}
-      <h3 style="margin-top:14px">Plyometrie (ab Phase 3)</h3>
+      <h3 style="margin-top:14px">Plyometrie</h3>
       ${plyoBarHtml()}
     </div>
     <div class="card"><h2>Austrittstests</h2>${testsTableHtml()}
