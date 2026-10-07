@@ -66,6 +66,8 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
   .tabs button { font-family: inherit; font-size: 14px; font-weight: 600; padding: 9px 14px; min-height: 40px;
     border-radius: 7px; border: 1px solid var(--rule); background: var(--card); color: var(--ink-soft); cursor: pointer; }
   .tabs button[aria-selected="true"] { background: var(--ink); border-color: var(--ink); color: var(--on-ink); }
+  .tabs button[data-tab="mehr"] { border-style: dashed; background: transparent; color: var(--ink-soft); font-weight: 600; }
+  .tabs button[data-tab="mehr"][aria-selected="true"] { background: var(--surface-3); color: var(--ink); border-style: dashed; border-color: var(--ink-soft); }
 
   .card { background: var(--card); border: 1px solid var(--rule-soft); border-radius: 10px; padding: 18px; margin-bottom: 14px; }
   .card h2 { margin: 0 0 4px; font-size: 16px; font-weight: 650; letter-spacing: -0.01em; }
@@ -932,7 +934,7 @@ function normalize(p) {
   m.ok.forEach(x => map.set(x.date, x.skipped ? skippedMorning(x.date) : makeMorning(x.date, x.pain, x.stiff, x.note, x.spots)));
   t.ok.forEach(x => tmap.set(x.date, makeTest(x.date, x.right, x.left, x.note, x)));
   return { entries: e.ok.map(cleanEntry), mornings: [...map.values()], tests: [...tmap.values()],
-    settings: cleanSettings(p.settings), ladders: cleanLadders(p.ladders), run: cleanRun(p.run),
+    settings: cleanSettings(p.settings), ladders: cleanLadders(p.ladders), run: cleanRun(p.run), plyo: cleanPlyo(p.plyo),
     dropped: e.dropped + m.dropped + t.dropped, doppelt: 0, legacy: false, from: typeof p.v === 'number' ? p.v : 4 };
 }
 
@@ -944,11 +946,12 @@ function adopt(n) {
   state.settings = cleanSettings(n.settings);
   state.ladders = cleanLadders(n.ladders);
   state.run = cleanRun(n.run);
+  state.plyo = cleanPlyo(n.plyo);
   invalidate();
   noteDropped(n.dropped);
   return hasData();
 }
-function packState() { return { v: 5, entries: state.entries, mornings: state.mornings, tests: state.tests, settings: state.settings || cleanSettings(null), ladders: state.ladders || cleanLadders(null), run: state.run || cleanRun(null) }; }
+function packState() { return { v: 5, entries: state.entries, mornings: state.mornings, tests: state.tests, settings: state.settings || cleanSettings(null), ladders: state.ladders || cleanLadders(null), run: state.run || cleanRun(null), plyo: state.plyo || cleanPlyo(null) }; }
 function migrationText(n) {
   if (!n.legacy) return 'Neu in dieser Fassung: „Schmerz danach“, Schmerzort und Distanz beim Lauf. Deine Daten wurden übernommen – bei alten Einträgen sind die neuen Felder leer, das zählt nicht als Verstoß. Der alte Stand bleibt zusätzlich gespeichert.';
   return 'Morgenwerte stehen jetzt an dem Tag, an dem du aufgewacht bist – nicht mehr beim Training vom Vortag. Deine Daten wurden übernommen, der alte Stand bleibt zusätzlich unverändert gespeichert.'
@@ -1065,7 +1068,7 @@ async function load() {
       }
     }
   }
-  if (!state.settings) { state.settings = cleanSettings(null); state.ladders = cleanLadders(null); state.run = cleanRun(null); }
+  if (!state.settings) { state.settings = cleanSettings(null); state.ladders = cleanLadders(null); state.run = cleanRun(null); state.plyo = cleanPlyo(null); }
   await loadMeta();
   state.snapPrev  = await readSnapshot(KEY_PREV);
   state.snapTrash = await readSnapshot(KEY_TRASH);
@@ -1505,6 +1508,17 @@ function cleanLadders(l) {
   });
   return out;
 }
+// Plyometrie (ab Phase 3): drei Stufen, je mindestens 14 Tage und 4 grüne Einheiten
+const PLYO_STEPS = [
+  { ex:'p1', sets:3, reps:20, label:'Pogo Hops 3 × 20' },
+  { ex:'p2', sets:3, reps:30, label:'Seilspringen 3 × 30 Sek.' },
+  { ex:'p3', sets:3, reps:10, label:'Einbeinige Hops 3 × 10 je Seite' }
+];
+const PLYO_TAGE = 14, PLYO_EINHEITEN = 4;
+function cleanPlyo(r) {
+  const x = r && typeof r === 'object' ? r : {};
+  return { step: Number.isInteger(x.step) && x.step >= -1 && x.step < PLYO_STEPS.length ? x.step : -1, since: isIsoDate(x.since) ? x.since : null };
+}
 function cleanRun(r) {
   const x = r && typeof r === 'object' ? r : {};
   return { step: Number.isInteger(x.step) && x.step >= -1 ? x.step : -1, since: isIsoDate(x.since) ? x.since : null };
@@ -1702,6 +1716,43 @@ function runStatus() {
   memo.runStatus = { step, counter, next, gate, lastRun, sinceLast, text: step >= 0 ? runStepText(step) : null, nextText: next != null ? runStepText(next) : null };
   return memo.runStatus;
 }
+// Plyometrie-Tage mit Ampel; Stufe weiter nach 14 Tagen und 4 grünen Einheiten auf der Stufe
+function plyoDays() {
+  if (memo.plyoDays) return memo.plyoDays;
+  const all = days(), done = all.filter(d => d.painMorning != null);
+  const lv = new Map(); done.forEach((d, i) => lv.set(d.date, dayLevel(d, i, done).level));
+  memo.plyoDays = all.filter(d => entriesOf(d.date).some(e => e.type === 'plyo')).map(d => ({ date: d.date, level: lv.get(d.date) || 'offen', entries: entriesOf(d.date).filter(e => e.type === 'plyo') }));
+  return memo.plyoDays;
+}
+function plyoLogged(entries, ex) { for (const e of entries) { const v = e.details && e.details.ex && e.details.ex[ex]; if (v && (v.sets || v.reps)) return v; } return null; }
+function plyoStatus() {
+  if (memo.plyoStatus) return memo.plyoStatus;
+  const st = state.plyo || cleanPlyo(null), ph = phaseState();
+  const active = ph.nr >= 3;
+  const cur = st.step >= 0 ? PLYO_STEPS[st.step] : null, next = PLYO_STEPS[st.step + 1] || null;
+  let counter = 0;
+  if (cur) {
+    const list = plyoDays().filter(d => !st.since || d.date >= st.since);
+    for (let i = list.length - 1; i >= 0; i--) { const d = list[i]; if (d.level === 'offen') continue; if (d.level !== 'gruen') break; const v = plyoLogged(d.entries, cur.ex); if (v && (+v.sets || 0) >= cur.sets && (+v.reps || 0) >= cur.reps) counter++; }
+  }
+  const tage = st.since ? daysBetween(st.since, today()) : 0;
+  const ready = active && next && !isDeloadWeek() && (st.step < 0 || (counter >= PLYO_EINHEITEN && tage >= PLYO_TAGE));
+  const last = plyoDays().slice(-1)[0] || null;
+  const lastRun = runsSorted().slice(-1)[0] || null;
+  memo.plyoStatus = { active, step: st.step, since: st.since, cur, next, counter, tage, ready, last,
+    hint: !active ? 'Ab Phase 3.' : ready ? (st.step < 0 ? 'Einstieg frei: Pogo Hops 3 × 20.' : `Nächste Stufe frei: ${next.label}.`)
+      : next ? `${Math.min(counter, PLYO_EINHEITEN)} von ${PLYO_EINHEITEN} grünen Einheiten, ${Math.min(tage, PLYO_TAGE)} von ${PLYO_TAGE} Tagen auf dieser Stufe.` : 'Letzte Stufe erreicht – Teil des Austrittstests.' };
+  return memo.plyoStatus;
+}
+function applyPlyoAdvance(entry) {
+  if (entry.type !== 'plyo' || !entryClean(entry) || isDeloadWeek(entry.date)) return null;
+  const s = plyoStatus();
+  if (!s.ready || !s.next) return null;
+  const v = plyoLogged([entry], s.next.ex);
+  if (!v || (+v.sets || 0) < s.next.sets || (+v.reps || 0) < s.next.reps) return null;
+  state.plyo = { step: s.step + 1, since: entry.date }; invalidate();
+  return s.next.label;
+}
 function applyRunAdvance(entry) {
   if (entry.type !== 'lauf' || !entryClean(entry) || isDeloadWeek(entry.date)) return null;
   const s = runStatus(), min = runMin(entry) || 0;
@@ -1792,7 +1843,7 @@ function phaseCriteria(nr) {
     item('Mindestens 4 Wochen in Phase 3', ph.tage >= 28, `${Math.floor(ph.tage / 7)} von 4 Wochen`);
     const tempo = runDays().filter(d => d.level === 'gruen' && d.intervals && d.date >= ph.since).length; item('3 Tempoläufe grün (Feld „Intervalle“ ausgefüllt)', tempo >= 3, `${Math.min(tempo, 3)} von 3`);
     const n = runGreenCount(58, ph.since); item('Längster Lauf 58 Min. grün', n >= 1, `${Math.min(n, 1)} von 1`);
-    const hops = days().filter(d => d.date >= ph.since && entriesOf(d.date).some(e => e.type === 'plyo' && e.details && e.details.ex && e.details.ex.p3)).length; item('Einbeinige Hops als Einheit erfasst', hops >= 1, hops ? 'erfüllt' : 'noch nicht');
+    const pl = plyoStatus(); item('Plyometrie auf Stufe 3 (einbeinige Hops) mit einer grünen Einheit', pl.step >= 2 && pl.counter >= 1, pl.step < 0 ? 'noch nicht begonnen' : `Stufe ${pl.step + 1} von 3`);
     item('Morgenwert in den letzten 14 Tagen nie über 2', morningCalm(14), morningCalm(14) ? 'erfüllt' : 'noch nicht');
   }
   return c;
@@ -1891,6 +1942,20 @@ function runTodayHtml() {
       ${limitNote}${isDeloadWeek() ? '<div class="warnbox">Entlastungswoche: 30 % kürzer, keine Steigerung.</div>' : ''}${wk}
     </div>`;
 }
+function plyoTodayHtml() {
+  const s = plyoStatus();
+  if (!s.active) return '';
+  const lastRunTomorrow = false;
+  const target = s.ready && s.next ? s.next : s.cur;
+  return `<div class="card${s.ready ? ' pending' : ''}">
+      <h2>Plyometrie</h2>
+      <p class="lede">1–2× pro Woche, nie am Tag vor einem Lauf. Je Stufe mindestens ${PLYO_TAGE} Tage und ${PLYO_EINHEITEN} grüne Einheiten.${s.last ? ` Letzte: ${esc(relDay(s.last.date).replace(/\.$/, ''))}.` : ''}</p>
+      ${target ? `<div class="today-row${s.ready ? ' today-up' : ''}"><div class="today-main"><button type="button" class="exlink" data-act="gotoEx" data-ex="${target.ex}">${esc(EX[target.ex].name)}</button> ${esc(target.label.replace(EX[target.ex].name, '').trim())}${s.ready ? ` <span class="arrow">⬆ ${s.step < 0 ? 'Einstieg' : 'nächste Stufe'}</span>` : ''}</div>
+        <div class="today-side">${s.cur && !s.ready ? `<span class="dots">${'●'.repeat(Math.min(s.counter, PLYO_EINHEITEN))}${'○'.repeat(Math.max(0, PLYO_EINHEITEN - s.counter))}</span>` : ''}</div></div>` : ''}
+      <p class="hint">${esc(s.hint)}</p>
+      <div class="btn-row"><button class="btn small" data-act="openFromToday" data-type="plyo">Plyometrie erfassen</button></div>
+    </div>`;
+}
 function testTodayHtml() {
   const ph = phaseState(), st = exitTestStatus();
   if (ph.nr >= 4) return '';
@@ -1925,6 +1990,7 @@ function tabToday() {
       <p class="hint">Grün zählt den Zähler hoch, Gelb setzt ihn auf null, Rot heißt Stufe wiederholen. Details im Tab „Fortschritt“.</p></div>
     ${kraftTodayHtml()}
     ${runTodayHtml()}
+    ${plyoTodayHtml()}
     ${testTodayHtml()}
     ${adviceHtml()}
   </div>`;
@@ -1942,6 +2008,19 @@ function ladderBarHtml(s) {
       <div class="btn-row" style="margin-top:6px">
         <button type="button" class="btn quiet small" data-act="ladderDown" data-key="${s.key}" ${s.step < 0 ? 'disabled' : ''}>Stufe runter</button>
         <button type="button" class="btn quiet small" data-act="ladderUp" data-key="${s.key}" ${s.done ? 'disabled' : ''}>Stufe hoch</button>
+      </div>
+    </div>`;
+}
+function plyoBarHtml() {
+  const s = plyoStatus();
+  const boxes = PLYO_STEPS.map((st, i) => `<i class="lb${i < s.step ? ' done' : i === s.step ? ' cur' : ''}" title="${esc(st.label)}"></i>`).join('');
+  return `<div class="ladder">
+      <div class="ladder-head"><b>Plyometrie</b><span class="hint" style="margin:0">${s.step >= 0 ? `Stufe ${s.step + 1} von ${PLYO_STEPS.length} · <span class="dots">${'●'.repeat(Math.min(s.counter, PLYO_EINHEITEN))}${'○'.repeat(Math.max(0, PLYO_EINHEITEN - s.counter))}</span>` : 'ab Phase 3'}</span></div>
+      <div class="lbar">${boxes}</div>
+      <div class="ladder-cur">${esc(s.cur ? s.cur.label : s.hint)}${s.cur && s.next ? `<span class="hint" style="margin:0"> → nächste: ${esc(s.next.label)}</span>` : ''}</div>
+      <div class="btn-row" style="margin-top:6px">
+        <button type="button" class="btn quiet small" data-act="plyoDown" ${s.step < 0 ? 'disabled' : ''}>Stufe runter</button>
+        <button type="button" class="btn quiet small" data-act="plyoUp" ${s.step + 1 >= PLYO_STEPS.length ? 'disabled' : ''}>Stufe hoch</button>
       </div>
     </div>`;
 }
@@ -1994,6 +2073,7 @@ function tabProgress() {
       <p class="lede">Jede Übung hat ihre Stufen. Drei grüne Einheiten seit der letzten Änderung, dann schlägt die App genau eine Steigerung vor. Die Knöpfe sind für Korrekturen von Hand.</p>
       ${LADDER_ORDER.map(k => ladderBarHtml(ladderStatus(k))).join('')}
       ${runBarHtml()}
+      ${plyoBarHtml()}
     </div>
     <div class="card"><h2>Austrittstests</h2>${testsTableHtml()}
       <div class="btn-row" style="margin-top:12px"><button type="button" class="btn ghost small" data-act="openTest">Test eintragen</button></div></div>
@@ -2998,7 +3078,7 @@ function tabData() {
 }
 
 /* ============================================ Render */
-const TABS = [['heute','Heute'],['log','Logbuch'],['fort','Fortschritt'],['mehr','Mehr']];
+const TABS = [['heute','Heute'],['log','Logbuch'],['fort','Fortschritt'],['mehr','⋯ Mehr']];
 // Nachschlagen – erreichbar über „Mehr“
 const MORE = [
   ['plan',  'Plan',               'Regeln, Phasen, Laufregeln, Austrittstest, Warnzeichen'],
@@ -3162,6 +3242,7 @@ async function applyBackup(raw) {
     if (parsed.ladders) { state.ladders = n.ladders; prog = true; }
     if (parsed.run) { state.run = n.run; prog = true; }
     if (parsed.settings) { state.settings = n.settings; prog = true; }
+    if (parsed.plyo) { state.plyo = n.plyo; prog = true; }
   }
   importBuf = ''; state.dataNote = null; mEdit = null; closeForm();
   await save();
@@ -3270,8 +3351,9 @@ document.addEventListener('click', async (ev) => {
   }
   if (act === 'setToday') { draft.date = today(); draft.time = nowTime(); whenOpen = false; return render(); }
   if (act === 'openFromToday') {
-    draft = newDraft(); draft.type = t.dataset.type === 'lauf' ? 'lauf' : 'kraft';
+    draft = newDraft(); draft.type = TYPES[t.dataset.type] ? t.dataset.type : 'kraft';
     if (draft.type === 'kraft') draft.ex = exFromLadders();
+    if (draft.type === 'plyo') { const s = plyoStatus(), tgt = s.ready && s.next ? s.next : s.cur; if (tgt) draft.ex = { [tgt.ex]: { sets: String(tgt.sets), reps: String(tgt.reps), weight: '' } }; }
     testDraft = null; formOpen = true; editingId = null; tab = 'log';
     render();
     document.getElementById('form')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
@@ -3284,6 +3366,13 @@ document.addEventListener('click', async (ev) => {
     if (ns === st.step) return;
     state.ladders[k] = { step: ns, since: today() };
     await save(); announce(`${L.name}: ${ns < 0 ? 'aus der Einheit genommen' : 'Stufe ' + (ns + 1)}.`);
+    return;
+  }
+  if (act === 'plyoUp' || act === 'plyoDown') {
+    const st = state.plyo || cleanPlyo(null), ns = act === 'plyoUp' ? Math.min(st.step + 1, PLYO_STEPS.length - 1) : Math.max(-1, st.step - 1);
+    if (ns === st.step) return;
+    state.plyo = { step: ns, since: today() };
+    await save(); announce(ns < 0 ? 'Plyometrie zurückgesetzt.' : `Plyometrie: ${PLYO_STEPS[ns].label}.`);
     return;
   }
   if (act === 'runUp' || act === 'runDown') {
@@ -3334,9 +3423,10 @@ document.addEventListener('click', async (ev) => {
       state.entries.push(neu);
       text = `Gespeichert: ${art}, ${wann}.`;
       invalidate();
-      const adv = applyLadderAdvance(neu), radv = applyRunAdvance(neu);
+      const adv = applyLadderAdvance(neu), radv = applyRunAdvance(neu), padv = applyPlyoAdvance(neu);
       if (adv) text += ` Leiter vorgerückt: ${adv.join(', ')}.`;
       if (radv) text += ` Lauf-Leiter: ${radv}.`;
+      if (padv) text += ` Plyometrie: ${padv}.`;
     }
     closeForm();
     await save();
@@ -3467,7 +3557,7 @@ document.addEventListener('click', async (ev) => {
     const e = lastDeleted;
     if (!state.entries.some(x => x.id === e.id)) state.entries.push(e);
     lastDeleted = null;
-    invalidate(); applyLadderAdvance(e); applyRunAdvance(e);
+    invalidate(); applyLadderAdvance(e); applyRunAdvance(e); applyPlyoAdvance(e);
     await save();
     if (!state.error) { uiFlash = { where: 'entry', ok: true, text: `Einheit vom ${fmt(e.date)} wiederhergestellt.` }; announce(uiFlash.text); }
     return render();
@@ -3719,7 +3809,7 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
 const _test = {
   setNow(f) { _now = f; },
   setState(s) { state.entries = s.entries || []; state.mornings = s.mornings || []; state.tests = s.tests || [];
-    state.settings = cleanSettings(s.settings); state.ladders = cleanLadders(s.ladders); state.run = cleanRun(s.run); state.loaded = true; invalidate(); },
+    state.settings = cleanSettings(s.settings); state.ladders = cleanLadders(s.ladders); state.run = cleanRun(s.run); state.plyo = cleanPlyo(s.plyo); state.loaded = true; invalidate(); },
   setDraft(d, editing) { draft = d; editingId = editing ?? null; },
   setTab(t) { tab = t; },
   ui() { return { tab, formOpen, editingId, testDraft, uiFlash, lastDeleted, draft, mEdit }; },

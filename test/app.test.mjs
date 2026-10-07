@@ -800,3 +800,41 @@ describe('Paket 8: Vier Tabs, Sicherung mit Programmstand', () => {
     assert.equal(third.ladderStatus('a1').step, 1);
   });
 });
+
+describe('Paket 9: Plyometrie-Leiter ab Phase 3', () => {
+  test('inaktiv vor Phase 3; Einstieg, Zähler, nächste Stufe nach 14 Tagen und 4 grünen Einheiten', async () => {
+    const app = await loadApp();
+    app._test.setNow(() => new Date('2027-03-20T10:00:00'));
+    app._test.setProgrammStart('2026-10-07');
+    const morn = (d, p) => app.makeMorning(d, p ?? 1, 'unter15', '');
+    // zwei bestandene Tests → Phase 3 seit 2027-03-02
+    const t1 = app.makeTest('2026-12-10', 15, 20, '', { after: 1 }), t2 = app.makeTest('2027-03-01', 26, 28, '', { after: 1, balance: true });
+    const mornings = ['2026-12-10', '2026-12-11', '2027-03-01', '2027-03-02'].map(d => morn(d));
+    app._test.setState({ tests: [t2], mornings });
+    assert.equal(app.phaseState().nr, 2);   // der eine Test besteht Phase 1, mehr nicht
+    assert.equal(app.plyoStatus().active, false);
+    app._test.setState({ tests: [t1, t2], mornings });
+    assert.equal(app.phaseState().nr, 3);
+    let s = app.plyoStatus();
+    assert.equal(s.active, true); assert.equal(s.step, -1); assert.equal(s.ready, true);
+    const plyo = (date, ex, sets, reps) => ({ id: 'p' + date, date, time: '18:00', type: 'plyo', details: { ex: { [ex]: { sets: String(sets), reps: String(reps), weight: '' } } }, painDuring: 1, painAfter: 1, spots: ['knoechel'] });
+    const e1 = plyo('2027-03-20', 'p1', 3, 20);
+    app._test.setState({ tests: [t1, t2], mornings, entries: [e1] });
+    assert.equal(app.applyPlyoAdvance(e1), 'Pogo Hops 3 × 20');
+    assert.equal(app.plyoStatus().step, 0);
+    // vier grüne Pogo-Einheiten, aber erst 10 Tage: noch nicht bereit
+    app._test.setNow(() => new Date('2027-03-30T10:00:00'));
+    const dates = ['2027-03-20', '2027-03-23', '2027-03-26', '2027-03-29'];
+    const entries = dates.map(d => plyo(d, 'p1', 3, 20));
+    const m2 = mornings.concat(dates.flatMap(d => [morn(d), morn(app.addDays(d, 1))]));
+    app._test.setState({ tests: [t1, t2], mornings: m2, entries, plyo: { step: 0, since: '2027-03-20' } });
+    s = app.plyoStatus();
+    assert.equal(s.counter, 4); assert.equal(s.ready, false);
+    app._test.setNow(() => new Date('2027-04-04T10:00:00'));
+    app._test.setState({ tests: [t1, t2], mornings: m2, entries, plyo: { step: 0, since: '2027-03-20' } });
+    s = app.plyoStatus();
+    assert.equal(s.ready, true); assert.equal(s.next.ex, 'p2');
+    assert.match(app.tabToday(), /Plyometrie[\s\S]*Seilspringen/);
+    assert.equal(app.packState().plyo.step, 0);
+  });
+});
