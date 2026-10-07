@@ -857,8 +857,8 @@ describe('Paket 10: Stufenpläne für alle Übungen', () => {
       details: { ex: { a1: { sets: '1', reps: '12', weight: '', v: 'beidbeinig' }, b3: { sets: '1', reps: '12', weight: '', v: 'je Seite' }, b1: { sets: '1', reps: '15', weight: '', band: 0 } } } };
     app._test.setState({ entries: [e], ladders: { a1: { step: 0, since: '2026-10-08' }, a3: { step: 0, since: '2026-10-08' } } });
     const adv = app.applyLadderAdvance(e);
-    assert.ok(adv.includes('Seitstütz mit Beinheben (Hüfte, Alternative)'));
-    assert.ok(adv.includes('Band-Dorsalextension (nur auf Hinweis)'));
+    assert.ok(adv.includes('Seitstütz (Alternative)'));
+    assert.ok(adv.includes('Dorsalextension (auf Hinweis)'));
     assert.equal(app.ladderStatus('b3').step, 0);
     assert.equal(app.ladderStatus('a1').step, 0);   // Kernübung ohne Vorschlag rückt nicht vor
     const f = app.tabProgress();
