@@ -804,7 +804,7 @@ describe('Paket 8: Vier Tabs, Sicherung mit Programmstand', () => {
 describe('Paket 9: Plyometrie-Leiter ab Phase 3', () => {
   test('inaktiv vor Phase 3; Einstieg, Zähler, nächste Stufe nach 14 Tagen und 4 grünen Einheiten', async () => {
     const app = await loadApp();
-    app._test.setNow(() => new Date('2027-03-20T10:00:00'));
+    app._test.setNow(() => new Date('2027-03-28T10:00:00'));   // Woche 24 – keine Entlastungswoche
     app._test.setProgrammStart('2026-10-07');
     const morn = (d, p) => app.makeMorning(d, p ?? 1, 'unter15', '');
     // zwei bestandene Tests → Phase 3 seit 2027-03-02
@@ -818,7 +818,7 @@ describe('Paket 9: Plyometrie-Leiter ab Phase 3', () => {
     let s = app.plyoStatus();
     assert.equal(s.active, true); assert.equal(s.step, -1); assert.equal(s.ready, true);
     const plyo = (date, ex, sets, reps) => ({ id: 'p' + date, date, time: '18:00', type: 'plyo', details: { ex: { [ex]: { sets: String(sets), reps: String(reps), weight: '' } } }, painDuring: 1, painAfter: 1, spots: ['knoechel'] });
-    const e1 = plyo('2027-03-20', 'p1', 3, 20);
+    const e1 = plyo('2027-03-28', 'p1', 3, 20);
     app._test.setState({ tests: [t1, t2], mornings, entries: [e1] });
     assert.equal(app.applyPlyoAdvance(e1), 'Pogo Hops 3 × 20');
     assert.equal(app.plyoStatus().step, 0);
