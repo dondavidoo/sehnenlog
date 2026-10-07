@@ -566,7 +566,7 @@ const EX = {
 };
 
 const GROUPS = [
-  { g:'kern', title:'Kern – Sehne und Wade', sub:'Die Leitern im Tab „Heute“ sagen dir Stufe und Dosis. Ball-Wadenheben und Doming kommen als letzter Schritt dazu.' },
+  { g:'kern', title:'Kern – Sehne und Wade', sub:'Der Tab „Heute“ sagt dir Stufe und Dosis. Ball-Wadenheben und Doming kommen als letzter Schritt dazu.' },
   { g:'erg',  title:'Ergänzung', sub:'Hüfte 2× pro Woche (eine der beiden), Einbeinstand als Aufwärmen, Dehnung zum Schluss.' },
   { g:'opt',  title:'Geparkt – nur auf Vorschlag der App', sub:'Dorsalextension bei Anterior-Symptomen beim Laufen, Isometrie als freiwillige Schmerzbremse.' },
   { g:'plyo', title:'Plyometrie – ab Phase 3', sub:'Reihenfolge strikt einhalten, je Stufe mindestens zwei Wochen grün.' }
@@ -1693,7 +1693,7 @@ function exFromLadders() {
 }
 
 // Lauf-Leiter: Stufe 0 = Gehen/Laufen 3 × (8/2), Stufe 1 = 30 Min., danach +10 % je Stufe
-const RUN_MAX_STEPS = 24;
+const RUN_MAX_STEPS = 17;   // 30 → … → 124 Min., je +10 %
 function runStepMin(i) { if (i <= 1) return 30; let m = 30; for (let k = 2; k <= i; k++) m = Math.round(m * (1 + LAUF_SPRUNG)); return m; }
 function runStepText(i) { return i === 0 ? '3 × (8 Min. laufen / 2 Min. gehen), 30 Min. gesamt' : `${runStepMin(i)} Min. locker am Stück`; }
 const RUN_GREEN_NEEDED = 2;
@@ -1963,7 +1963,8 @@ function testTodayHtml() {
       <h2>${st.ready ? 'Austrittstest jetzt machen' : `Austrittstest Phase ${ph.nr}`}</h2>
       <p class="lede">${esc(st.text)}</p>
       <p class="hint">Ziel: ${esc(testTargetText(ph.nr))}. Der Test ersetzt an dem Tag die Kraft-Einheit.</p>
-      ${st.ready ? '<div class="btn-row"><button class="btn small" data-act="openTest">Test eintragen</button></div>' : ''}
+      <div class="btn-row">${st.ready ? '<button class="btn small" data-act="openTest">Test eintragen</button>' : '<button class="btn small" disabled title="Erst wenn alle Kriterien stehen">Test eintragen</button>'}<button type="button" class="btn quiet small" data-tab="fort">Kriterien im Fortschritt ansehen</button></div>
+      ${st.ready ? '' : '<p class="hint" style="margin-top:6px">Der Knopf wird aktiv, sobald alle Kriterien der Phase erfüllt sind, kein Test mehr offen ist und – nach einem nicht bestandenen Test – die Wiederholungsregel erfüllt ist.</p>'}
     </div>`;
 }
 function adviceHtml() {
@@ -1987,7 +1988,7 @@ function tabToday() {
   return `<div class="log">
     ${flags.length ? `<div class="flag"><b>Das gehört ärztlich angeschaut</b>${flags.map(f => `<div>${esc(f)}</div>`).join('')}</div>` : ''}
     <div class="card"><h2>${esc(dayLabel(today()))}</h2>${phaseBarHtml()}
-      <p class="hint">Grün zählt den Zähler hoch, Gelb setzt ihn auf null, Rot heißt Stufe wiederholen. Details im Tab „Fortschritt“.</p></div>
+      <p class="hint">Grün zählt den Zähler hoch, Gelb setzt ihn auf null, Rot heißt Stufe wiederholen. Stufenpläne und Kriterien im Tab „Fortschritt“.</p></div>
     ${kraftTodayHtml()}
     ${runTodayHtml()}
     ${plyoTodayHtml()}
@@ -2044,7 +2045,7 @@ function settingsHtml() {
       <input type="text" data-spath="${kind}.${i}.kg" value="${esc(b.kg)}" aria-label="Stärke" placeholder="Stärke">
     </div>`;
   const s = state.settings;
-  return `<p class="txt txt-gap">Reihenfolge = Leiter, schwächstes Band zuerst. Farben werden als Chips in den Vorschlägen gezeigt (bekannt: gelb, rot, grün, blau, schwarz, orange, lila, silber).</p>
+  return `<p class="txt txt-gap">Reihenfolge = Stufenfolge, schwächstes Band zuerst. Farben werden als Chips in den Vorschlägen gezeigt (bekannt: gelb, rot, grün, blau, schwarz, orange, lila, silber).</p>
     <h3>Theraband (Band-Adduktion, ggf. Dorsalextension)</h3>${s.thera.map((b, i) => row('thera', i, b)).join('')}
     <h3>Mini-Loop (Hüfte)</h3>${s.loop.map((b, i) => row('loop', i, b)).join('')}
     <h3>Kurzhantel</h3><div class="eq-row eq-row-2"><label class="sublabel" for="eq-hantel">Schritt in kg</label><input type="number" id="eq-hantel" inputmode="numeric" min="1" data-spath="hantelSchritt" value="${esc(s.hantelSchritt)}"></div>
@@ -2069,10 +2070,17 @@ function tabProgress() {
         <div class="crit-row${st.ready ? ' ready' : ''}"><span class="crit-mark">${st.pending ? '…' : '▶'}</span><div><div>Austrittstest: ${esc(testTargetText(ph.nr))}</div><div class="hint" style="margin:0">${esc(st.text)}</div></div></div>
       </div>` : '<p class="txt">Erhalt: Sehnenkraft 2× pro Woche, dauerhaft. Der Halbmarathon-Plan läuft außerhalb der App.</p>'}
     </div>
-    <div class="card"><h2>Leitern</h2>
-      <p class="lede">Jede Übung hat ihre Stufen. Drei grüne Einheiten seit der letzten Änderung, dann schlägt die App genau eine Steigerung vor. Die Knöpfe sind für Korrekturen von Hand.</p>
-      ${LADDER_ORDER.map(k => ladderBarHtml(ladderStatus(k))).join('')}
+    <div class="card"><h2>Stufenpläne</h2>
+      <p class="lede">Nur Übungen, die gesteigert werden, haben einen Stufenplan. Einbeinstand und Wadendehnung stehen fest in jeder Einheit; geparkte Übungen kommen nur auf Hinweis. Die Knöpfe sind für Korrekturen von Hand.</p>
+      <h3>Sehne und Wade</h3>
+      <p class="hint">Drei grüne Einheiten seit der letzten Änderung, dann schlägt die App genau eine Steigerung vor – erst neue Übung, dann Sätze, dann Stufe.</p>
+      ${['a1', 'a2', 'a6', 'a3', 'a5'].map(k => ladderBarHtml(ladderStatus(k))).join('')}
+      <h3 style="margin-top:14px">Hüfte</h3>
+      ${ladderBarHtml(ladderStatus('hip'))}
+      <h3 style="margin-top:14px">Laufen</h3>
+      <p class="hint">Jede Stufe ist 10 % länger als die vorige, nach zwei grünen Läufen. Die Stufen reichen bis rund zwei Stunden – das ist die Spanne, die der Halbmarathon-Plan später braucht.</p>
       ${runBarHtml()}
+      <h3 style="margin-top:14px">Plyometrie (ab Phase 3)</h3>
       ${plyoBarHtml()}
     </div>
     <div class="card"><h2>Austrittstests</h2>${testsTableHtml()}
@@ -3247,7 +3255,7 @@ async function applyBackup(raw) {
   importBuf = ''; state.dataNote = null; mEdit = null; closeForm();
   await save();
   importMsg = { ok:!state.error, text: state.error ? 'Nicht gespeichert – siehe Fehlermeldung oben.' :
-    `Einheiten: ${neu} neu, ${ersetzt} aktualisiert. Morgen: ${mNeu} neu, ${mErsetzt} aktualisiert.${n.tests.length ? ` Tests: ${tNeu} neu, ${tErsetzt} aktualisiert.` : ''}${prog ? ' Leitern, Lauf-Stufe und Ausrüstung übernommen.' : ''} Insgesamt ${state.entries.length} ${state.entries.length === 1 ? 'Einheit' : 'Einheiten'}.`
+    `Einheiten: ${neu} neu, ${ersetzt} aktualisiert. Morgen: ${mNeu} neu, ${mErsetzt} aktualisiert.${n.tests.length ? ` Tests: ${tNeu} neu, ${tErsetzt} aktualisiert.` : ''}${prog ? ' Stufenpläne und Ausrüstung übernommen.' : ''} Insgesamt ${state.entries.length} ${state.entries.length === 1 ? 'Einheit' : 'Einheiten'}.`
     + (n.dropped ? ` ${n.dropped} unvollständige ${n.dropped === 1 ? 'Zeile wurde' : 'Zeilen wurden'} übersprungen.` : '')
     + (n.doppelt ? ` Bei ${n.doppelt} Morgen gab es zwei Werte – übernommen wurde der Morgen-Check, der zweite steht in der Notiz.` : '') };
   announce(importMsg.text);
@@ -3414,7 +3422,7 @@ document.addEventListener('click', async (ev) => {
         delete e.detail; Object.assign(e, base); text = `Änderung gespeichert: ${art}, ${wann}.`;
         invalidate();
         if (!entryClean(e)) revertLadderAdvance(e);   // nachträglich Schmerz eingetragen: Schritt zurück
-        else { const adv = applyLadderAdvance(e); if (adv) text += ` Leiter vorgerückt: ${adv.join(', ')}.`; }
+        else { const adv = applyLadderAdvance(e); if (adv) text += ` Neue Stufe: ${adv.join(', ')}.`; }
       }
       else text = null;   // die Einheit gibt es nicht mehr (gelöscht, zurückgeholt, ersetzt)
       editingId = null;
@@ -3424,8 +3432,8 @@ document.addEventListener('click', async (ev) => {
       text = `Gespeichert: ${art}, ${wann}.`;
       invalidate();
       const adv = applyLadderAdvance(neu), radv = applyRunAdvance(neu), padv = applyPlyoAdvance(neu);
-      if (adv) text += ` Leiter vorgerückt: ${adv.join(', ')}.`;
-      if (radv) text += ` Lauf-Leiter: ${radv}.`;
+      if (adv) text += ` Neue Stufe: ${adv.join(', ')}.`;
+      if (radv) text += ` Laufstufe: ${radv}.`;
       if (padv) text += ` Plyometrie: ${padv}.`;
     }
     closeForm();
