@@ -423,8 +423,8 @@ window.storage = {
   }
 };
 
-const KEY = 'sehnenlog:v4';
-const KEYS_ALT = ['sehnenlog:v3', 'sehnenlog:v2', 'sehnenlog:v1'];   // ältere Formate – bleiben beim Umzug unangetastet liegen
+const KEY = 'sehnenlog:v5';
+const KEYS_ALT = ['sehnenlog:v4', 'sehnenlog:v3', 'sehnenlog:v2', 'sehnenlog:v1'];   // ältere Formate – bleiben beim Umzug unangetastet liegen
 const KEY_PREV  = 'sehnenlog:prev';   // Stand vor der letzten Änderung
 const KEY_TRASH = 'sehnenlog:trash';  // Stand vor „Alles löschen“
 const KEY_META  = 'sehnenlog:meta';   // u. a. wann zuletzt gesichert wurde
@@ -432,6 +432,29 @@ const KEY_RESCUE = 'sehnenlog:rescue'; // Rohtext eines Stands, der sich nicht l
 const BACKUP_FAELLIG_TAGE = 14;
 // Fachgrenzen aus dem Plan – an einer Stelle, damit Urteil, Skala und Diagramm dieselben Zahlen nutzen
 const SCHMERZ_MAX = 3;            // Schmerz während der Einheit: bis hierhin erlaubt
+const DANACH_MAX = 3;             // Schmerz danach (Spitze 1–6 Std. nach der Einheit): bis hierhin grün
+const DANACH_GELB_MAX = 5;        // 4–5 gelb, darüber rot
+const MORGEN_ROT = 4;             // Morgenwert ab hier rot
+const ROT_FENSTER_TAGE = 7;       // zweites Rot innerhalb dieser Tage: eine Stufe runter
+const GRUEN_FUER_STEIGERUNG = 3;  // grüne Einheiten in Folge, dann ist eine Steigerung frei
+const KRAFT_ABSTAND_H = 48;       // Stunden zwischen zwei Sehnenkraft-Einheiten
+const DANACH_OFFEN_TAGE = 3;      // so lange bietet der Verlauf „Schmerz danach“ zum Nachtragen an
+const RUHETAG_FENSTER = 7;        // in so vielen Tagen muss ein Ruhetag liegen
+const LAUF_SPRUNG = 0.10;         // längster Lauf: höchstens +10 % gegenüber dem längsten der letzten 30 Tage
+const LAUF_FENSTER_TAGE = 30;
+const PACE_TOLERANZ = 0.05;       // Lauf mehr als 5 % schneller als die Referenz: Warnung
+const KADENZ_ZIEL = 0.05;         // Kadenzziel: 5 % über der Referenz
+const PACE_REF_LAEUFE = 3;        // Referenzpace und -kadenz aus den ersten drei Läufen ab Programmstart
+const PROGRAMM_START = '2026-10-07';
+// Schmerzorte – Mehrfachauswahl an Einheiten und Morgen
+const WHERE = [
+  { v:'knoechel',   label:'hinter dem Knöchel' },
+  { v:'innenfuss',  label:'Innenfuß / Kahnbein' },
+  { v:'spann',      label:'Spann' },
+  { v:'vorne',      label:'vorne am Sprunggelenk' },
+  { v:'schienbein', label:'Schienbeinkante' },
+  { v:'ferse',      label:'Ferse' }
+];
 const ANSTRENGUNG_LEICHT = 6;     // letzter Satz bei höchstens 6/10: Last vermutlich zu leicht
 const STEIGERUNG_TAGE = 7;        // eine Variable pro Woche
 const MORGEN_OFFEN_TAGE = 3;      // so lange hält ein fehlender Morgen das Urteil an
@@ -599,7 +622,7 @@ const SUPPRULES = [
 // up = erlaubt, hold = Warnstufe, down = „Zurücknehmen“ bzw. ärztlich abklären, act = Zielbereich.
 const SCALES = [
   { id:'during', title:'Schmerz während der Einheit', sub:'Das Grundniveau während der Sätze, nicht der stärkste Moment.',
-    rule:'Liegt der höchste Wert eines Trainingstags über 3, lautet die Bewertung „Zurücknehmen“.',
+    rule:'Liegt der höchste Wert eines Trainingstags über 3, heißt die Bewertung Rot: Stufe wiederholen.',
     rows:[
       ['0',    'Nichts. Du spürst Muskelarbeit, aber nichts an der Sehne.', 'up'],
       ['1',    'Die Struktur meldet sich. Kein Schmerz – Präsenz. „Ja, das ist sie.“', 'up'],
@@ -612,8 +635,16 @@ const SCALES = [
       ['8',    'Weitermachen ist keine Option.', 'down'],
       ['9–10', 'Stechend, mit Kraftverlust. Sofort aufhören, ärztlich abklären.', 'down']
     ]},
+  { id:'after', title:'Schmerz danach', sub:'Die Spitze in den ein bis sechs Stunden nach der Einheit – nicht während, nicht am nächsten Morgen.',
+    rule:'Bis 3 ist grün. 4 bis 5 oder „den Rest des Tages spürbar“ heißt Gelb: Stufe halten. Über 5 heißt Rot. Leer gelassen zählt nicht als Verstoß.',
+    rows:[
+      ['0–1', 'Nichts oder nur beim bewussten Hinspüren.', 'up'],
+      ['2–3', 'Spürbar, aber nach ein, zwei Stunden weg. Obergrenze.', 'up'],
+      ['4–5', 'Den Nachmittag über da, beim Gehen präsent. Die Dosis war zu hoch.', 'hold'],
+      ['6+',  'Humpeln, Schonhaltung, abends noch deutlich. Klar zu viel.', 'down']
+    ]},
   { id:'morning', title:'Schmerz am Morgen', sub:'In Ruhe, vor dem ersten Schritt.',
-    rule:'Verglichen wird mit dem Morgen nach dem vorletzten Trainingstag: ein Punkt mehr heißt „Level halten“, zwei Punkte mehr heißen „Zurücknehmen“.',
+    rule:'Verglichen wird mit dem Morgen des Trainingstags (sonst mit dem Morgen nach dem vorletzten Training): ein Punkt mehr heißt Gelb. Ab 4/10 oder wenn der Wert nach 48 Stunden nicht zurück ist, heißt es Rot.',
     rows:[
       ['0',  'Nichts. Fühlt sich an wie der linke Fuß.', ''],
       ['1',  'Beim bewussten Hinspüren ist da etwas. Von selbst würdest du es nicht bemerken.', ''],
@@ -624,15 +655,15 @@ const SCALES = [
       ['6+', 'Weckt dich oder verhindert das Wiedereinschlafen. Ärztlich abklären.', 'down']
     ]},
   { id:'stiff', title:'Steifigkeit der Sehne', sub:'Das steife, eingerostete Gefühl an der Sehne hinter dem Innenknöchel nach dem Aufstehen – gemessen, bis sich das Gehen wieder normal anfühlt.', wide:true,
-    rule:'Über 30 Minuten heißt die Bewertung „Level halten“, über 45 Minuten „Zurücknehmen“.',
+    rule:'Ab 15 Minuten heißt die Bewertung Gelb, über 45 Minuten Rot.',
     rows:[
       ['unter 15 Min.', 'Nach ein paar Schritten weg. Im Bad schon vergessen.', 'up'],
-      ['15–30 Min.',    'Beim Frühstück noch da, beim Losgehen nicht mehr.', 'up'],
-      ['30–45 Min.',    'Zieht sich in den Vormittag. Erste Warnstufe.', 'hold'],
-      ['über 45 Min.',  'Der halbe Vormittag. Löst „Zurücknehmen“ aus.', 'down']
+      ['15–30 Min.',    'Beim Frühstück noch da, beim Losgehen nicht mehr. Gelb.', 'hold'],
+      ['30–45 Min.',    'Zieht sich in den Vormittag. Gelb.', 'hold'],
+      ['über 45 Min.',  'Der halbe Vormittag. Rot.', 'down']
     ]},
   { id:'effort', title:'Anstrengung des letzten Satzes', sub:'Kraft, nicht Schmerz. Wird nur bei Sehnenkraft abgefragt.',
-    rule:'Zählt erst, wenn der Schmerz bei 3 oder darunter liegt. Bleibt der letzte Satz an ruhigen Tagen bei 6 oder darunter, wertet die App das als Zeichen, dass die Last zu leicht ist.',
+    rule:'Nur zur Orientierung – die Steigerung steuert der Zähler grüner Einheiten, nicht die Anstrengung. Ab Phase 2 sollte der letzte Satz bei 8 liegen.',
     rows:[
       ['0',   'Keine Anstrengung. Als hättest du die Bewegung nur angedeutet.', ''],
       ['1–3', 'Aufwärmen bis leicht. Fordert dich nicht.', ''],
@@ -669,6 +700,7 @@ let whenOpen = false;      // Datum/Uhrzeit als Felder statt als eine Zeile?
 let uiFlash = null;        // kurze Rückmeldung { where:'entry'|'backup'|'morning'|'history', ok, text } – verschwindet beim nächsten Tippen
 let lastDeleted = null;    // zuletzt gelöschte Einheit – für „Rückgängig“ direkt nach dem Löschen
 let testDraft = null;      // { date, right, left, note, orig } – Monatstest-Formular offen? orig = Datum des bearbeiteten Tests
+let afterEdit = null;      // { id, pain, allDay, spots } – „Schmerz danach“ wird in einer Verlaufszeile nachgetragen
 
 function nowTime() { const d = _now(); return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0'); }
 function today() {
@@ -679,8 +711,8 @@ function today() {
 }
 function newDraft() {
   return { date: today(), time: nowTime(), type: 'kraft', ex: {},
-    run: { min:'', pace:'', hr:'', cadence:'', intervals:'' }, session: { min:'', hr:'', what:'' },
-    painDuring: null, effort: null, collagen: false, progressed: false, progressedWhat: '', note: '' };
+    run: { min:'', km:'', pace:'', hr:'', cadence:'', intervals:'' }, session: { min:'', hr:'', what:'' },
+    painDuring: null, painAfter: null, allDay: false, spots: [], effort: null, collagen: false, progressed: false, progressedWhat: '', note: '' };
 }
 function fmt(iso) { const [y,m,d] = iso.split('-'); return `${+d}.${+m}.`; }
 function fmtY(iso) { return fmt(iso) + iso.slice(0, 4); }
@@ -696,10 +728,11 @@ function draftFromEntry(e) {
   d.date = e.date; d.time = e.time || '';
   d.type = TYPES[e.type] ? e.type : 'crossfit';
   d.painDuring = e.painDuring; d.effort = e.effort;
+  d.painAfter = e.painAfter ?? null; d.allDay = !!e.allDay; d.spots = asSpots(e.spots);
   d.collagen = !!e.collagen; d.progressed = !!e.progressed; d.progressedWhat = asStr(e.progressedWhat);
   d.note = [e.note, e.detail ? 'Alteintrag: ' + e.detail : ''].filter(Boolean).join(' · ');
   if (kind === 'ex') d.ex = JSON.parse(JSON.stringify((e.details || {}).ex || {}));
-  else if (kind === 'run') d.run = { min:'', pace:'', hr:'', cadence:'', intervals:'', ...(e.details || {}) };
+  else if (kind === 'run') d.run = { min:'', km:'', pace:'', hr:'', cadence:'', intervals:'', ...(e.details || {}) };
   else d.session = { min:'', hr:'', what:'', ...(e.details || {}) };
   return d;
 }
@@ -756,10 +789,10 @@ function noteDropped(n) {
 }
 
 // Ein Morgen je Kalendertag – an dem Tag, an dem du aufwachst.
-function makeMorning(date, pain, stiff, note) {
-  return { id: 'm' + date, date, pain, stiff: asStiff(stiff), note: asStr(note).trim(), skipped: false };
+function makeMorning(date, pain, stiff, note, spots) {
+  return { id: 'm' + date, date, pain, stiff: asStiff(stiff), note: asStr(note).trim(), spots: asSpots(spots), skipped: false };
 }
-function skippedMorning(date) { return { id: 'm' + date, date, pain: null, stiff: null, note: '', skipped: true }; }
+function skippedMorning(date) { return { id: 'm' + date, date, pain: null, stiff: null, note: '', spots: [], skipped: true }; }
 // Monatstest: einbeiniges Wadenheben, Wiederholungen je Seite – einer je Kalendertag.
 // Rechts ist die betroffene Seite, links die gesunde (so steht es im Plan).
 const asCount = v => (typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 999) ? Math.round(v) : null;
@@ -770,6 +803,8 @@ function makeTest(date, right, left, note) { return { id: 't' + date, date, righ
 const asStr = v => (typeof v === 'string' || typeof v === 'number') ? String(v) : '';
 const asScore = v => (typeof v === 'number' && v >= 0 && v <= 10) ? v : null;
 const asStiff = v => STIFF.some(s => s.v === v) ? v : null;
+const asSpots = v => Array.isArray(v) ? [...new Set(v.filter(x => WHERE.some(w => w.v === x)))] : [];
+function spotsLabel(list) { return (list || []).map(v => { const w = WHERE.find(x => x.v === v); return w ? w.label : v; }).join(', '); }
 function cleanEntry(e) {
   const c = { ...e };
   delete c.painMorning; delete c.stiffness; delete c.morningNote; delete c.skipped;
@@ -779,11 +814,14 @@ function cleanEntry(e) {
   c.note = asStr(c.note);
   if (c.detail != null) c.detail = asStr(c.detail);
   c.painDuring = asScore(c.painDuring);
+  c.painAfter = asScore(c.painAfter);
+  c.allDay = !!c.allDay;
+  c.spots = asSpots(c.spots);
   c.effort = asScore(c.effort);
   c.collagen = !!c.collagen; c.progressed = !!c.progressed; c.progressedWhat = asStr(c.progressedWhat);
   const d = (c.details && typeof c.details === 'object') ? c.details : {};
   const det = {};
-  ['min', 'pace', 'hr', 'cadence', 'intervals', 'what'].forEach(k => { if (k in d) det[k] = asStr(d[k]); });
+  ['min', 'km', 'pace', 'hr', 'cadence', 'intervals', 'what'].forEach(k => { if (k in d) det[k] = asStr(d[k]); });
   if (d.ex && typeof d.ex === 'object') {
     det.ex = {};
     Object.entries(d.ex).forEach(([k, v]) => {
@@ -827,10 +865,10 @@ function normalize(p) {
   if (!Array.isArray(p.mornings)) return fromLegacy(p.entries, p.rest);
   const e = keepValid(p.entries, validEntry), m = keepValid(p.mornings, validMorning), t = keepValid(p.tests, validTest);
   const map = new Map(), tmap = new Map();
-  m.ok.forEach(x => map.set(x.date, x.skipped ? skippedMorning(x.date) : makeMorning(x.date, x.pain, x.stiff, x.note)));
+  m.ok.forEach(x => map.set(x.date, x.skipped ? skippedMorning(x.date) : makeMorning(x.date, x.pain, x.stiff, x.note, x.spots)));
   t.ok.forEach(x => tmap.set(x.date, makeTest(x.date, x.right, x.left, x.note)));
   return { entries: e.ok.map(cleanEntry), mornings: [...map.values()], tests: [...tmap.values()],
-    dropped: e.dropped + m.dropped + t.dropped, doppelt: 0, legacy: false };
+    dropped: e.dropped + m.dropped + t.dropped, doppelt: 0, legacy: false, from: typeof p.v === 'number' ? p.v : 4 };
 }
 
 function adopt(n) {
@@ -842,8 +880,9 @@ function adopt(n) {
   noteDropped(n.dropped);
   return hasData();
 }
-function packState() { return { v: 4, entries: state.entries, mornings: state.mornings, tests: state.tests }; }
+function packState() { return { v: 5, entries: state.entries, mornings: state.mornings, tests: state.tests }; }
 function migrationText(n) {
+  if (!n.legacy) return 'Neu in dieser Fassung: „Schmerz danach“, Schmerzort und Distanz beim Lauf. Deine Daten wurden übernommen – bei alten Einträgen sind die neuen Felder leer, das zählt nicht als Verstoß. Der alte Stand bleibt zusätzlich gespeichert.';
   return 'Morgenwerte stehen jetzt an dem Tag, an dem du aufgewacht bist – nicht mehr beim Training vom Vortag. Deine Daten wurden übernommen, der alte Stand bleibt zusätzlich unverändert gespeichert.'
     + (n.doppelt ? ` Für ${n.doppelt} Morgen gab es zwei Werte (Morgen-Check und „Morgen ohne Training“). Übernommen wurde der Morgen-Check, der zweite Wert steht in der Notiz.` : '');
 }
@@ -1003,6 +1042,7 @@ function summary(e) {
   if (k === 'run') {
     const b = [];
     if (d.min) b.push(d.min + ' Min.');
+    if (d.km) b.push(d.km + ' km');
     if (d.pace) b.push(d.pace);
     if (d.hr) b.push('Ø ' + d.hr + ' bpm');
     if (d.cadence) b.push(d.cadence + ' Schritte/Min.');
@@ -1091,15 +1131,103 @@ function days() {
   if (memo.days) return memo.days;
   const out = [];
   byDate().forEach((list, date) => {
-    const md = addDays(date, 1), m = morningOf(md);
+    const md = addDays(date, 1), m = morningOf(md), m0 = morningOf(date), m2 = morningOf(addDays(date, 2));
+    const after = list.filter(e => typeof e.painAfter === 'number').map(e => e.painAfter);
     out.push({ date, n: list.length, painDuring: maxDuring(date), progressed: list.some(e => e.progressed),
       efforts: list.filter(e => e.effort != null).map(e => e.effort), labels: list.map(e => typeLabel(e.type)),
+      painAfter: after.length ? Math.max(...after) : null, allDay: list.some(e => e.allDay),
+      spots: asSpots(list.flatMap(e => e.spots || [])),
       morningDate: md, skipped: !!(m && m.skipped),
-      painMorning: m && !m.skipped ? m.pain : null, stiffness: m && !m.skipped ? m.stiff : null });
+      painMorning: m && !m.skipped ? m.pain : null, stiffness: m && !m.skipped ? m.stiff : null,
+      painBase: m0 && !m0.skipped ? m0.pain : null,          // Morgen desselben Tags = Ausgangsniveau
+      painMorning2: m2 && !m2.skipped ? m2.pain : null,      // Morgen nach 48 Stunden
+      kraftGap: kraftGapHours(date), runWarn: runWarnings(date) });
   });
   return (memo.days = out.sort((a,b) => a.date.localeCompare(b.date)));
 }
 function pending() { return days().filter(d => d.painMorning == null && !d.skipped && d.morningDate <= today()); }
+
+// Stunden zwischen der ersten Sehnenkraft-Einheit dieses Tags und der letzten davor (anderer Tag)
+function kraftGapHours(date) {
+  const list = sorted().filter(e => e.type === 'kraft');
+  const i = list.findIndex(e => e.date === date);
+  if (i <= 0) return null;
+  const cur = list[i], prev = list[i - 1];
+  if (prev.date === cur.date) return null;
+  const a = new Date(prev.date + 'T' + (prev.time || '12:00')), b = new Date(cur.date + 'T' + (cur.time || '12:00'));
+  if (isNaN(a) || isNaN(b)) return daysBetween(prev.date, cur.date) * 24;
+  return (b - a) / 3600000;
+}
+// Läufe: Dauer, Pace („5:45“ → Sekunden) und Kadenz als Zahlen
+function runMin(e) { const v = +((e.details || {}).min); return Number.isFinite(v) && v > 0 ? v : null; }
+function paceSec(v) { const m = /^\s*(\d{1,2})[:.](\d{2})/.exec(String(v ?? '')); return m ? +m[1] * 60 + +m[2] : null; }
+function paceFmt(sec) { return sec == null ? '–' : Math.floor(sec / 60) + ':' + String(Math.round(sec % 60)).padStart(2, '0'); }
+function runsSorted() { return memo.runs || (memo.runs = sorted().filter(e => e.type === 'lauf')); }
+// Referenz: die ersten drei Läufe ab Programmstart mit Pace bzw. Kadenz
+function runReference(excludeId) {
+  const list = runsSorted().filter(e => e.date >= PROGRAMM_START && e.id !== excludeId);
+  const paces = list.map(e => paceSec((e.details || {}).pace)).filter(v => v != null).slice(0, PACE_REF_LAEUFE);
+  const cads = list.map(e => +((e.details || {}).cadence)).filter(v => Number.isFinite(v) && v > 0).slice(0, PACE_REF_LAEUFE);
+  const avg = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : null;
+  return { pace: paces.length >= PACE_REF_LAEUFE ? avg(paces) : null, cadence: cads.length >= PACE_REF_LAEUFE ? avg(cads) : null,
+    paceN: paces.length, cadN: cads.length };
+}
+// Prüft einen Lauf (Entwurf oder Eintrag) gegen die Laufregeln: längster Lauf +10 %, Pace, Kadenz
+function runCheck(r, excludeId) {
+  const date = isIsoDate(r.date) ? r.date : today();
+  const prior = runsSorted().filter(e => e.id !== excludeId && e.date <= date && daysBetween(e.date, date) <= LAUF_FENSTER_TAGE && runMin(e) != null);
+  const longest = prior.length ? Math.max(...prior.map(runMin)) : null;
+  const limit = longest != null ? Math.round(longest * (1 + LAUF_SPRUNG)) : null;
+  const min = +r.min; const minOk = Number.isFinite(min) && min > 0;
+  const tooLong = minOk && limit != null && min > limit;
+  const ref = runReference(excludeId);
+  const pace = paceSec(r.pace);
+  const tooFast = pace != null && ref.pace != null && pace < ref.pace * (1 - PACE_TOLERANZ);
+  const cadence = +r.cadence; const cadOk = Number.isFinite(cadence) && cadence > 0;
+  const cadTarget = ref.cadence != null ? Math.round(ref.cadence * (1 + KADENZ_ZIEL)) : null;
+  const warn = [];
+  if (tooLong) warn.push(`Lauf von ${min} Min. liegt über ${limit} Min. – mehr als 10 % über dem längsten Lauf der letzten ${LAUF_FENSTER_TAGE} Tage (${longest} Min.).`);
+  if (tooFast) warn.push(`Pace ${paceFmt(pace)} war mehr als 5 % schneller als die Referenz ${paceFmt(ref.pace)}.`);
+  return { longest, limit, tooLong, ref, pace, tooFast, cadence: cadOk ? cadence : null, cadTarget, warn };
+}
+function runWarnings(date) {
+  return entriesOf(date).filter(e => e.type === 'lauf').flatMap(e => runCheck({ date, ...(e.details || {}) }, e.id).warn);
+}
+// Kein Ruhetag in den letzten sieben Tagen?
+function noRestDay() {
+  const t = today();
+  for (let i = 0; i < RUHETAG_FENSTER; i++) if (!hasTraining(addDays(t, -i))) return false;
+  return true;
+}
+
+// Ampel je Trainingstag nach den Steuerungsregeln: Grün, Gelb oder Rot
+function dayLevel(d, i, done) {
+  const red = [], amber = [];
+  const base = d.painBase != null ? d.painBase : (i > 0 ? done[i - 1].painMorning : null);
+  if (d.painDuring > SCHMERZ_MAX) red.push(`Schmerz während der Einheit lag bei ${d.painDuring}/10 – über der ${SCHMERZ_MAX}/10-Grenze.`);
+  if (d.painAfter != null) {
+    if (d.painAfter > DANACH_GELB_MAX) red.push(`Schmerz danach lag bei ${d.painAfter}/10.`);
+    else if (d.painAfter > DANACH_MAX) amber.push(`Schmerz danach lag bei ${d.painAfter}/10 – über der ${DANACH_MAX}/10-Grenze.`);
+  }
+  if (d.allDay) amber.push('Die Sehne war den Rest des Tages spürbar.');
+  if (d.painMorning >= MORGEN_ROT) red.push(`Morgenschmerz lag bei ${d.painMorning}/10.`);
+  else if (base != null && d.painMorning - base >= 1) amber.push(`Morgenschmerz ist von ${base} auf ${d.painMorning} gestiegen.`);
+  if (base != null && d.painMorning2 != null && d.painMorning > base && d.painMorning2 > base) red.push(`Morgenschmerz war auch nach 48 Stunden noch nicht zurück auf ${base}.`);
+  const stiffMin = stiffMins(d.stiffness);
+  if (stiffMin > 45) red.push('Die Sehne war morgens über 45 Minuten steif.');
+  else if (stiffMin >= 15) amber.push('Die Sehne war morgens 15 Minuten oder länger steif.');
+  if (d.kraftGap != null && d.kraftGap < KRAFT_ABSTAND_H) amber.push(`Nur ${Math.round(d.kraftGap)} Stunden seit der letzten Sehnenkraft-Einheit – vorgesehen sind mindestens ${KRAFT_ABSTAND_H}.`);
+  (d.runWarn || []).forEach(w => amber.push(w));
+  return { level: red.length ? 'rot' : amber.length ? 'gelb' : 'gruen', red, amber };
+}
+// Grüne Trainingstage in Folge (bewertete Tage, von hinten gezählt)
+function greenStreak() {
+  const done = days().filter(d => d.painMorning != null);
+  const levels = done.map((d, i) => dayLevel(d, i, done).level);
+  let n = 0;
+  for (let i = levels.length - 1; i >= 0 && levels[i] === 'gruen'; i--) n++;
+  return n;
+}
 
 function assess() {
   const all = days();
@@ -1108,46 +1236,32 @@ function assess() {
   // unbewertet und stehen in „Noch offene Morgen“ – sie blockieren aber nichts mehr.
   if (pending().some(d => daysBetween(d.morningDate, today()) <= MORGEN_OFFEN_TAGE)) return { tone:'none', word:'Morgen-Check offen', kicker:'Noch keine Bewertung möglich',
     reasons:['Ohne den Wert vom Folgemorgen fehlt der wichtigste Marker.'], todo:'Trag den fehlenden Morgenwert ein oder überspring ihn – dann bewertet die App die Einheit.' };
-  if (done.length < 2) return { tone:'none', word:'Noch zu wenig Daten', kicker:`${done.length} von 2 bewerteten Trainingstagen`,
-    reasons:['Ein Trainingstag gilt als vollständig, sobald am Folgetag der Morgen-Check ausgefüllt ist. Ab dem zweiten vergleicht die App die beiden Morgenwerte.'], todo:'Weiter erfassen und nichts an der Last ändern.' };
+  if (!done.length) return { tone:'none', word:'Noch keine Bewertung', kicker:'0 bewertete Trainingstage',
+    reasons:['Ein Trainingstag gilt als bewertet, sobald am Folgetag der Morgen-Check ausgefüllt ist.'], todo:'Weiter erfassen und nichts an der Last ändern.' };
 
-  const last = done[done.length-1], prev = done[done.length-2];
-  const stiffMin = stiffMins(last.stiffness);
-  const delta = last.painMorning - prev.painMorning;
-  const red = [], amber = [], green = [];
+  const levels = done.map((d, i) => ({ d, ...dayLevel(d, i, done) }));
+  const last = levels[levels.length - 1];
+  let streak = 0;
+  for (let i = levels.length - 1; i >= 0 && levels[i].level === 'gruen'; i--) streak++;
+  const extra = noRestDay() ? ['In den letzten sieben Tagen gab es keinen Ruhetag.'] : [];
+  const kicker = `Nach dem Trainingstag ${fmt(last.d.date)}`;
 
-  if (last.painDuring > SCHMERZ_MAX) red.push(`Höchster Schmerzwert an diesem Tag lag bei ${last.painDuring}/10 – über der ${SCHMERZ_MAX}/10-Grenze.`);
-  if (delta >= 2) red.push(`Morgenschmerz ist von ${prev.painMorning} auf ${last.painMorning} gestiegen.`);
-  else if (delta === 1) amber.push(`Morgenschmerz ist um einen Punkt gestiegen (${prev.painMorning} → ${last.painMorning}).`);
-  if (stiffMin > 45) red.push('Die Sehne war morgens über 45 Minuten steif.');
-  else if (stiffMin > 30) amber.push('Die Sehne war morgens 30 bis 45 Minuten steif.');
-
-  const recent = done.slice(-3);
-  const calm = recent.length === 3 && recent.every(d => typeof d.painDuring === 'number' && d.painDuring <= SCHMERZ_MAX)
-    && recent.every(d => stiffMins(d.stiffness) <= 30)
-    && recent[2].painMorning <= recent[0].painMorning;
-
-  const lastProgress = [...all].reverse().find(d => d.progressed);
-  const sinceProgress = lastProgress ? Math.max(0, daysBetween(lastProgress.date, today())) : 999;   // Zukunftsdatum → nicht negativ
-
-  if (calm) {
-    green.push('Die letzten drei Trainingstage waren ruhig: Schmerz während ≤ 3/10, Sehne morgens höchstens 30 Minuten steif, Schmerz am Morgen nicht gestiegen.');
-    const eff = recent.flatMap(d => d.efforts);
-    if (eff.length && Math.max(...eff) <= ANSTRENGUNG_LEICHT) green.push(`Der letzte Satz fühlte sich zuletzt bei höchstens ${Math.max(...eff)}/10 an – das ist zu leicht.`);
+  if (last.level === 'rot') {
+    const zweites = levels.slice(0, -1).some(l => l.level === 'rot' && daysBetween(l.d.date, last.d.date) <= ROT_FENSTER_TAGE);
+    return { tone:'down', word: zweites ? 'Rot – eine Stufe runter' : 'Rot – Stufe wiederholen', kicker, reasons: last.red.concat(last.amber, extra),
+      todo: zweites ? `Zweites Rot innerhalb von ${ROT_FENSTER_TAGE} Tagen: bei der betroffenen Übung bzw. beim Laufen eine Stufe zurück. Zähler auf null.`
+                    : 'Nächste Einheit auf derselben Stufe wiederholen, nichts steigern. Zähler auf null.' };
   }
+  if (last.level === 'gelb' || extra.length) return { tone:'hold', word:'Gelb – Stufe halten', kicker, reasons: last.amber.concat(extra),
+    todo:'Nichts steigern. Gleiche Stufe noch einmal, dann neu bewerten. Zähler auf null.' };
 
-  if (red.length) return { tone:'down', word:'Zurücknehmen', kicker:`Nach dem Trainingstag ${fmt(last.date)}`, reasons:red.concat(amber),
-    todo:'Auf das letzte funktionierende Level zurück, dort ein bis zwei Wochen bleiben, dann in kleineren Schritten weiter. Isometrie geht fast immer.' };
-  if (amber.length) return { tone:'hold', word:'Level halten', kicker:`Nach dem Trainingstag ${fmt(last.date)}`, reasons:amber,
-    todo:'Nichts steigern. Gleiche Last noch einmal wiederholen und beobachten, ob sich der Wert einpendelt.' };
-  if (green.length && sinceProgress < STEIGERUNG_TAGE) return { tone:'hold', word:'Level halten', kicker:'Alles ruhig – aber die Woche ist noch nicht um',
-    reasons:green.concat([`Die letzte Steigerung war vor ${sinceProgress} ${sinceProgress===1?'Tag':'Tagen'}. Eine Variable pro Woche.`]),
-    todo:`Noch ${STEIGERUNG_TAGE-sinceProgress} ${STEIGERUNG_TAGE-sinceProgress===1?'Tag':'Tage'} auf diesem Level bleiben.` };
-  if (green.length) return { tone:'up', word:'Steigern', kicker:'Die Sehne verträgt mehr', reasons:green,
-    todo:'Beim Krafttraining zuerst das Gewicht erhöhen, nicht die Wiederholungen. Beim Laufen eine Variable um etwa 10 %. Hak beim nächsten Eintrag „Das war eine Steigerung“ an.' };
-  return { tone:'hold', word:'Level halten', kicker:`Nach dem Trainingstag ${fmt(last.date)}`,
-    reasons:['Keine Warnzeichen, aber auch noch keine drei durchgehend ruhigen Trainingstage.'],
-    todo:'Gleiche Last beibehalten, bis drei Trainingstage in Folge ruhig verlaufen sind.' };
+  const reasons = [`${streak} grüne ${streak === 1 ? 'Einheit' : 'Einheiten'} in Folge: Schmerz während ≤ ${SCHMERZ_MAX}, danach ≤ ${DANACH_MAX}, Morgen nicht gestiegen.`];
+  if (last.d.painAfter == null) reasons.push('„Schmerz danach“ ist für diesen Tag nicht eingetragen. Leer zählt nicht als Verstoß – trag ihn im Verlauf nach, wenn du ihn weißt.');
+  if (streak >= GRUEN_FUER_STEIGERUNG) return { tone:'up', word:'Grün – Steigerung frei', kicker:`${streak} grüne in Folge`, reasons,
+    todo:'Genau eine Sache steigern: eine Übung (erst neue Übung, dann Sätze, dann Stufe oder Gewicht) oder der längste Lauf um 10 % – nie beides in derselben Einheit. Hak beim Eintrag „Das war eine Steigerung“ an, dann zählt der Zähler neu.' };
+  const rest = GRUEN_FUER_STEIGERUNG - streak;
+  return { tone:'up', word:'Grün', kicker:`${streak} von ${GRUEN_FUER_STEIGERUNG} für die nächste Steigerung`, reasons,
+    todo:`Gleiche Stufe weiter. Noch ${rest} grüne ${rest === 1 ? 'Einheit' : 'Einheiten'}, dann ist eine Steigerung frei.` };
 }
 
 // Warnzeichen zählen jeden erfassten Morgen – auch nach Ruhetagen. Gerade in einer
@@ -1193,7 +1307,7 @@ function buildExport() {
   const L = ['Sehnenlog – Auswertung bitte', `Stand: ${_now().toLocaleDateString('de-DE')}`,
     `Einheiten: ${state.entries.length}, erfasste Morgen: ${state.mornings.filter(m => !m.skipped).length}, Monatstests: ${tests.length}`,
     `Aktuelle Einschätzung der App: ${a.word}`,
-    'Schmerzwerte 0–10. Ein Morgenwert gilt jeweils für das Training vom Vortag (24-Stunden-Regel).'];
+    'Schmerzwerte 0–10: während der Einheit, danach (Spitze 1–6 Std. später), am Morgen. Ein Morgenwert gilt jeweils für das Training vom Vortag (24-Stunden-Regel).'];
   if (dates.length > EXPORT_TAGE) L.push(`Gekürzt auf die letzten ${EXPORT_TAGE} Tage mit Einträgen (von ${dates.length}).`);
   L.push('');
   if (tests.length) {
@@ -1205,13 +1319,15 @@ function buildExport() {
     const list = entriesOf(date), prev = addDays(date, -1), m = morningOf(date), x = testOf(date);
     L.push(`${weekday(date)}, ${fmt(date)}${list.length ? '' : x ? ' – Monatstest' : ' – Ruhetag'}`);
     if (m && !m.skipped) {
-      L.push(`  Morgen: Schmerz ${m.pain}/10, Sehne steif ${stiffLabel(m.stiff)}${hasTraining(prev) ? ` (gilt für das Training vom ${fmt(prev)})` : ''}${m.note ? ' – ' + m.note : ''}`);
+      L.push(`  Morgen: Schmerz ${m.pain}/10, Sehne steif ${stiffLabel(m.stiff)}${m.spots && m.spots.length ? ', Ort: ' + spotsLabel(m.spots) : ''}${hasTraining(prev) ? ` (gilt für das Training vom ${fmt(prev)})` : ''}${m.note ? ' – ' + m.note : ''}`);
     } else if (m && m.skipped) L.push('  Morgen: übersprungen');
     else if (hasTraining(prev)) L.push('  Morgen: nicht erfasst');
     if (x) L.push(`  Monatstest: rechts ${x.right}, links ${x.left}`);
     list.forEach(e => {
       const parts = [`${e.time || '–'} ${typeLabel(e.type)}: ${summary(e)}`,
-        `während ${e.painDuring != null ? e.painDuring + '/10' : '–'}`];
+        `während ${e.painDuring != null ? e.painDuring + '/10' : '–'}`,
+        `danach ${e.painAfter != null ? e.painAfter + '/10' : '–'}${e.allDay ? ' (ganztägig spürbar)' : ''}`];
+      if (e.spots && e.spots.length) parts.push('Ort: ' + spotsLabel(e.spots));
       if (e.effort != null) parts.push(`Anstrengung ${e.effort}/10`);
       parts.push(`Kollagen ${e.collagen ? 'ja' : 'nein'}`);
       if (e.progressed) parts.push('Steigerung' + (e.progressedWhat ? ': ' + e.progressedWhat : ''));
@@ -1229,8 +1345,21 @@ function scaleHtml(name, value, showLimit, label) {
   for (let i = 0; i <= 10; i++)
     s += `<button type="button" class="${showLimit && i <= SCHMERZ_MAX ? 'ok' : ''}" data-scale="${name}" data-val="${i}" aria-pressed="${value===i}" aria-label="${i} von 10">${i}</button>`;
   s += '</div>';
-  if (showLimit) s += `<p class="scale-note">0 bis ${SCHMERZ_MAX} sind erlaubt – darüber heißt es Zurücknehmen.</p>`;
+  if (showLimit) s += `<p class="scale-note">0 bis ${SCHMERZ_MAX} sind grün – darüber Gelb bzw. Rot.</p>`;
   return s;
+}
+// Schmerzorte als Mehrfachauswahl
+function chipsHtml(name, selected, label) {
+  const sel = selected || [];
+  return `<div class="seg chips" role="group" aria-label="${esc(label || 'Schmerzort')}">` + WHERE.map(o =>
+    `<button type="button" data-chips="${name}" data-val="${o.v}" aria-pressed="${sel.includes(o.v)}">${esc(o.label)}</button>`).join('') + '</div>';
+}
+function spotsFieldHtml(name, selected, hint) {
+  return `<div class="field" id="f-${name}">
+      <span class="field-label">Wo genau?</span>
+      <p class="hint">${esc(hint || 'Mehrfachauswahl. Pflicht, sobald ein Schmerzwert über 0 liegt.')}</p>
+      ${chipsHtml(name, selected, 'Schmerzort')}
+    </div>`;
 }
 function segHtml(name, options, value, label) {
   return `<div class="seg" role="group" aria-label="${esc(label || name)}">` + options.map(o =>
@@ -1308,14 +1437,28 @@ function exPickerHtml() {
   }
   return h;
 }
+// Hinweise zum Lauf-Entwurf: längster Lauf, Pace-Referenz, Kadenzziel
+function runNoteHtml() {
+  const c = runCheck({ date: draft.date, ...draft.run }, editingId);
+  const lines = [];
+  if (c.limit != null) lines.push(`Längster Lauf der letzten ${LAUF_FENSTER_TAGE} Tage: ${c.longest} Min. – heute höchstens ${c.limit} Min.`);
+  else lines.push('Noch kein Lauf in den letzten 30 Tagen – dieser setzt die Bezugsgröße.');
+  if (c.ref.pace != null) lines.push(`Referenzpace ${paceFmt(c.ref.pace)} – locker heißt nicht schneller als ${paceFmt(c.ref.pace * (1 - PACE_TOLERANZ))}.`);
+  else lines.push(`Referenzpace entsteht aus den ersten ${PACE_REF_LAEUFE} Läufen ab ${fmt(PROGRAMM_START)} (${c.ref.paceN} von ${PACE_REF_LAEUFE}).`);
+  if (c.cadTarget != null) lines.push(`Kadenzziel ${c.cadTarget}/Min. (Referenz ${Math.round(c.ref.cadence)} + 5 %).`);
+  const warn = c.warn.map(w => `<div class="warnbox" style="margin-top:8px">${esc(w)}</div>`).join('');
+  return `<p class="hint">${lines.map(esc).join('<br>')}</p>${warn}`;
+}
 function runFieldsHtml() {
   const r = draft.run;
   return `<div class="field"><div class="grid4">
-      <div><label class="sublabel" for="f-run-min">Dauer (Min.)</label>${num('run.min', r.min, '32')}</div>
-      <div><label class="sublabel" for="f-run-pace">Pace</label><input type="text" id="f-run-pace" data-path="run.pace" value="${esc(r.pace)}" placeholder="5:45 min/km"></div>
-      <div><label class="sublabel" for="f-run-hr">Ø Puls</label>${num('run.hr', r.hr, '148')}</div>
+      <div><label class="sublabel" for="f-run-min">Dauer (Min.)</label>${num('run.min', r.min, '30')}</div>
+      <div><label class="sublabel" for="f-run-km">Distanz (km)</label>${num('run.km', r.km, '5,2', true)}</div>
+      <div><label class="sublabel" for="f-run-pace">Pace</label><input type="text" id="f-run-pace" data-path="run.pace" value="${esc(r.pace)}" placeholder="6:10 min/km"></div>
       <div><label class="sublabel" for="f-run-cadence">Kadenz/Min.</label>${num('run.cadence', r.cadence, '172')}</div>
-    </div></div>
+      <div><label class="sublabel" for="f-run-hr">Ø Puls</label>${num('run.hr', r.hr, '148')}</div>
+    </div>
+    <div id="run-note">${runNoteHtml()}</div></div>
     <div class="field"><label for="d-int">Intervalle</label>
       <p class="hint">Leer lassen bei Dauerlauf.</p>
       <input type="text" id="d-int" data-path="run.intervals" value="${esc(r.intervals)}" placeholder="z. B. 4 × 4 Min. zügig, 2 Min. Trabpause"></div>`;
@@ -1636,6 +1779,7 @@ function morningFieldsHtml(p, d) {
       <p class="hint">Das steife, eingerostete Gefühl an der Sehne hinter dem Innenknöchel – gemessen, bis sich das Gehen wieder normal anfühlte.${scaleLink('stiff', `f-${p}Stiff`)}</p>
       ${segHtml(p + 'Stiff', STIFF, d.stiff ?? null, 'Wie lange war die Sehne steif?')}
     </div>
+    ${spotsFieldHtml(p + 'Spots', d.spots, 'Mehrfachauswahl. Pflicht, sobald der Schmerz über 0 liegt – damit sichtbar wird, ob Sehne, Ansatz oder Vorderseite reagiert.')}
     <div class="field">
       <label for="${p}-note">Notiz zum Morgen</label>
       <textarea id="${p}-note" data-${p}path="note" placeholder="Optional – z. B. „beim ersten Aufsetzen ziept es, nach ein paar Schritten weg“">${esc(d.note || '')}</textarea>
@@ -1661,7 +1805,7 @@ function morningCardHtml(mt) {
       <button class="btn ghost" data-act="openMorning">Heute Morgen eintragen</button>
     </div>`;
   const labels = entriesOf(prev).map(e => typeLabel(e.type));
-  const ok = morningDraft.pain != null && !!morningDraft.stiff;
+  const ok = morningOk(morningDraft);
   return `<div class="card${mt.due ? ' pending' : ''}">
       <h2>Wie war es heute Morgen?</h2>
       <p class="lede">${mt.due
@@ -1676,8 +1820,10 @@ function morningCardHtml(mt) {
       ${ok ? '' : `<p class="hint" style="margin-top:8px">Es fehlt noch: ${esc(missingMorning(morningDraft))}.</p>`}
     </div>`;
 }
+function needSpots(pain, spots) { return typeof pain === 'number' && pain > 0 && !(spots && spots.length); }
+function morningOk(d) { return d.pain != null && !!d.stiff && !needSpots(d.pain, d.spots); }
 function missingMorning(d) {
-  return [d.pain == null ? 'der Schmerzwert' : '', d.stiff ? '' : 'die Steifigkeit'].filter(Boolean).join(' und ');
+  return [d.pain == null ? 'der Schmerzwert' : '', d.stiff ? '' : 'die Steifigkeit', needSpots(d.pain, d.spots) ? 'der Schmerzort' : ''].filter(Boolean).join(' und ');
 }
 // Ältere Morgen nach Trainingstagen, die noch fehlen
 function openMorningsHtml() {
@@ -1708,7 +1854,7 @@ function openMorningsHtml() {
 // Morgen ändern oder nachtragen – im Verlauf, direkt am Tag oder mit frei wählbarem Datum
 function morningEditCheck(d) {
   const gueltig = isIsoDate(d.date), zukunft = gueltig && d.date > today(), cur = gueltig ? morningOf(d.date) : null;
-  return { gueltig, zukunft, cur, ok: gueltig && !zukunft && d.pain != null && !!d.stiff };
+  return { gueltig, zukunft, cur, ok: gueltig && !zukunft && morningOk(d) };
 }
 function morningEditNotesHtml(c) {
   return (c.zukunft ? '<div class="warnbox">Ein Morgen in der Zukunft lässt sich nicht eintragen.</div>' : '')
@@ -1749,6 +1895,7 @@ function morningRowHtml(date) {
         <span class="day-time">Morgen</span>
         <div class="day-main">
           <div class="day-title">Sehne steif: ${esc(stiffLabel(m.stiff))}</div>
+          ${m.spots && m.spots.length ? `<div class="day-sub">Ort: ${esc(spotsLabel(m.spots))}</div>` : ''}
           ${bezug}
           ${m.note ? `<div class="day-sub day-note">${esc(m.note)}</div>` : ''}
         </div>
@@ -1770,18 +1917,40 @@ function morningRowHtml(date) {
     </div>`;
 }
 
+// „Schmerz danach“ nachtragen – direkt in der Zeile, ohne das ganze Formular
+function afterEditorHtml(e) {
+  const a = afterEdit, ok = a.pain != null && !needSpots(a.pain, a.spots);
+  return `<div class="m-edit">
+      <div class="day-title" style="margin-bottom:10px">Schmerz danach – ${esc(typeLabel(e.type))} vom ${fmt(e.date)}${e.time ? ', ' + esc(e.time) + ' Uhr' : ''}</div>
+      <div class="field" id="f-aPain">
+        <span class="field-label">Spitze in den 1–6 Stunden danach</span>
+        <p class="hint">Nicht während, nicht am nächsten Morgen.${scaleLink('after', 'f-aPain')}</p>
+        ${scaleHtml('aPain', a.pain, true, 'Schmerz danach, 0 bis 10')}
+      </div>
+      <label class="check"><input type="checkbox" data-apath="allDay" ${a.allDay ? 'checked' : ''}><span>Die Sehne war den Rest des Tages spürbar</span></label>
+      ${spotsFieldHtml('aSpots', a.spots)}
+      <div class="btn-row">
+        <button class="btn small" data-act="saveAfter" data-id="${esc(e.id)}" ${ok ? '' : 'disabled'}>Speichern</button>
+        <button class="btn quiet small" data-act="cancelAfter">Abbrechen</button>
+      </div>
+    </div>`;
+}
 function entryRowHtml(e) {
   const label = typeLabel(e.type);
+  if (afterEdit && afterEdit.id === e.id) return `<div class="day-row editing">${afterEditorHtml(e)}</div>`;
+  const offen = e.painAfter == null && daysBetween(e.date, today()) <= DANACH_OFFEN_TAGE && e.date <= today();
   return `<div class="day-row${editingId === e.id ? ' editing' : ''}">
       <span class="day-time">${e.time ? esc(e.time) : '–'}</span>
       <div class="day-main">
         <div class="day-title">${esc(label)}${e.progressed ? ' · gesteigert' + (e.progressedWhat ? ': ' + esc(e.progressedWhat) : '') : ''}</div>
-        <div class="day-sub">${esc(summary(e))}${e.effort != null ? ' · Anstrengung ' + esc(e.effort) + '/10' : ''}${e.collagen ? ' · Kollagen' : ''}</div>
+        <div class="day-sub">${esc(summary(e))}${e.effort != null ? ' · Anstrengung ' + esc(e.effort) + '/10' : ''}${e.collagen ? ' · Kollagen' : ''}${e.allDay ? ' · ganztägig spürbar' : ''}</div>
+        ${e.spots && e.spots.length ? `<div class="day-sub">Ort: ${esc(spotsLabel(e.spots))}</div>` : ''}
         ${e.note ? `<div class="day-sub day-note">${esc(e.note)}</div>` : ''}
       </div>
       <div class="day-side">
         <div class="day-val">während<b>${e.painDuring != null ? esc(e.painDuring) : '–'}</b></div>
-        <div class="day-acts"><button type="button" class="edit" data-act="edit" data-id="${esc(e.id)}" aria-label="Einheit vom ${fmt(e.date)} bearbeiten">ändern</button></div>
+        <div class="day-val">danach<b>${e.painAfter != null ? esc(e.painAfter) : '–'}</b></div>
+        <div class="day-acts">${offen ? `<button type="button" class="edit" data-act="editAfter" data-id="${esc(e.id)}" aria-label="Schmerz danach für die Einheit vom ${fmt(e.date)} nachtragen">danach eintragen</button>` : ''}<button type="button" class="edit" data-act="edit" data-id="${esc(e.id)}" aria-label="Einheit vom ${fmt(e.date)} bearbeiten">ändern</button></div>
       </div>
     </div>`;
 }
@@ -1915,8 +2084,10 @@ function collagenNoteHtml() {
   const gap = collagenGap();
   return gap !== null ? `<div class="warnbox"><b>Nur ${gap.toFixed(1)} Stunden seit der letzten Dosis.</b> Nach einem Reiz ist die Sehne rund 6 Stunden refraktär – diese Dosis bringt vermutlich nichts.</div>` : '';
 }
+function entryOk() { return draft.painDuring != null && isIsoDate(draft.date) && !needSpots(Math.max(draft.painDuring, draft.painAfter ?? 0), draft.spots); }
 function entryHintText() {
-  return draft.painDuring == null ? 'Der Schmerzwert fehlt noch.' : !isIsoDate(draft.date) ? 'Das Datum fehlt oder ist ungültig.' : '';
+  return draft.painDuring == null ? 'Der Schmerzwert fehlt noch.' : !isIsoDate(draft.date) ? 'Das Datum fehlt oder ist ungültig.'
+    : needSpots(Math.max(draft.painDuring, draft.painAfter ?? 0), draft.spots) ? 'Der Schmerzort fehlt noch.' : '';
 }
 function setHtml(id, html) { const el = document.getElementById(id); if (el && el.innerHTML !== html) el.innerHTML = html; }
 function setHint(id, text) { const el = document.getElementById(id); if (el) { el.textContent = text; el.hidden = !text; } }
@@ -1925,8 +2096,9 @@ function refreshEntryForm() {
   setHtml('when-note', whenNoteHtml());
   setHtml('collagen-note', collagenNoteHtml());
   const w = document.getElementById('progressed-what'); if (w) w.hidden = !draft.progressed;
-  const b = document.getElementById('save-entry'); if (b) b.disabled = draft.painDuring == null || !isIsoDate(draft.date);
+  const b = document.getElementById('save-entry'); if (b) b.disabled = !entryOk();
   setHint('entry-hint', entryHintText());
+  if (TYPES[draft.type].kind === 'run') setHtml('run-note', runNoteHtml());
 }
 
 function tabLog() {
@@ -1981,6 +2153,14 @@ function tabLog() {
         ${scaleHtml('painDuring', draft.painDuring, true, 'Schmerz während der Einheit, 0 bis 10')}
       </div>
 
+      <div class="field" id="f-painAfter">
+        <span class="field-label">Schmerz danach</span>
+        <p class="hint">Die Spitze in den 1–6 Stunden nach der Einheit. Weißt du es noch nicht: leer lassen und im Verlauf nachtragen.${scaleLink('after', 'f-painAfter')}</p>
+        ${scaleHtml('painAfter', draft.painAfter, true, 'Schmerz danach, 0 bis 10')}
+        <label class="check" style="margin-top:8px"><input type="checkbox" data-path="allDay" ${draft.allDay ? 'checked' : ''}><span>Die Sehne war den Rest des Tages spürbar</span></label>
+      </div>
+      ${spotsFieldHtml('spots', draft.spots)}
+
       ${draft.type === 'kraft' ? `<div class="field" id="f-effort">
         <span class="field-label">Wie schwer war der letzte Satz?</span>
         <p class="hint">Kraft, nicht Schmerz. Ein niedriger Wert spricht für mehr Gewicht – aber nur, solange der Schmerz bei 3/10 oder darunter bleibt.${scaleLink('effort', 'f-effort')}</p>
@@ -2002,7 +2182,7 @@ function tabLog() {
       </div>
 
       <div class="btn-row">
-        <button class="btn" id="save-entry" data-act="saveEntry" ${draft.painDuring == null || !isIsoDate(draft.date) ? 'disabled' : ''}>${editingId ? 'Änderungen speichern' : 'Einheit speichern'}</button>
+        <button class="btn" id="save-entry" data-act="saveEntry" ${entryOk() ? '' : 'disabled'}>${editingId ? 'Änderungen speichern' : 'Einheit speichern'}</button>
         <button class="btn quiet" data-act="cancelEdit">Abbrechen</button>
         ${editingId ? `<button type="button" class="edit" data-act="del" data-id="${esc(editingId)}" style="margin-left:auto">Einheit löschen</button>` : ''}
       </div>
@@ -2011,13 +2191,15 @@ function tabLog() {
     </div>`}</div>
     <div class="o10">${testAccHtml()}${acc('howto', 'Wie die Bewertung zustande kommt', 'Erklärung – keine Daten',
       `<h3>Schmerz während der Einheit</h3>
-       <p class="txt">Trägst du unter „Einheit erfassen“ ein, direkt nach dem Training. Bis 3/10 ist erlaubt.</p>
+       <p class="txt">Trägst du unter „Einheit erfassen“ ein, direkt nach dem Training. Bis 3/10 ist grün, darüber Rot.</p>
+       <h3>Schmerz danach</h3>
+       <p class="txt">Die Spitze in den ein bis sechs Stunden nach der Einheit. Bis 3 grün; 4 bis 5 oder „den Rest des Tages spürbar“ ist Gelb; über 5 Rot. Nachtragen geht im Verlauf, leer zählt nicht als Verstoß.</p>
        <h3>Schmerz am Morgen und Steifigkeit der Sehne</h3>
        <p class="txt">Jeder Morgen gehört zu dem Tag, an dem du aufwachst. Nach einem Trainingstag fragt die Morgen-Karte danach, weil die Bewertung diesen Wert braucht; an anderen Tagen ist er freiwillig. Ändern oder nachtragen kannst du ihn jederzeit im Verlauf.</p>
        <h3>Der Vergleich</h3>
-       <p class="txt">Verglichen wird der Morgen nach dem letzten Trainingstag mit dem Morgen nach dem vorletzten. Steigt der Schmerz um zwei Punkte, heißt das Zurücknehmen. Das ist die 24-Stunden-Regel in Zahlen.</p>
-       <h3>Die Rangfolge</h3>
-       <p class="txt">Schmerz schlägt Anstrengung. Liegt der Schmerz über 3/10, heißt das Zurücknehmen – auch wenn sich der letzte Satz leicht angefühlt hat. Die Anstrengung wird erst zum Steuerungsmaß, wenn der Schmerz im grünen Bereich liegt.</p>
+       <p class="txt">Der Morgen nach dem Trainingstag wird mit dem Morgen desselben Tags verglichen (fehlt der, mit dem Morgen nach dem vorletzten Training). Ein Punkt mehr ist Gelb. Ab 4/10, oder wenn der Wert nach 48 Stunden nicht zurück ist, Rot. Das ist die 24-Stunden-Regel in Zahlen.</p>
+       <h3>Grün, Gelb, Rot</h3>
+       <p class="txt">Grün zählt den Zähler hoch; nach drei grünen Einheiten in Folge ist genau eine Steigerung frei. Gelb setzt den Zähler auf null, die Stufe bleibt. Rot heißt Stufe wiederholen; ein zweites Rot innerhalb von sieben Tagen heißt eine Stufe runter. Dazu Gelb bei weniger als 48 Stunden zwischen zwei Sehnenkraft-Einheiten, ohne Ruhetag in sieben Tagen, oder wenn ein Lauf länger als 10 % über dem längsten der letzten 30 Tage bzw. mehr als 5 % schneller als die Referenzpace war.</p>
        <h3>Warnzeichen</h3>
        <p class="txt">Für die rote Karte „Das gehört ärztlich angeschaut“ zählt jeder Morgen der letzten drei Wochen – auch nach Ruhetagen. Gerade in einer Trainingspause zeigt nur der Morgen, ob es schlechter wird.</p>`)}</div>
     </div>
@@ -2040,6 +2222,7 @@ function tabLog() {
       <p class="lede">${hasData()
         ? `${state.entries.length} ${state.entries.length === 1 ? 'Einheit' : 'Einheiten'} und ${state.mornings.filter(m => !m.skipped).length} Morgen erfasst${state.tests.length ? `, dazu ${state.tests.length} ${state.tests.length === 1 ? 'Monatstest' : 'Monatstests'}` : ''}.`
         : 'Noch nichts erfasst.'}</p>
+      ${uiFlash && uiFlash.where === 'history' ? `<div class="infobox">${esc(uiFlash.text)}</div>` : ''}
       <div id="chartbox">${chartInnerHtml()}</div>
       ${historyHtml()}
       ${!hasData() ? '<p class="empty">Der erste Eintrag macht noch keine Aussage. Ab dem zweiten bewerteten Trainingstag wird es aussagekräftig.</p>' : ''}
@@ -2168,7 +2351,7 @@ function focusKeyOf(el) {
   if (!el || el === document.body || !document.getElementById('root').contains(el)) return null;
   if (el.id) return '#' + CSS.escape(el.id);
   if (el.classList.contains('chart-svg')) return '.chart-svg';
-  const attrs = ['data-tab','data-act','data-scale','data-seg','data-extoggle','data-exblock','data-exlast','data-acc','data-val','data-id','data-date','data-snap','data-type','data-range','data-sc','data-where','data-path','data-mpath','data-epath','data-tpath'];
+  const attrs = ['data-tab','data-act','data-scale','data-seg','data-chips','data-apath','data-extoggle','data-exblock','data-exlast','data-acc','data-val','data-id','data-date','data-snap','data-type','data-range','data-sc','data-where','data-path','data-mpath','data-epath','data-tpath'];
   const parts = attrs.filter(a => el.hasAttribute(a)).map(a => `[${a}="${CSS.escape(el.getAttribute(a))}"]`);
   return parts.length ? parts.join('') : null;
 }
@@ -2306,7 +2489,7 @@ function setPath(path, val) {
 
 document.addEventListener('click', async (ev) => {
   if (chartState && chartState.sel && !(ev.target.closest && ev.target.closest('.chart-svg'))) chartShow(null);
-  const t = ev.target.closest('[data-scale],[data-seg],[data-act],[data-tab],[data-extoggle],[data-exblock],[data-exlast],[data-acc]');
+  const t = ev.target.closest('[data-scale],[data-seg],[data-chips],[data-act],[data-tab],[data-extoggle],[data-exblock],[data-exlast],[data-acc]');
   if (!t) return;
   uiFlash = null;   // Rückmeldungen gelten nur bis zum nächsten Tippen
 
@@ -2332,7 +2515,16 @@ document.addEventListener('click', async (ev) => {
     const v = +t.dataset.val;
     if (t.dataset.scale === 'mPain') morningDraft.pain = v;
     else if (t.dataset.scale === 'ePain') { if (mEdit) mEdit.pain = v; }
+    else if (t.dataset.scale === 'aPain') { if (afterEdit) afterEdit.pain = v; }
     else draft[t.dataset.scale] = v;
+    return render();
+  }
+  if (t.dataset.chips) {
+    const n = t.dataset.chips, v = t.dataset.val;
+    const target = n === 'spots' ? draft : n === 'mSpots' ? morningDraft : n === 'eSpots' ? mEdit : n === 'aSpots' ? afterEdit : null;
+    if (!target) return;
+    const cur = asSpots(target.spots);
+    target.spots = cur.includes(v) ? cur.filter(x => x !== v) : cur.concat([v]);
     return render();
   }
   if (t.dataset.seg) {
@@ -2376,10 +2568,11 @@ document.addEventListener('click', async (ev) => {
     const details = kind === 'ex' ? { ex: JSON.parse(JSON.stringify(draft.ex)) }
       : kind === 'run' ? { ...draft.run } : { ...draft.session };
     const base = { date:draft.date, time:draft.time, type:draft.type, details,
-      painDuring:draft.painDuring, effort: draft.type === 'kraft' ? draft.effort : null,
+      painDuring:draft.painDuring, painAfter: draft.painAfter, allDay: !!draft.allDay, spots: asSpots(draft.spots),
+      effort: draft.type === 'kraft' ? draft.effort : null,
       collagen:draft.collagen, progressed:draft.progressed, progressedWhat: draft.progressed ? draft.progressedWhat.trim() : '', note:draft.note.trim() };
 
-    if (base.painDuring == null || !isIsoDate(base.date)) return;   // der Knopf ist dann ohnehin gesperrt
+    if (!entryOk()) return;   // der Knopf ist dann ohnehin gesperrt
     const art = typeLabel(base.type);
     const wann = `${relDay(base.date)}${base.time ? ' ' + base.time : ''}`;
     let text;
@@ -2413,10 +2606,25 @@ document.addEventListener('click', async (ev) => {
   }
   if (act === 'cancelEdit') { closeForm(); return render(); }
 
+  if (act === 'editAfter') {
+    const e = state.entries.find(x => x.id === t.dataset.id);
+    if (e) { afterEdit = { id: e.id, pain: e.painAfter ?? null, allDay: !!e.allDay, spots: asSpots(e.spots) }; render(); focusEl('#f-aPain button'); }
+    return;
+  }
+  if (act === 'cancelAfter') { afterEdit = null; return render(); }
+  if (act === 'saveAfter') {
+    const e = afterEdit && state.entries.find(x => x.id === afterEdit.id);
+    if (!e || afterEdit.pain == null || needSpots(afterEdit.pain, afterEdit.spots)) return;
+    e.painAfter = afterEdit.pain; e.allDay = !!afterEdit.allDay; e.spots = asSpots(afterEdit.spots);
+    const wann = fmt(e.date);
+    afterEdit = null; await save();
+    if (!state.error) { uiFlash = { where: 'history', ok: true, text: `Schmerz danach für die Einheit vom ${wann} gespeichert.` }; announce(uiFlash.text); }
+    return render();
+  }
   if (act === 'saveMorning') {
     const date = t.dataset.date;
-    if (!isIsoDate(date) || morningDraft.pain == null || !morningDraft.stiff) return;
-    const m = makeMorning(date, morningDraft.pain, morningDraft.stiff, morningDraft.note);
+    if (!isIsoDate(date) || !morningOk(morningDraft)) return;
+    const m = makeMorning(date, morningDraft.pain, morningDraft.stiff, morningDraft.note, morningDraft.spots);
     upsertMorning(m);
     morningDraft = {}; morningOpen = false; await save();
     const text = `Morgen vom ${fmt(date)} gespeichert: Schmerz ${m.pain}, Sehne steif ${stiffLabel(m.stiff)}`;
@@ -2438,18 +2646,18 @@ document.addEventListener('click', async (ev) => {
   if (act === 'editMorning') {
     const date = t.dataset.date, m = morningOf(date);
     mEdit = { date, pain: m && !m.skipped ? m.pain : null, stiff: m && !m.skipped ? m.stiff : null,
-      note: m ? m.note || '' : '', where: t.dataset.where || 'day' };
+      note: m ? m.note || '' : '', spots: m && !m.skipped ? asSpots(m.spots) : [], where: t.dataset.where || 'day' };
     return render();
   }
   if (act === 'addMorning') {
-    mEdit = { date: today(), pain: null, stiff: null, note: '', where: 'free' };
+    mEdit = { date: today(), pain: null, stiff: null, note: '', spots: [], where: 'free' };
     render();
     document.querySelector('.m-edit')?.scrollIntoView({ block: 'center' });
     return;
   }
   if (act === 'saveMorningEdit') {
-    if (!mEdit || !isIsoDate(mEdit.date) || mEdit.date > today() || mEdit.pain == null || !mEdit.stiff) return;
-    upsertMorning(makeMorning(mEdit.date, mEdit.pain, mEdit.stiff, mEdit.note));
+    if (!mEdit || !isIsoDate(mEdit.date) || mEdit.date > today() || !morningOk(mEdit)) return;
+    upsertMorning(makeMorning(mEdit.date, mEdit.pain, mEdit.stiff, mEdit.note, mEdit.spots));
     const gespeichert = mEdit.date;
     mEdit = null; await save();
     announce(`Morgen vom ${fmt(gespeichert)} gespeichert.`);
@@ -2655,6 +2863,8 @@ function onField(ev) {
   if (ev.target.id === 'impbox') { importBuf = ev.target.value; return; }
   const ep = ev.target.dataset.epath;
   if (ep) { if (mEdit) { mEdit[ep] = ev.target.value; if (ep === 'date') refreshMorningEdit(); } return; }
+  const ap = ev.target.dataset.apath;
+  if (ap) { if (afterEdit) afterEdit[ap] = ev.target.type === 'checkbox' ? ev.target.checked : ev.target.value; return; }
   const tp = ev.target.dataset.tpath;
   if (tp) { if (testDraft) { testDraft[tp] = ev.target.value; updateTestForm(); } return; }
   const mp = ev.target.dataset.mpath;
@@ -2664,7 +2874,7 @@ function onField(ev) {
   const isCb = ev.target.type === 'checkbox';
   setPath(p, isCb ? ev.target.checked : ev.target.value);
   // Kein Neuaufbau beim Tippen – nur die abhängigen Hinweise und der Knopf werden nachgeführt
-  if (isCb || p === 'time' || p === 'date') refreshEntryForm();
+  if (isCb || p === 'time' || p === 'date' || p.startsWith('run.')) refreshEntryForm();
 }
 document.addEventListener('input', onField);
 document.addEventListener('change', onField);
@@ -2750,6 +2960,7 @@ const _test = {
   setTab(t) { tab = t; },
   ui() { return { tab, formOpen, editingId, testDraft, uiFlash, lastDeleted, draft, mEdit }; },
   setMEdit(m) { mEdit = m; },
+  setAfterEdit(a) { afterEdit = a; },
   openForm(on) { formOpen = !!on; }
 };
 

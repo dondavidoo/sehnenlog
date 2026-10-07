@@ -90,25 +90,27 @@ describe('Umzug alter Daten und Import-Prüfung', () => {
   });
 });
 
-describe('Urteil (assess)', () => {
-  // Drei ruhige Trainingstage mit Morgen danach, jeweils zwei Tage Abstand
+describe('Ampel (assess)', () => {
+  // Drei grüne Trainingstage mit Morgen danach, jeweils zwei Tage Abstand; Morgen am Trainingstag selbst = Ausgangsniveau 1
   function calmDays(app, opts = {}) {
     const entries = [], mornings = [];
     [-6, -4, -2].forEach((n, i) => {
-      entries.push(entry(day(app, n), opts.pain ?? 1, { type: 'kraft', effort: opts.effort ?? 8, progressed: opts.progressedAt === i }));
+      entries.push(entry(day(app, n), opts.pain ?? 1, { type: 'kraft', time: '18:00', effort: opts.effort ?? 8, painAfter: opts.after ? opts.after[i] : 1, allDay: !!(opts.allDay && opts.allDay[i]), spots: ['knoechel'] }));
+      mornings.push(app.makeMorning(day(app, n), 1, 'unter15', ''));
       mornings.push(app.makeMorning(day(app, n + 1), opts.morning ? opts.morning[i] : 1, opts.stiff ? opts.stiff[i] : 'unter15', ''));
     });
     return { entries, mornings };
   }
-  test('1 – ohne Daten: zu wenig Daten', async () => {
+  test('1 – ohne Daten: noch keine Bewertung', async () => {
     const app = await fresh();
-    assert.equal(app.assess().word, 'Noch zu wenig Daten');
+    assert.equal(app.assess().word, 'Noch keine Bewertung');
   });
-  test('2 – ein bewerteter Tag: zu wenig Daten', async () => {
+  test('2 – ein bewerteter grüner Tag: Grün, 1 von 3', async () => {
     const app = await fresh();
-    app._test.setState({ entries: [entry(day(app, -2), 1)], mornings: [app.makeMorning(day(app, -1), 1, 'unter15', '')] });
-    assert.equal(app.assess().word, 'Noch zu wenig Daten');
-    assert.equal(app.assess().kicker, '1 von 2 bewerteten Trainingstagen');
+    app._test.setState({ entries: [entry(day(app, -2), 1, { painAfter: 2, spots: ['knoechel'] })], mornings: [app.makeMorning(day(app, -1), 1, 'unter15', '')] });
+    const a = app.assess();
+    assert.equal(a.word, 'Grün');
+    assert.equal(a.kicker, '1 von 3 für die nächste Steigerung');
   });
   test('3 – Training gestern ohne Morgen heute: Morgen-Check offen', async () => {
     const app = await fresh();
@@ -128,73 +130,139 @@ describe('Urteil (assess)', () => {
     const app = await fresh();
     app._test.setState({ entries: [entry(day(app, -1), 1)], mornings: [app.skippedMorning(T)] });
     assert.equal(app.pending().length, 0);
-    assert.equal(app.assess().word, 'Noch zu wenig Daten');
+    assert.equal(app.assess().word, 'Noch keine Bewertung');
   });
-  test('6 – Schmerz während über 3: Zurücknehmen', async () => {
+  test('6 – Schmerz während über 3: Rot, Stufe wiederholen', async () => {
     const app = await fresh();
     const s = calmDays(app); s.entries[2].painDuring = 4;
     app._test.setState(s);
     const a = app.assess();
-    assert.equal(a.word, 'Zurücknehmen');
+    assert.equal(a.word, 'Rot – Stufe wiederholen');
     assert.match(a.reasons[0], /4\/10 – über der 3\/10-Grenze/);
   });
-  test('7 – Morgenschmerz +2: Zurücknehmen, +1: Level halten', async () => {
+  test('7 – zweites Rot in sieben Tagen: eine Stufe runter', async () => {
     const app = await fresh();
-    app._test.setState(calmDays(app, { morning: [1, 1, 3] }));
-    assert.equal(app.assess().word, 'Zurücknehmen');
-    app._test.setState(calmDays(app, { morning: [1, 1, 2] }));
-    const a = app.assess();
-    assert.equal(a.word, 'Level halten');
-    assert.match(a.reasons[0], /um einen Punkt gestiegen \(1 → 2\)/);
+    const s = calmDays(app); s.entries[1].painDuring = 5; s.entries[2].painDuring = 4;
+    app._test.setState(s);
+    assert.equal(app.assess().word, 'Rot – eine Stufe runter');
   });
-  test('8 – Steifigkeit über 45 Min.: Zurücknehmen, 30–45: Level halten', async () => {
+  test('8 – Schmerz danach: 4–5 Gelb, über 5 Rot, leer kein Verstoß', async () => {
+    const app = await fresh();
+    app._test.setState(calmDays(app, { after: [1, 1, 4] }));
+    let a = app.assess();
+    assert.equal(a.word, 'Gelb – Stufe halten');
+    assert.match(a.reasons[0], /danach lag bei 4\/10/);
+    app._test.setState(calmDays(app, { after: [1, 1, 6] }));
+    assert.equal(app.assess().word, 'Rot – Stufe wiederholen');
+    app._test.setState(calmDays(app, { after: [1, 1, null] }));
+    a = app.assess();
+    assert.equal(a.word, 'Grün – Steigerung frei');
+    assert.match(a.reasons[1], /nicht eingetragen/);
+  });
+  test('9 – ganztägig spürbar: Gelb', async () => {
+    const app = await fresh();
+    app._test.setState(calmDays(app, { allDay: [false, false, true] }));
+    const a = app.assess();
+    assert.equal(a.word, 'Gelb – Stufe halten');
+    assert.match(a.reasons[0], /Rest des Tages/);
+  });
+  test('10 – Morgen +1 gegenüber dem Morgen des Trainingstags: Gelb; ab 4: Rot', async () => {
+    const app = await fresh();
+    app._test.setState(calmDays(app, { morning: [1, 1, 2] }));
+    let a = app.assess();
+    assert.equal(a.word, 'Gelb – Stufe halten');
+    assert.match(a.reasons[0], /von 1 auf 2 gestiegen/);
+    app._test.setState(calmDays(app, { morning: [1, 1, 3] }));
+    assert.equal(app.assess().word, 'Gelb – Stufe halten');   // +2 ist kein Rot mehr
+    app._test.setState(calmDays(app, { morning: [1, 1, 4] }));
+    assert.equal(app.assess().word, 'Rot – Stufe wiederholen');
+  });
+  test('11 – nach 48 Stunden nicht zurück: Rot', async () => {
+    const app = await fresh();
+    const s = calmDays(app, { morning: [1, 1, 2] });
+    s.mornings.push(app.makeMorning(T, 2, 'unter15', ''));   // zwei Tage nach dem letzten Training immer noch 2
+    app._test.setState(s);
+    const a = app.assess();
+    assert.equal(a.word, 'Rot – Stufe wiederholen');
+    assert.match(a.reasons[0], /48 Stunden/);
+  });
+  test('12 – Steifigkeit: ab 15 Min. Gelb, über 45 Rot', async () => {
     const app = await fresh();
     app._test.setState(calmDays(app, { stiff: ['unter15', 'unter15', 'ueber45'] }));
-    assert.equal(app.assess().word, 'Zurücknehmen');
-    app._test.setState(calmDays(app, { stiff: ['unter15', 'unter15', '30bis45'] }));
-    assert.equal(app.assess().word, 'Level halten');
+    assert.equal(app.assess().word, 'Rot – Stufe wiederholen');
+    app._test.setState(calmDays(app, { stiff: ['unter15', 'unter15', '15bis30'] }));
+    assert.equal(app.assess().word, 'Gelb – Stufe halten');
   });
-  test('9 – drei ruhige Tage, Steigerung vor 4 Tagen: Level halten bis die Woche um ist', async () => {
-    const app = await fresh();
-    app._test.setState(calmDays(app, { progressedAt: 1 }));   // Tag -4
-    const a = app.assess();
-    assert.equal(a.word, 'Level halten');
-    assert.match(a.kicker, /Woche ist noch nicht um/);
-    assert.match(a.todo, /Noch 3 Tage/);
-  });
-  test('10 – drei ruhige Tage ohne Steigerung: Steigern', async () => {
+  test('13 – drei grüne in Folge: Steigerung frei; Gelb davor setzt den Zähler zurück', async () => {
     const app = await fresh();
     app._test.setState(calmDays(app));
     const a = app.assess();
-    assert.equal(a.word, 'Steigern');
-    assert.equal(a.reasons.length, 1);   // Anstrengung 8 ist kein Grund
+    assert.equal(a.word, 'Grün – Steigerung frei');
+    assert.match(a.todo, /Genau eine Sache/);
+    app._test.setState(calmDays(app, { after: [1, 4, 1] }));
+    const b = app.assess();
+    assert.equal(b.word, 'Grün');
+    assert.equal(b.kicker, '1 von 3 für die nächste Steigerung');
   });
-  test('11 – ruhig und letzter Satz höchstens 6: Steigern mit Hinweis „zu leicht“', async () => {
+  test('14 – weniger als 48 Stunden zwischen zwei Kraft-Einheiten: Gelb', async () => {
     const app = await fresh();
-    app._test.setState(calmDays(app, { effort: 5 }));
-    const a = app.assess();
-    assert.equal(a.word, 'Steigern');
-    assert.match(a.reasons[1], /höchstens 5\/10 an – das ist zu leicht/);
-  });
-  test('12 – nur zwei ruhige Tage: Level halten (Standard)', async () => {
-    const app = await fresh();
-    const s = calmDays(app); s.entries.shift(); s.mornings.shift();
+    const s = calmDays(app);
+    s.entries.push(entry(day(app, -3), 1, { type: 'kraft', time: '18:00', painAfter: 1, spots: ['knoechel'] }));   // Tag -3, dann Tag -2: 24 h
+    s.mornings.push(app.makeMorning(day(app, -3), 1, 'unter15', ''));
     app._test.setState(s);
     const a = app.assess();
-    assert.equal(a.word, 'Level halten');
-    assert.match(a.reasons[0], /noch keine drei durchgehend ruhigen/);
+    assert.equal(a.word, 'Gelb – Stufe halten');
+    assert.match(a.reasons[0], /24 Stunden seit der letzten Sehnenkraft/);
   });
-  test('13 – Steigerung mit Zukunftsdatum ergibt keine negativen Tage', async () => {
+  test('15 – kein Ruhetag in sieben Tagen: Gelb', async () => {
     const app = await fresh();
-    const s = calmDays(app); s.entries.push(entry(day(app, 3), 1, { progressed: true })); s.mornings.push(app.makeMorning(day(app, 4), 1, 'unter15', ''));
-    app._test.setState(s);
-    assert.doesNotMatch(app.assess().todo + app.assess().reasons.join(' '), /vor -\d/);
+    const entries = [], mornings = [];
+    for (let n = -6; n <= 0; n++) { entries.push(entry(day(app, n), 1, { type: 'volleyball', painAfter: 1, spots: ['knoechel'] })); mornings.push(app.makeMorning(day(app, n), 1, 'unter15', '')); }
+    app._test.setState({ entries, mornings });
+    const a = app.assess();
+    assert.equal(a.word, 'Gelb – Stufe halten');
+    assert.match(a.reasons.join(' '), /keinen Ruhetag/);
   });
-  test('Schmerz während ohne Wert zählt nicht als ruhig', async () => {
+  test('Schmerz während ohne Wert bleibt grün (kein Verstoß), aber nicht als Argument', async () => {
     const app = await fresh();
     const s = calmDays(app); s.entries[1].painDuring = null;
     app._test.setState(s);
-    assert.equal(app.assess().word, 'Level halten');
+    assert.equal(app.assess().word, 'Grün – Steigerung frei');
+  });
+});
+
+describe('Laufregeln', () => {
+  const run = (date, min, pace, cadence, extra) => ({ id: 'r' + date, date, time: '08:00', type: 'lauf', details: { min: String(min), pace, cadence: cadence ? String(cadence) : '' }, painDuring: 1, ...extra });
+  test('längster Lauf der letzten 30 Tage + 10 %', async () => {
+    const app = await fresh();
+    app._test.setState({ entries: [run('2026-08-01', 60, '5:49'), run('2026-09-10', 30, '6:10', 170)] });
+    const c = app.runCheck({ date: T, min: '34', pace: '6:10' });
+    assert.equal(c.longest, 30);   // der 60er ist älter als 30 Tage
+    assert.equal(c.limit, 33);
+    assert.equal(c.tooLong, true);
+    assert.match(c.warn[0], /über 33 Min/);
+    assert.equal(app.runCheck({ date: T, min: '33' }).tooLong, false);
+  });
+  test('Referenzpace aus den ersten drei Läufen ab Programmstart, Warnung ab 5 % schneller, Kadenzziel +5 %', async () => {
+    const app = await fresh();
+    app._test.setNow(() => new Date('2026-10-30T10:00:00'));
+    app._test.setState({ entries: [run('2026-09-01', 60, '5:00', 160), run('2026-10-08', 30, '6:00', 170), run('2026-10-12', 30, '6:10', 170), run('2026-10-16', 30, '6:20', 170)] });
+    const c = app.runCheck({ date: '2026-10-30', min: '30', pace: '5:40', cadence: '172' });
+    assert.equal(Math.round(c.ref.pace), 370);   // Schnitt aus 6:00, 6:10, 6:20 – der alte 5:00er zählt nicht
+    assert.equal(c.tooFast, true);
+    assert.equal(c.cadTarget, 179);
+    assert.equal(app.runCheck({ date: '2026-10-30', min: '30', pace: '5:55' }).tooFast, false);
+    const d = app.runCheck({ date: '2026-10-30', min: '30' }, 'r2026-10-16');   // der dritte Lauf wird gerade bearbeitet: nur zwei Referenzläufe
+    assert.equal(d.ref.pace, null);
+    assert.equal(d.ref.paceN, 2);
+  });
+  test('zu langer Lauf macht den Trainingstag Gelb', async () => {
+    const app = await fresh();
+    app._test.setState({ entries: [run(day(app, -10), 30, '6:10'), run(day(app, -2), 40, '6:10', null, { painAfter: 1, spots: ['knoechel'] })],
+      mornings: [app.makeMorning(day(app, -2), 1, 'unter15', ''), app.makeMorning(day(app, -1), 1, 'unter15', '')] });
+    const a = app.assess();
+    assert.equal(a.word, 'Gelb – Stufe halten');
+    assert.match(a.reasons[0], /40 Min\. liegt über 33 Min/);
   });
 });
 
@@ -407,5 +475,70 @@ describe('Paket 4: Kadenz, Steigerung, Rettungskopie, Speicher-Zusage, Safari', 
     const html = app.__dom.root.innerHTML;
     for (const id of ['when-note', 'collagen-note', 'progressed-what', 'save-entry', 'entry-hint']) assert.match(html, new RegExp(`id="${id}"`), id);
     assert.match(html, /id="progressed-what" hidden/);
+  });
+});
+
+describe('Paket 5: Schmerz danach, Schmerzort, Distanz, Speicherformat v5', () => {
+  test('cleanEntry und makeMorning kennen die neuen Felder; Unbekanntes fällt raus', async () => {
+    const app = await fresh();
+    const c = app.cleanEntry({ id: 1, date: '2026-10-07', type: 'lauf', painDuring: 1, painAfter: 11, allDay: 'ja', spots: ['knoechel', 'mond', 'knoechel'], details: { min: 30, km: 5.2 } });
+    assert.equal(c.painAfter, null);
+    assert.equal(c.allDay, true);
+    assert.deepEqual(c.spots, ['knoechel']);
+    assert.equal(c.details.km, '5.2');
+    const m = app.makeMorning('2026-10-07', 2, 'unter15', 'x', ['spann', 'nix']);
+    assert.deepEqual(m.spots, ['spann']);
+    assert.deepEqual(app.skippedMorning('2026-10-08').spots, []);
+  });
+  test('packState schreibt v5; ein v4-Stand wird übernommen und ohne neue Felder bewertet', async () => {
+    const app = await fresh();
+    assert.equal(app.packState().v, 5);
+    assert.equal(app.KEY, 'sehnenlog:v5');
+    assert.equal(app.KEYS_ALT[0], 'sehnenlog:v4');
+    const n = app.normalize({ v: 4, entries: [{ id: 'a', date: day(app, -2), type: 'kraft', painDuring: 1 }], mornings: [{ date: day(app, -1), pain: 1, stiff: 'unter15' }], tests: [] });
+    assert.equal(n.legacy, false);
+    assert.equal(n.from, 4);
+    assert.equal(n.entries[0].painAfter, null);
+    assert.deepEqual(n.entries[0].spots, []);
+    app._test.setState(n);
+    assert.equal(app.assess().word, 'Grün');
+  });
+  test('summary und Export zeigen Distanz, danach, ganztägig und Ort', async () => {
+    const app = await fresh();
+    const e = { id: 'x', date: day(app, -1), time: '08:00', type: 'lauf', details: { min: '30', km: '5,2', pace: '6:10' }, painDuring: 1, painAfter: 2, allDay: true, spots: ['innenfuss', 'spann'] };
+    assert.equal(app.summary(e), '30 Min. · 5,2 km · 6:10');
+    app._test.setState({ entries: [e], mornings: [app.makeMorning(T, 1, 'unter15', '', ['knoechel'])] });
+    const x = app.buildExport();
+    assert.match(x, /danach 2\/10 \(ganztägig spürbar\)/);
+    assert.match(x, /Ort: Innenfuß \/ Kahnbein, Spann/);
+    assert.match(x, /Morgen: Schmerz 1\/10, Sehne steif unter 15 Min\., Ort: hinter dem Knöchel/);
+  });
+  test('Formular: Schmerzort ist Pflicht, sobald ein Wert über 0 liegt; Verlauf bietet „danach eintragen“ an', async () => {
+    const app = await fresh();
+    const e = { id: 'x', date: day(app, -1), time: '08:00', type: 'kraft', details: { ex: {} }, painDuring: 1, painAfter: null, allDay: false, spots: ['knoechel'] };
+    app._test.setState({ entries: [e], mornings: [app.makeMorning(T, 1, 'unter15', '', ['knoechel'])] });
+    const d = app.newDraft(); d.painDuring = 2; d.spots = [];
+    app._test.setDraft(d); app._test.openForm(true);
+    let html = app.tabLog();
+    assert.match(html, /Der Schmerzort fehlt noch/);
+    assert.match(html, /id="save-entry" data-act="saveEntry" disabled/);
+    d.spots = ['knoechel'];
+    html = app.tabLog();
+    assert.doesNotMatch(html, /Der Schmerzort fehlt noch/);
+    assert.match(html, /data-chips="spots" data-val="knoechel" aria-pressed="true"/);
+    assert.match(html, /data-act="editAfter" data-id="x"/);
+    app._test.setAfterEdit({ id: 'x', pain: 2, allDay: false, spots: ['knoechel'] });
+    html = app.tabLog();
+    assert.match(html, /data-scale="aPain" data-val="2" aria-pressed="true"/);
+    assert.match(html, /data-act="saveAfter" data-id="x" >/);
+  });
+  test('Lauf-Formular zeigt Distanz und die Laufhinweise', async () => {
+    const app = await fresh();
+    const d = app.newDraft(); d.type = 'lauf'; d.painDuring = 0;
+    app._test.setDraft(d); app._test.openForm(true);
+    const html = app.tabLog();
+    assert.match(html, /data-path="run.km"/);
+    assert.match(html, /id="run-note"/);
+    assert.match(html, /Noch kein Lauf in den letzten 30 Tagen/);
   });
 });
