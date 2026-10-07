@@ -2038,14 +2038,15 @@ function tabToday() {
     ${afterTodayHtml()}
     <div class="card"><h2>${esc(dayLabel(today()))}</h2>${phaseBarHtml()}
       <p class="hint">Grün zählt den Zähler hoch, Gelb setzt ihn auf null, Rot heißt Stufe wiederholen. Stufenpläne und Kriterien im Tab „Fortschritt“.</p></div>
+    <div class="card"><h2>Einheit erfassen</h2>
+      <p class="lede">CrossFit und Volleyball zählen als Belastungstage und gehen in die Ampel ein – darum bitte immer eintragen.</p>
+      <div class="btn-row"><button class="btn small" data-act="openFromToday" data-type="kraft">Sehnenkraft</button><button class="btn quiet small" data-act="openFromToday" data-type="crossfit">CrossFit</button><button class="btn quiet small" data-act="openFromToday" data-type="volleyball">Volleyball</button><button class="btn quiet small" data-act="openFromToday" data-type="lauf">Lauf</button></div>
+    </div>
     ${kraftTodayHtml()}
     ${runTodayHtml()}
     ${plyoTodayHtml()}
     ${testTodayHtml()}
-    <div class="card"><h2>Andere Einheit erfassen</h2>
-      <p class="lede">CrossFit und Volleyball zählen als Belastungstage und gehen in die Ampel ein – darum bitte immer eintragen.</p>
-      <div class="btn-row"><button class="btn quiet small" data-act="openFromToday" data-type="crossfit">CrossFit</button><button class="btn quiet small" data-act="openFromToday" data-type="volleyball">Volleyball</button><button class="btn quiet small" data-act="openFromToday" data-type="lauf">Lauf</button></div>
-    </div>
+
     ${adviceHtml()}
   </div>`;
 }
