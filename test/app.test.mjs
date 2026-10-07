@@ -10,6 +10,7 @@ const clock = () => new Date(T + 'T10:00:00');
 async function fresh(state) {
   const app = await loadApp();
   app._test.setNow(clock);
+  app._test.setProgrammStart('2026-09-01');   // die Testdaten liegen im September
   app._test.setState(state || {});
   return app;
 }
@@ -246,6 +247,7 @@ describe('Laufregeln', () => {
   test('Referenzpace aus den ersten drei Läufen ab Programmstart, Warnung ab 5 % schneller, Kadenzziel +5 %', async () => {
     const app = await fresh();
     app._test.setNow(() => new Date('2026-10-30T10:00:00'));
+    app._test.setProgrammStart('2026-10-07');
     app._test.setState({ entries: [run('2026-09-01', 60, '5:00', 160), run('2026-10-08', 30, '6:00', 170), run('2026-10-12', 30, '6:10', 170), run('2026-10-16', 30, '6:20', 170)] });
     const c = app.runCheck({ date: '2026-10-30', min: '30', pace: '5:40', cadence: '172' });
     assert.equal(Math.round(c.ref.pace), 370);   // Schnitt aus 6:00, 6:10, 6:20 – der alte 5:00er zählt nicht

@@ -445,7 +445,7 @@ const LAUF_FENSTER_TAGE = 30;
 const PACE_TOLERANZ = 0.05;       // Lauf mehr als 5 % schneller als die Referenz: Warnung
 const KADENZ_ZIEL = 0.05;         // Kadenzziel: 5 % über der Referenz
 const PACE_REF_LAEUFE = 3;        // Referenzpace und -kadenz aus den ersten drei Läufen ab Programmstart
-const PROGRAMM_START = '2026-10-07';
+let PROGRAMM_START = '2026-10-07';   // ab hier zählen Zähler, Leitern und Lauf-Referenz; Einträge davor bleiben Verlauf
 // Schmerzorte – Mehrfachauswahl an Einheiten und Morgen
 const WHERE = [
   { v:'knoechel',   label:'hinter dem Knöchel' },
@@ -1225,7 +1225,7 @@ function greenStreak() {
   const done = days().filter(d => d.painMorning != null);
   const levels = done.map((d, i) => dayLevel(d, i, done).level);
   let n = 0;
-  for (let i = levels.length - 1; i >= 0 && levels[i] === 'gruen'; i--) n++;
+  for (let i = levels.length - 1; i >= 0 && levels[i] === 'gruen' && done[i].date >= PROGRAMM_START; i--) n++;
   return n;
 }
 
@@ -1241,8 +1241,8 @@ function assess() {
 
   const levels = done.map((d, i) => ({ d, ...dayLevel(d, i, done) }));
   const last = levels[levels.length - 1];
-  let streak = 0;
-  for (let i = levels.length - 1; i >= 0 && levels[i].level === 'gruen'; i--) streak++;
+  let streak = 0;   // nur Tage ab Programmstart zählen für den Zähler
+  for (let i = levels.length - 1; i >= 0 && levels[i].level === 'gruen' && levels[i].d.date >= PROGRAMM_START; i--) streak++;
   const extra = noRestDay() ? ['In den letzten sieben Tagen gab es keinen Ruhetag.'] : [];
   const kicker = `Nach dem Trainingstag ${fmt(last.d.date)}`;
 
@@ -2961,6 +2961,7 @@ const _test = {
   ui() { return { tab, formOpen, editingId, testDraft, uiFlash, lastDeleted, draft, mEdit }; },
   setMEdit(m) { mEdit = m; },
   setAfterEdit(a) { afterEdit = a; },
+  setProgrammStart(d) { PROGRAMM_START = d; },
   openForm(on) { formOpen = !!on; }
 };
 
