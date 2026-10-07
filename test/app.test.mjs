@@ -894,3 +894,23 @@ describe('Paket 11: „Wie war es danach?“ unter Heute', () => {
     assert.match(app.tabLog(), /data-scale="painAfter"/);   // beim Bearbeiten bleibt das Feld
   });
 });
+
+describe('Paket 12: Formular und Navigation', () => {
+  test('offenes Formular blendet Morgen-Check und Ampel aus; Geparkt ist eingeklappt; Sprung-Ziel wird gemerkt', async () => {
+    const app = await fresh();
+    app._test.setState({ entries: [entry(day(app, -1), 1, { type: 'kraft', spots: ['knoechel'] })], mornings: [] });
+    app._test.setTab('log');
+    let html = app.tabLog();
+    assert.match(html, /Wie war es heute Morgen\?/);
+    assert.match(html, /class="verdict/);
+    const d = app.newDraft(); d.painDuring = 1; d.spots = ['knoechel'];
+    app._test.setDraft(d); app._test.openForm(true);
+    html = app.tabLog();
+    assert.doesNotMatch(html, /Wie war es heute Morgen\?/);
+    assert.doesNotMatch(html, /class="verdict/);
+    assert.match(html, /class="form-actions"/);
+    assert.match(html, /<details class="exopt"><summary>Geparkt/);
+    d.ex.b1 = { sets: '1', reps: '15', weight: '', band: 0 };
+    assert.match(app.tabLog(), /<details class="exopt" open>/);
+  });
+});

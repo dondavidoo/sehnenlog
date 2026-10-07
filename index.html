@@ -154,6 +154,10 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
   .btn.small { font-size: 13.5px; padding: 8px 13px; }
   .btn[disabled] { opacity: .45; cursor: default; }
   .btn-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .exopt { margin-top: 8px; }
+  .exopt summary { cursor: pointer; font-size: 13px; color: var(--ink-soft); padding: 8px 0; min-height: 44px; display: flex; align-items: center; }
+  .exopt .seg { margin-top: 4px; }
+  .form-actions { position: sticky; bottom: 0; background: var(--card); margin: 14px -18px -18px; padding: 10px 18px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--rule-soft); border-radius: 0 0 10px 10px; z-index: 2; }
 
   .pending { border-left: 3px solid var(--act); }
   .warnbox { background: var(--hold-bg); border: 1px solid var(--hold-border); border-radius: 7px;
@@ -2238,10 +2242,11 @@ function exPickerHtml() {
     .map(g => ({ ...g, ids: Object.keys(EX).filter(id => EX[id].g === g.g) })).filter(g => g.ids.length);
   let h = `<div class="field"><span class="field-label">Übungen</span><p class="hint">Antippen zum Auswählen, dann Sätze und Wiederholungen eintragen.</p>`;
   groups.forEach(g => {
-    const all = g.ids.every(id => draft.ex[id]);
-    if (groups.length > 1) h += `<div class="exblock"><span class="exblock-name">${esc(g.title)}</span></div>`;
-    h += '<div class="seg">' + g.ids.map(id =>
+    const seg = '<div class="seg">' + g.ids.map(id =>
       `<button type="button" data-extoggle="${id}" aria-pressed="${!!draft.ex[id]}">${esc(EX[id].name.split('(')[0].trim())}</button>`).join('') + '</div>';
+    if (g.g === 'opt') { h += `<details class="exopt"${g.ids.some(id => draft.ex[id]) ? ' open' : ''}><summary>${esc(g.title)}</summary>${seg}</details>`; return; }
+    if (groups.length > 1) h += `<div class="exblock"><span class="exblock-name">${esc(g.title)}</span></div>`;
+    h += seg;
   });
   h += '</div>';
   const chosen = groups.flatMap(g => g.ids).filter(id => draft.ex[id]);
@@ -2530,7 +2535,7 @@ function tabEx() {
       return `<div class="blockhead">${esc(gr.title)}</div><p class="blocksub">${esc(gr.sub)}</p><div class="acc-grid">` +
         ids.map(id => {
           const ex = EX[id];
-          const back = exJump && exJump.id === id ? `<div class="btn-row" style="margin-bottom:10px"><button type="button" class="btn quiet small" data-act="backFromEx">← Zurück zu „Heute“</button></div>` : '';
+          const back = exJump && exJump.id === id ? `<div class="btn-row" style="margin-bottom:10px"><button type="button" class="btn quiet small" data-act="backFromEx">← Zurück zu „${exJump.from === 'log' ? 'Logbuch' : 'Heute'}“</button></div>` : '';
           return acc(id, ex.name, ex.dose,
             `${back}<h3>Ausführung</h3><ul>${ex.how.map(h => `<li>${esc(h)}</li>`).join('')}</ul>
              <div class="acc-err"><b>Häufiger Fehler:</b> ${esc(ex.err)}</div>
@@ -2583,6 +2588,7 @@ function tabScales() {
       </p>
     </div>
     <div class="cards2">${SCALES.map(sc => { const ziel = !!scaleJump && scaleJump.sc === sc.id; return `<div class="card${ziel ? ' sc-target' : ''}" id="sc-${sc.id}">
+      ${ziel ? '<div class="btn-row" style="margin-bottom:10px"><button type="button" class="btn quiet small" data-act="backFromScale">← Zurück zum Eintrag</button></div>' : ''}
       <h2>${esc(sc.title)}</h2>
       <p class="lede">${esc(sc.sub)}</p>
       <div class="sc-list"${sc.wide ? ' style="--sc-w:104px"' : ''}>
@@ -2958,8 +2964,8 @@ function tabLog() {
     <div class="o5">${state.dataNote ? `<div class="warnbox"><b>Unvollständige Daten übersprungen.</b> ${esc(state.dataNote)}</div>` : ''}</div>
     </div>
     <div class="log-in">
-    <div class="o3">${uiFlash && uiFlash.where === 'morning' ? `<div class="infobox" id="morning-flash" tabindex="-1">${esc(uiFlash.text)}</div>` : ''}${mt && mt.due ? morningCardHtml(mt) : ''}${openMorningsHtml()}</div>
-    <div class="o8">${mt && !mt.due ? morningCardHtml(mt) : ''}</div>
+    <div class="o3">${formOpen || editingId || testDraft ? '' : `${uiFlash && uiFlash.where === 'morning' ? `<div class="infobox" id="morning-flash" tabindex="-1">${esc(uiFlash.text)}</div>` : ''}${mt && mt.due ? morningCardHtml(mt) : ''}${openMorningsHtml()}`}</div>
+    <div class="o8">${!(formOpen || editingId || testDraft) && mt && !mt.due ? morningCardHtml(mt) : ''}</div>
     <div class="o9">${testDraft ? testFormHtml() : !formOpen && !editingId ? formClosedHtml() : `<div class="card" id="form">
       <h2 tabindex="-1">${editingId ? 'Einheit bearbeiten' : 'Einheit erfassen'}</h2>
       <p class="lede">${editingId ? 'Änderungen wirken sich sofort auf die Bewertung aus.' : 'Direkt nach dem Training, solange du es noch im Gefühl hast.'}</p>
@@ -3021,12 +3027,14 @@ function tabLog() {
         <textarea id="d-note" data-path="note" placeholder="Optional – was auffällig war">${esc(draft.note)}</textarea>
       </div>
 
-      <div class="btn-row">
-        <button class="btn" id="save-entry" data-act="saveEntry" ${entryOk() ? '' : 'disabled'}>${editingId ? 'Änderungen speichern' : 'Einheit speichern'}</button>
-        <button class="btn quiet" data-act="cancelEdit">Abbrechen</button>
-        ${editingId ? `<button type="button" class="edit" data-act="del" data-id="${esc(editingId)}" style="margin-left:auto">Einheit löschen</button>` : ''}
+      <div class="form-actions">
+        <div class="btn-row">
+          <button class="btn" id="save-entry" data-act="saveEntry" ${entryOk() ? '' : 'disabled'}>${editingId ? 'Änderungen speichern' : 'Einheit speichern'}</button>
+          <button class="btn quiet" data-act="cancelEdit">Abbrechen</button>
+          ${editingId ? `<button type="button" class="edit" data-act="del" data-id="${esc(editingId)}" style="margin-left:auto">Einheit löschen</button>` : ''}
+        </div>
+        <p class="hint" id="entry-hint" style="margin:6px 0 0"${entryHintText() ? '' : ' hidden'}>${esc(entryHintText())}</p>
       </div>
-      <p class="hint" id="entry-hint" style="margin-top:8px"${entryHintText() ? '' : ' hidden'}>${esc(entryHintText())}</p>
 
     </div>`}</div>
     <div class="o10">${testAccHtml()}${acc('howto', 'Wie die Bewertung zustande kommt', 'Erklärung – keine Daten',
@@ -3044,19 +3052,19 @@ function tabLog() {
        <p class="txt">Für die rote Karte „Das gehört ärztlich angeschaut“ zählt jeder Morgen der letzten drei Wochen – auch nach Ruhetagen –, dazu eine Rot-Serie (vier rote Trainingstage in vier Wochen), wiederholter Schmerz am Innenfuß/Kahnbein und ein Einbruch beim Austrittstest.</p>`)}</div>
     </div>
     <div class="log-out">
-    <div class="o7"><div class="verdict ${a.tone}">
+    <div class="o7">${formOpen || editingId || testDraft ? '' : `<div class="verdict ${a.tone}">
       <p class="verdict-kicker">${esc(a.kicker)}</p>
       <p class="verdict-word">${esc(a.word)}</p>
       <ul>${a.reasons.map(r => `<li>${esc(r)}</li>`).join('')}</ul>
       <p class="todo">${esc(a.todo)}</p>
-    </div></div>
-    <div class="o7b">${safariBrowserModus() && !state.meta.itpSeen && hasData() ? `<div class="infobox"><b>Im Safari-Browser geöffnet.</b> Safari löscht die Daten einer Seite, wenn du sie rund sieben Tage lang nicht benutzt. Als Home-Bildschirm-App (Teilen → „Zum Home-Bildschirm“) gilt das nicht – und die App startet schneller.
+    </div>`}</div>
+    <div class="o7b">${formOpen || editingId || testDraft ? '' : `${safariBrowserModus() && !state.meta.itpSeen && hasData() ? `<div class="infobox"><b>Im Safari-Browser geöffnet.</b> Safari löscht die Daten einer Seite, wenn du sie rund sieben Tage lang nicht benutzt. Als Home-Bildschirm-App (Teilen → „Zum Home-Bildschirm“) gilt das nicht – und die App startet schneller.
       <div style="margin-top:8px"><button type="button" class="btn quiet small" data-act="dismissItp">Verstanden</button></div></div>` : ''}${backupFaellig() ? `<div class="infobox"><b>Sicherung fällig.</b> ${backupAge() === null
         ? 'Von diesen Daten gibt es noch keine Kopie außerhalb dieses Geräts.'
         : `Die letzte ist ${backupAge()} ${backupAge() === 1 ? 'Tag' : 'Tage'} her (${esc(fmtWhen(state.meta.lastBackup))}).`}
       <div class="btn-row" style="margin-top:8px"><button class="btn small" data-act="backupFile">Jetzt als Datei sichern</button><span class="hint" style="margin:0">Landet in „Dateien“ bzw. im Download-Ordner.</span></div>
       ${uiFlash && uiFlash.where === 'backup' ? `<p class="${uiFlash.ok ? 'note' : 'err'}" style="margin-top:8px">${esc(uiFlash.text)}</p>` : ''}
-    </div>` : uiFlash && uiFlash.where === 'backup' ? `<div class="${uiFlash.ok ? 'infobox' : 'flag'}">${esc(uiFlash.text)}</div>` : ''}</div>
+    </div>` : uiFlash && uiFlash.where === 'backup' ? `<div class="${uiFlash.ok ? 'infobox' : 'flag'}">${esc(uiFlash.text)}</div>` : ''}`}</div>
     <div class="o11"><div class="card">
       <h2>Verlauf</h2>
       <p class="lede">${hasData()
@@ -3185,7 +3193,9 @@ function tabMore() {
 }
 function moreBarHtml() {
   const m = MORE.find(x => x[0] === tab); if (!m) return '';
-  return `<div class="morebar"><button type="button" class="sc-link" data-tab="mehr">← Mehr</button><span>${esc(m[1])}</span></div>`;
+  const jump = tab === 'ex' && exJump ? `<button type="button" class="sc-link" data-act="backFromEx">← Zurück zu „${exJump.from === 'log' ? 'Logbuch' : 'Heute'}“</button>`
+    : tab === 'scale' && scaleJump ? '<button type="button" class="sc-link" data-act="backFromScale">← Zurück zum Eintrag</button>' : '';
+  return `<div class="morebar">${jump || '<button type="button" class="sc-link" data-tab="mehr">← Mehr</button>'}<span>${esc(m[1])}</span></div>`;
 }
 
 // Notausgang: wirft ein Tab beim Aufbau, bleibt die Seite sonst auf dem alten Stand
@@ -3408,7 +3418,7 @@ document.addEventListener('click', async (ev) => {
   const act = t.dataset.act;
   if (act === 'gotoScale') {
     const sc = t.dataset.sc, from = t.dataset.from;
-    scaleJump = { sc, from };
+    scaleJump = { sc, from, tab };
     tab = 'scale'; openAcc = null;
     render();
     document.getElementById('sc-' + sc)?.scrollIntoView({ block:'start' });
@@ -3430,8 +3440,8 @@ document.addEventListener('click', async (ev) => {
     return;
   }
   if (act === 'backFromScale') {
-    const from = scaleJump && scaleJump.from;
-    scaleJump = null; tab = 'log';
+    const from = scaleJump && scaleJump.from, back = scaleJump && scaleJump.tab;
+    scaleJump = null; tab = ['heute', 'log', 'fort'].includes(back) ? back : 'log';
     render();
     const el = from && document.getElementById(from);
     if (el) el.scrollIntoView({ block:'center' }); else window.scrollTo(0,0);
