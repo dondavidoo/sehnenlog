@@ -134,7 +134,7 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
   .exblock { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin: 12px 0 6px; }
   .exblock:first-of-type { margin-top: 0; }
   .exblock-name { font-size: 12.5px; font-weight: 600; color: var(--ink-soft); }
-  .exblock .sc-link, .exrow-last .sc-link { font-size: 12.5px; }
+  .exrow-last .sc-link { font-size: 12.5px; }
   .exrow-last { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 10px; font-size: 12px; color: var(--ink-soft); margin-top: 7px; }
   /* Austrittstest-Tabelle */
   .ttab { width: 100%; border-collapse: collapse; font-size: 13.5px; margin-top: 12px; font-variant-numeric: tabular-nums; }
@@ -512,12 +512,9 @@ const WHERE = [
   { v:'ferse',      label:'Ferse' }
 ];
 const ANSTRENGUNG_LEICHT = 6;     // letzter Satz bei höchstens 6/10: Last vermutlich zu leicht
-const STEIGERUNG_TAGE = 7;        // eine Variable pro Woche
 const MORGEN_OFFEN_TAGE = 3;      // so lange hält ein fehlender Morgen das Urteil an
 const WARN_FENSTER_TAGE = 21;     // Warnzeichen: die Morgen der letzten drei Wochen
 const EXPORT_TAGE = 30;           // Textfassung fürs Chat: so viele Tage mit Einträgen
-const TEST_INTERVALL_TAGE = 30;   // Monatstest: danach wieder fällig
-const TEST_ERSTER_AB_TAGE = 14;   // erster Monatstest fällig, sobald zwei Wochen Daten da sind
 const TEST_WARN_TAGE = 45;        // so lange wirkt ein auffälliger Monatstest als Warnzeichen
 
 /* ============================================ Übungen */
@@ -1231,17 +1228,22 @@ function days() {
 }
 function pending() { return days().filter(d => d.painMorning == null && !d.skipped && d.morningDate <= today()); }
 
-// Stunden zwischen der ersten Sehnenkraft-Einheit dieses Tags und der letzten davor (anderer Tag)
+// Stunden zwischen der ersten Sehnenkraft-Einheit eines Tags und der letzten davor (anderer Tag) – einmal für alle Tage gerechnet, nicht je Tag neu
 function kraftGapHours(date) {
-  const list = sorted().filter(e => e.type === 'kraft');
-  const i = list.findIndex(e => e.date === date);
-  if (i <= 0) return null;
-  const cur = list[i], prev = list[i - 1];
-  if (prev.date === cur.date) return null;
-  // UTC wie addDays – mit Ortszeit wären es über die Zeitumstellung 47 bzw. 49 Stunden
-  const a = new Date(prev.date + 'T' + (prev.time || '12:00') + ':00Z'), b = new Date(cur.date + 'T' + (cur.time || '12:00') + ':00Z');
-  if (isNaN(a) || isNaN(b)) return daysBetween(prev.date, cur.date) * 24;
-  return (b - a) / 3600000;
+  if (!memo.kraftGap) {
+    const map = new Map(); let prev = null;
+    // UTC wie addDays – mit Ortszeit wären es über die Zeitumstellung 47 bzw. 49 Stunden
+    const at = e => new Date(e.date + 'T' + (e.time || '12:00') + ':00Z');
+    sorted().filter(e => e.type === 'kraft').forEach(e => {
+      if (!map.has(e.date)) {
+        if (!prev) map.set(e.date, null);
+        else { const a = at(prev), b = at(e); map.set(e.date, isNaN(a) || isNaN(b) ? daysBetween(prev.date, e.date) * 24 : (b - a) / 3600000); }
+      }
+      prev = e;
+    });
+    memo.kraftGap = map;
+  }
+  return memo.kraftGap.has(date) ? memo.kraftGap.get(date) : null;
 }
 // Läufe: Dauer, Pace („5:45“ → Sekunden) und Kadenz als Zahlen
 function runMin(e) { const v = +((e.details || {}).min); return Number.isFinite(v) && v > 0 ? v : null; }
@@ -1305,15 +1307,6 @@ function dayLevel(d, i, done) {
   (d.runWarn || []).forEach(w => amber.push(w));
   return { level: red.length ? 'rot' : amber.length ? 'gelb' : 'gruen', red, amber };
 }
-// Grüne Trainingstage in Folge (bewertete Tage, von hinten gezählt)
-function greenStreak() {
-  const done = days().filter(d => d.painMorning != null);
-  const levels = done.map((d, i) => dayLevel(d, i, done).level);
-  let n = 0;
-  for (let i = levels.length - 1; i >= 0 && levels[i] === 'gruen' && done[i].date >= PROGRAMM_START; i--) n++;
-  return n;
-}
-
 function assess() {
   const all = days();
   const done = all.filter(d => d.painMorning != null);
@@ -1563,23 +1556,23 @@ function cleanRun(r) {
 function programmWeek(date) { const n = daysBetween(PROGRAMM_START, date || today()); return n < 0 ? -1 : Math.floor(n / 7); }
 function isDeloadWeek(date) { const w = programmWeek(date); return w >= 3 && w % 4 === 3; }
 
-// Kraft-Trainingstage mit Ampel – Grundlage der Zähler
-function kraftDays() {
-  if (memo.kraftDays) return memo.kraftDays;
-  const all = days(), done = all.filter(d => d.painMorning != null);
+// Ampel je bewertetem Trainingstag – einmal gerechnet, von allen Tageslisten geteilt
+function levelMap() {
+  if (memo.levelMap) return memo.levelMap;
+  const done = days().filter(d => d.painMorning != null);
   const lv = new Map(); done.forEach((d, i) => lv.set(d.date, dayLevel(d, i, done).level));
-  memo.kraftDays = all.filter(d => entriesOf(d.date).some(e => e.type === 'kraft')).map(d => ({ date: d.date, level: lv.get(d.date) || 'offen', entries: entriesOf(d.date).filter(e => e.type === 'kraft') }));
-  return memo.kraftDays;
+  return (memo.levelMap = lv);
 }
-function runDays() {
-  if (memo.runDays) return memo.runDays;
-  const all = days(), done = all.filter(d => d.painMorning != null);
-  const lv = new Map(); done.forEach((d, i) => lv.set(d.date, dayLevel(d, i, done).level));
-  memo.runDays = all.filter(d => entriesOf(d.date).some(e => e.type === 'lauf')).map(d => ({ date: d.date, level: lv.get(d.date) || 'offen',
-    min: Math.max(0, ...entriesOf(d.date).filter(e => e.type === 'lauf').map(e => runMin(e) || 0)),
-    intervals: entriesOf(d.date).some(e => e.type === 'lauf' && asStr((e.details || {}).intervals).trim()) }));
-  return memo.runDays;
+// Trainingstage einer Art (kraft, lauf, plyo) mit Ampel und ihren Einheiten – Grundlage der Zähler. extra: weitere Felder aus den Einheiten des Tags
+function typedDays(type, extra) {
+  const key = 'days:' + type;
+  if (memo[key]) return memo[key];
+  const lv = levelMap();
+  return (memo[key] = days().map(d => ({ date: d.date, level: lv.get(d.date) || 'offen', entries: entriesOf(d.date).filter(e => e.type === type) }))
+    .filter(d => d.entries.length).map(d => extra ? Object.assign(d, extra(d.entries)) : d));
 }
+function kraftDays() { return typedDays('kraft'); }
+function runDays() { return typedDays('lauf', es => ({ min: Math.max(0, ...es.map(e => runMin(e) || 0)), intervals: es.some(e => asStr((e.details || {}).intervals).trim()) })); }
 // Übung an einem Kraft-Tag mindestens in der Dosis der Stufe gemacht?
 function exLogged(entries, key) {
   for (const e of entries) for (const id of LADDERS[key].ex) { const v = e.details && e.details.ex && e.details.ex[id]; if (v && (v.sets || v.reps)) return v; }
@@ -1790,13 +1783,7 @@ function runStatus() {
   return memo.runStatus;
 }
 // Plyometrie-Tage mit Ampel; Stufe weiter nach 14 Tagen und 4 grünen Einheiten auf der Stufe
-function plyoDays() {
-  if (memo.plyoDays) return memo.plyoDays;
-  const all = days(), done = all.filter(d => d.painMorning != null);
-  const lv = new Map(); done.forEach((d, i) => lv.set(d.date, dayLevel(d, i, done).level));
-  memo.plyoDays = all.filter(d => entriesOf(d.date).some(e => e.type === 'plyo')).map(d => ({ date: d.date, level: lv.get(d.date) || 'offen', entries: entriesOf(d.date).filter(e => e.type === 'plyo') }));
-  return memo.plyoDays;
-}
+function plyoDays() { return typedDays('plyo'); }
 function plyoLogged(entries, ex) { for (const e of entries) { const v = e.details && e.details.ex && e.details.ex[ex]; if (v && (v.sets || v.reps)) return v; } return null; }
 function plyoStatus() {
   if (memo.plyoStatus) return memo.plyoStatus;
@@ -2049,7 +2036,6 @@ function runTodayHtml() {
 function plyoTodayHtml() {
   const s = plyoStatus();
   if (!s.active) return '';
-  const lastRunTomorrow = false;
   const target = s.ready && s.next ? s.next : s.cur;
   return `<div class="card${s.ready ? ' pending' : ''}">
       <h2>Plyometrie</h2>
@@ -2171,12 +2157,25 @@ function settingsHtml() {
     <h3>Kurzhantel</h3><div class="eq-row eq-row-2"><label class="sublabel" for="eq-hantel">Schritt in kg</label><input type="number" id="eq-hantel" inputmode="numeric" min="1" data-spath="hantelSchritt" value="${esc(s.hantelSchritt)}"></div>
     <p class="hint">Änderungen werden beim Verlassen des Felds gespeichert.</p>`;
 }
+// Zu welcher Phase gehört ein Test? Bestandene kennen ihre Phase; sonst zählt, wie viele bestandene davor lagen (höchstens 4). Vor dem Programm: keine.
+function testPhaseNr(x) {
+  const ph = phaseState(), p = ph.passed.find(y => y.test.date === x.date);
+  if (p) return p.phase;
+  if (x.date < PROGRAMM_START) return null;
+  return Math.min(4, 1 + ph.passed.filter(y => y.test.date < x.date).length);
+}
+// Kurzform fürs Logbuch: „ · Phase 1 bestanden“, „ · Ergebnis offen“, „ · nicht bestanden“ – Phase 4 und Tests vor dem Programm ohne Zusatz
+function testTagText(x) {
+  const nr = testPhaseNr(x);
+  if (!nr || nr >= 4) return '';
+  const o = testOutcome(x, PHASEN[nr - 1]);
+  return o.status === 'bestanden' ? ` · Phase ${nr} bestanden` : o.status === 'offen' ? ' · Ergebnis offen' : ' · nicht bestanden';
+}
 function testsTableHtml() {
-  const ph = phaseState(), rows = [...testsSorted()].reverse();
+  const rows = [...testsSorted()].reverse();
   if (!rows.length) return '<p class="txt">Noch kein Test erfasst.</p>';
   return `<table class="ttab"><thead><tr><th>Datum</th><th>rechts</th><th>links</th><th>%</th><th>Ergebnis</th></tr></thead><tbody>${rows.map(x => {
-    const p = ph.passed.find(y => y.test.date === x.date);
-    const nr = p ? p.phase : x.date < PROGRAMM_START ? null : Math.min(4, 1 + ph.passed.filter(y => y.test.date < x.date).length);
+    const nr = testPhaseNr(x);
     const o = nr && nr < 4 ? testOutcome(x, PHASEN[nr - 1]) : null;
     const res = !nr ? 'vor dem Programm' : !o ? 'Phase 4 – Kontrolle' : o.status === 'bestanden' ? `Phase ${nr} bestanden` : o.status === 'offen' ? 'offen' : `nicht bestanden (${o.reasons.join('; ')})`;
     return `<tr><td>${esc(weekday(x.date))}, ${fmtY(x.date)}</td><td>${x.right}</td><td>${x.left}</td><td>${x.left > 0 ? Math.round(x.right / x.left * 100) : '–'}</td><td>${esc(res)}</td></tr>`; }).join('')}</tbody></table>`;
@@ -2847,7 +2846,7 @@ function testRowHtml(date) {
   return `<div class="day-row${testDraft && testDraft.orig === date ? ' editing' : ''}">
       <span class="day-time">Test</span>
       <div class="day-main">
-        <div class="day-title">Austrittstest${(() => { const ph = phaseState(); const p = ph.passed.find(y => y.test.date === date); const nr = p ? p.phase : date < PROGRAMM_START ? null : Math.min(4, 1 + ph.passed.filter(y => y.test.date < date).length); if (!nr || nr >= 4) return ''; const o = testOutcome(x, PHASEN[nr - 1]); return o.status === 'bestanden' ? ` · Phase ${nr} bestanden` : o.status === 'offen' ? ' · Ergebnis offen' : ' · nicht bestanden'; })()}</div>
+        <div class="day-title">Austrittstest${testTagText(x)}</div>
         <div class="day-sub">rechts ${x.right} · links ${x.left} · ${abstand}${pct !== null ? ` (${pct} % von links)` : ''}${x.jumpR != null && x.jumpL ? ` · Hop ${x.jumpR}/${x.jumpL} cm` : ''}${x.hops != null ? ` · ${x.hops} Hops` : ''}${x.balance ? ' · Einbeinstand ✓' : ''}${x.after != null ? ` · danach ${x.after}` : ''}</div>
         ${x.note ? `<div class="day-sub day-note">${esc(x.note)}</div>` : ''}
       </div>
@@ -3269,7 +3268,7 @@ function focusKeyOf(el) {
   if (!el || el === document.body || !document.getElementById('root').contains(el)) return null;
   if (el.id) return '#' + CSS.escape(el.id);
   if (el.classList.contains('chart-svg')) return '.chart-svg';
-  const attrs = ['data-tab','data-act','data-ex','data-key','data-scale','data-seg','data-chips','data-apath','data-spath','data-extoggle','data-exblock','data-exlast','data-acc','data-val','data-id','data-date','data-snap','data-type','data-range','data-sc','data-where','data-path','data-mpath','data-epath','data-tpath'];
+  const attrs = ['data-tab','data-act','data-ex','data-key','data-scale','data-seg','data-chips','data-apath','data-spath','data-extoggle','data-exlast','data-acc','data-val','data-id','data-date','data-snap','data-type','data-range','data-sc','data-where','data-path','data-mpath','data-epath','data-tpath'];
   const parts = attrs.filter(a => el.hasAttribute(a)).map(a => `[${a}="${CSS.escape(el.getAttribute(a))}"]`);
   return parts.length ? parts.join('') : null;
 }
@@ -3431,7 +3430,7 @@ function openFromToday(type) {
 
 document.addEventListener('click', async (ev) => {
   if (chartState && chartState.sel && !(ev.target.closest && ev.target.closest('.chart-svg'))) chartShow(null);
-  const t = ev.target.closest('[data-scale],[data-seg],[data-chips],[data-act],[data-tab],[data-extoggle],[data-exblock],[data-exlast],[data-acc]');
+  const t = ev.target.closest('[data-scale],[data-seg],[data-chips],[data-act],[data-tab],[data-extoggle],[data-exlast],[data-acc]');
   if (!t) return;
   uiFlash = null;   // Rückmeldungen gelten nur bis zum nächsten Tippen
 
@@ -3440,12 +3439,6 @@ document.addEventListener('click', async (ev) => {
   if (t.dataset.extoggle) {
     const id = t.dataset.extoggle;
     if (draft.ex[id]) delete draft.ex[id]; else draft.ex[id] = exDefaults(id);
-    return render();
-  }
-  if (t.dataset.exblock) {
-    const ids = Object.keys(EX).filter(id => EX[id].g === t.dataset.exblock);
-    const all = ids.every(id => draft.ex[id]);
-    ids.forEach(id => { if (all) delete draft.ex[id]; else if (!draft.ex[id]) draft.ex[id] = { sets:'', reps:'', weight:'' }; });
     return render();
   }
   if (t.dataset.exlast) {
