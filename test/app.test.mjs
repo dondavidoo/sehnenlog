@@ -287,17 +287,12 @@ describe('Warnzeichen', () => {
     app._test.setState({ tests: [app.makeTest(day(app, -60), 0, 25, '')] });
     assert.deepEqual(app.testFlags(), []);   // zu alt
   });
-  test('Monatstest fällig: nach 30 Tagen, der erste nach zwei Wochen Daten', async () => {
+  test('Austrittstest ist erst „bereit“, wenn alle Kriterien der Phase stehen', async () => {
     const app = await fresh();
     assert.equal(app.testDue(), false);
-    app._test.setState({ mornings: [app.makeMorning(day(app, -13), 1, 'unter15', '')] });
-    assert.equal(app.testDue(), false);
     app._test.setState({ mornings: [app.makeMorning(day(app, -14), 1, 'unter15', '')] });
-    assert.equal(app.testDue(), true);
-    app._test.setState({ tests: [app.makeTest(day(app, -29), 18, 24, '')] });
     assert.equal(app.testDue(), false);
-    app._test.setState({ tests: [app.makeTest(day(app, -30), 18, 24, '')] });
-    assert.equal(app.testDue(), true);
+    assert.match(app.exitTestStatus().text, /von 6 Kriterien erfüllt/);
   });
 });
 
@@ -391,14 +386,14 @@ describe('Texte und Formular', () => {
   test('Logbuch baut sich ohne Fehler auf – mit Monatstest im Verlauf und in der Übersicht', async () => {
     const app = await fresh();
     app._test.setState({ entries: [entry(day(app, -2), 1)], mornings: [app.makeMorning(day(app, -1), 1, 'unter15', '')], tests: [app.makeTest(day(app, -2), 18, 24, 'Rucksack')] });
-    app.render();
+    app._test.setTab('log'); app.render();
     const html = app.__dom.root.innerHTML;
     assert.doesNotMatch(html, /konnte nicht aufgebaut/);
     assert.match(html, /rechts 18 · links 24 · rechts 6 weniger \(75 % von links\)/);
     assert.match(html, /zuletzt 19\.9\.: rechts 18, links 24/);
     assert.match(html, /data-act="openTest"/);
     assert.doesNotMatch(html, /class="del"/);   // kein Lösch-× in den Zeilen
-    for (const t of ['plan', 'ex', 'supp', 'scale', 'data']) { app._test.setTab(t); app.render(); assert.doesNotMatch(app.__dom.root.innerHTML, /konnte nicht aufgebaut/, t); }
+    for (const t of ['heute', 'fort', 'plan', 'ex', 'supp', 'scale', 'data']) { app._test.setTab(t); app.render(); assert.doesNotMatch(app.__dom.root.innerHTML, /konnte nicht aufgebaut/, t); }
   });
 });
 
@@ -419,7 +414,7 @@ describe('Paket 4: Kadenz, Steigerung, Rettungskopie, Speicher-Zusage, Safari', 
   test('Verlauf zeigt Kollagen und die Art der Steigerung; Export auch', async () => {
     const app = await fresh();
     app._test.setState({ entries: [entry(day(app, -1), 1, { collagen: true, progressed: true, progressedWhat: 'Gewicht 15 → 17,5 kg' })] });
-    app.render();
+    app._test.setTab('log'); app.render();
     const html = app.__dom.root.innerHTML;
     assert.match(html, /gesteigert: Gewicht 15 → 17,5 kg/);
     assert.match(html, /· Kollagen</);
@@ -473,7 +468,7 @@ describe('Paket 4: Kadenz, Steigerung, Rettungskopie, Speicher-Zusage, Safari', 
     assert.equal(app.summary(alt), 'alter Freitext');
     const d = app.draftFromEntry(alt);
     assert.match(d.note, /Alteintrag: alter Freitext/);
-    app._test.setDraft(d, 'alt'); app._test.openForm(true); app.render();
+    app._test.setDraft(d, 'alt'); app._test.openForm(true); app._test.setTab('log'); app.render();
     const html = app.__dom.root.innerHTML;
     for (const id of ['when-note', 'collagen-note', 'progressed-what', 'save-entry', 'entry-hint']) assert.match(html, new RegExp(`id="${id}"`), id);
     assert.match(html, /id="progressed-what" hidden/);
@@ -542,5 +537,162 @@ describe('Paket 5: Schmerz danach, Schmerzort, Distanz, Speicherformat v5', () =
     assert.match(html, /data-path="run.km"/);
     assert.match(html, /id="run-note"/);
     assert.match(html, /Noch kein Lauf in den letzten 30 Tagen/);
+  });
+});
+
+describe('Paket 6: Leitern, Vorschlag, Lauf-Leiter, Phasen, Austrittstest', () => {
+  const P = '2026-10-07';
+  const kraft = (date, ex, extra) => ({ id: 'k' + date, date, time: '18:00', type: 'kraft', details: { ex }, painDuring: 1, painAfter: 1, spots: ['knoechel'], ...extra });
+  const morn = (app, date, pain) => app.makeMorning(date, pain ?? 1, 'unter15', '');
+  async function prog(now) {
+    const app = await loadApp();
+    app._test.setNow(() => new Date(now + 'T10:00:00'));
+    app._test.setProgrammStart(P);
+    return app;
+  }
+  test('Start: Vorschlag ist Einheit 1; erste Einheit startet beide Leitern', async () => {
+    const app = await prog('2026-10-08');
+    app._test.setState({});
+    const p = app.proposal();
+    assert.equal(p.item.kind, 'start');
+    assert.match(p.item.text, /Wadenheben gestreckt 1 × 12/);
+    assert.deepEqual(Object.keys(app.exFromLadders()).sort(), ['a1', 'a3']);
+    const e = kraft('2026-10-08', { a1: { sets: '1', reps: '12', weight: '' }, a3: { sets: '1', reps: '15', weight: '' } });
+    app._test.setState({ entries: [e] });
+    assert.deepEqual(app.applyLadderAdvance(e), ['Wadenheben gestreckt', 'Band-Adduktion']);
+    assert.equal(app.ladderStatus('a1').step, 0);
+    assert.equal(app.ladderStatus('a2').step, -1);
+  });
+  test('Nach drei grünen Einheiten: genau ein Vorschlag, zuerst die neue Übung', async () => {
+    const app = await prog('2026-10-16');
+    const ex = { a1: { sets: '1', reps: '12', weight: '' }, a3: { sets: '1', reps: '15', weight: '' } };
+    const entries = ['2026-10-08', '2026-10-10', '2026-10-13'].map(d => kraft(d, ex));
+    const mornings = ['2026-10-08', '2026-10-09', '2026-10-10', '2026-10-11', '2026-10-13', '2026-10-14'].map(d => morn(app, d));
+    const ladders = { a1: { step: 0, since: '2026-10-08' }, a3: { step: 0, since: '2026-10-08' } };
+    app._test.setState({ entries, mornings, ladders });
+    assert.equal(app.ladderStatus('a1').counter, 3);
+    const p = app.proposal();
+    assert.equal(p.streak, 3);
+    assert.equal(p.item.kind, 'neu');
+    assert.equal(p.item.key, 'a2');
+    // ein Gelb dazwischen setzt den Zähler zurück
+    const m2 = mornings.map(m => m.date === '2026-10-11' ? morn(app, m.date, 2) : m);
+    app._test.setState({ entries, mornings: m2, ladders });
+    assert.equal(app.proposal().item, null);
+    assert.equal(app.proposal().streak, 1);
+  });
+  test('Alle Übungen drin: Sätze vor Stufe, Ball und Doming nur ohne Innenfuß-Schmerz', async () => {
+    const app = await prog('2026-11-10');
+    const ex = { a1: { sets: '2', reps: '12', weight: '' }, a3: { sets: '3', reps: '15', weight: '' }, a2: { sets: '1', reps: '12', weight: '' }, b4: { sets: '1', reps: '12', weight: '' } };
+    const entries = ['2026-11-02', '2026-11-04', '2026-11-07'].map(d => kraft(d, ex));
+    const mornings = ['2026-11-02', '2026-11-03', '2026-11-04', '2026-11-05', '2026-11-07', '2026-11-08'].map(d => morn(app, d));
+    const ladders = { a1: { step: 1, since: '2026-11-01' }, a3: { step: 2, since: '2026-11-01' }, a2: { step: 0, since: '2026-11-01' }, hip: { step: 0, since: '2026-11-01' } };
+    app._test.setState({ entries, mornings, ladders });
+    let p = app.proposal();
+    assert.equal(p.item.kind, 'neu'); assert.equal(p.item.key, 'a6');   // Ball + Doming sind dran
+    // Innenfuß vor drei Tagen: Ball/Doming warten, stattdessen Sätze bei der ersten Übung mit vollem Zähler
+    const entries2 = entries.map(e => e.date === '2026-11-07' ? { ...e, spots: ['innenfuss'] } : e);
+    app._test.setState({ entries: entries2, mornings, ladders });
+    p = app.proposal();
+    assert.equal(app.gateOk('a6'), false);
+    assert.match(p.gated, /Innenfuß/);
+    assert.equal(p.item.kind, 'sätze');
+    assert.equal(p.item.key, 'a1');
+    assert.match(p.item.text, /3 × 12 · beidbeinig \(war 2 × 12/);
+  });
+  test('Entlastungswoche blockiert Steigerungen', async () => {
+    const app = await prog('2026-10-29');   // Woche 3 ab 7.10. = vierte Woche
+    app._test.setState({ ladders: { a1: { step: 0, since: P }, a3: { step: 0, since: P } } });
+    assert.equal(app.isDeloadWeek(), true);
+    assert.match(app.proposal().blocked, /Entlastungswoche/);
+  });
+  test('Lauf-Leiter: Einstieg nach 7 ruhigen Morgen, +10 % nach zwei grünen Läufen', async () => {
+    const app = await prog('2026-10-20');
+    const mornings = []; for (let i = 0; i <= 13; i++) mornings.push(morn(app, app.addDays('2026-10-20', -i)));
+    app._test.setState({ mornings });
+    let r = app.runStatus();
+    assert.equal(r.step, -1); assert.equal(r.gate, true); assert.equal(r.next, 0);
+    const run = (date, min) => ({ id: 'r' + date, date, time: '08:00', type: 'lauf', details: { min: String(min), pace: '6:10' }, painDuring: 1, painAfter: 1, spots: ['knoechel'] });
+    app._test.setState({ mornings, entries: [run('2026-10-12', 30), run('2026-10-15', 30)], run: { step: 1, since: '2026-10-12' } });
+    r = app.runStatus();
+    assert.equal(r.counter, 2);
+    assert.equal(r.next, 2);
+    assert.equal(r.nextText, '33 Min. locker am Stück');
+    const e = run('2026-10-20', 33);
+    app._test.setState({ mornings, entries: [run('2026-10-12', 30), run('2026-10-15', 30), e], run: { step: 1, since: '2026-10-12' } });
+    assert.equal(app.applyRunAdvance(e), '33 Min. locker am Stück');
+    assert.equal(app.runStatus().step, 2);
+  });
+  test('Phase 1: Kriterien, Austrittstest mit 24-Stunden-Regel, Wiederholung nach 14 Tagen und 4 Einheiten', async () => {
+    const app = await prog('2026-12-10');
+    const ex = { a1: { sets: '3', reps: '12', weight: '' }, a2: { sets: '3', reps: '12', weight: '' }, a3: { sets: '3', reps: '15', weight: '' }, b4: { sets: '2', reps: '12', weight: '' } };
+    const run = (date, min) => ({ id: 'r' + date, date, time: '08:00', type: 'lauf', details: { min: String(min), pace: '6:10' }, painDuring: 1, painAfter: 1, spots: ['knoechel'] });
+    const entries = ['2026-12-01', '2026-12-03', '2026-12-06'].map(d => kraft(d, ex)).concat([run('2026-11-28', 30), run('2026-12-05', 30)]);
+    const mornings = []; for (let i = 0; i <= 20; i++) mornings.push(morn(app, app.addDays('2026-12-10', -i)));
+    const ladders = { a1: { step: 2, since: '2026-11-20' }, a2: { step: 2, since: '2026-11-20' }, a3: { step: 2, since: '2026-11-20' }, hip: { step: 1, since: '2026-11-25' } };
+    const base = { entries, mornings, ladders, run: { step: 1, since: '2026-11-20' } };
+    app._test.setState(base);
+    const crit = app.phaseCriteria(1);
+    assert.equal(crit.filter(c => !c.ok).length, 0, JSON.stringify(crit.filter(c => !c.ok)));
+    assert.equal(app.exitTestStatus().ready, true);
+    // Test am 8.12.: Zahlen reichen, aber der Morgen danach fehlt → offen
+    const t1 = app.makeTest('2026-12-08', 15, 20, '', { after: 2 });
+    const m2 = mornings.filter(m => m.date !== '2026-12-09');
+    app._test.setState({ ...base, mornings: m2, tests: [t1] });
+    assert.equal(app.testOutcome(t1, app.PHASEN[0]).status, 'offen');
+    assert.equal(app.phaseState().nr, 1);
+    assert.match(app.exitTestStatus().text, /Ergebnis offen/);
+    // Morgen danach höher als am Testtag → nicht bestanden; Wiederholung ab 22.12.
+    const m3 = mornings.map(m => m.date === '2026-12-09' ? morn(app, m.date, 2) : m);
+    app._test.setState({ ...base, mornings: m3, tests: [t1] });
+    assert.equal(app.testOutcome(t1, app.PHASEN[0]).status, 'nicht');
+    const rt = app.retestStatus();
+    assert.equal(rt.from, '2026-12-22'); assert.equal(rt.ok, false); assert.equal(rt.sessions, 0);
+    assert.match(app.exitTestStatus().text, /frühestens ab 22\.12\./);
+    // Morgen danach gleich → bestanden, Phase 2 seit 9.12.
+    app._test.setState({ ...base, tests: [t1] });
+    assert.equal(app.testOutcome(t1, app.PHASEN[0]).status, 'bestanden');
+    assert.equal(app.phaseState().nr, 2);
+    assert.equal(app.phaseState().since, '2026-12-09');
+    // Zu wenig Wiederholungen → nicht bestanden trotz ruhigem Morgen
+    const t2 = app.makeTest('2026-12-08', 8, 20, '', {});
+    assert.match(app.testOutcome(t2, app.PHASEN[0]).reasons[0], /rechts 8 Wdh\. – Ziel 10/);
+  });
+  test('Phase 3 verlangt Hop-Test und Hops; packState trägt Leitern, Lauf und Ausrüstung', async () => {
+    const app = await prog('2027-03-10');
+    const t = app.makeTest('2027-03-09', 26, 28, '', { jumpR: '110', jumpL: '130', hops: 10, after: 1 });
+    app._test.setState({ tests: [t], mornings: [morn(app, '2027-03-09'), morn(app, '2027-03-10')] });
+    const o = app.testOutcome(t, app.PHASEN[2]);
+    assert.equal(o.status, 'nicht');
+    assert.match(o.reasons[0], /Hop-Test rechts 85 % von links – Ziel 90 %/);
+    const ps = app.packState();
+    assert.equal(ps.v, 5);
+    assert.equal(ps.settings.thera[0].name, 'gelb');
+    assert.equal(ps.ladders.a1.step, -1);
+    assert.equal(ps.run.step, -1);
+    const n = app.normalize({ v: 5, entries: [], mornings: [], tests: [], settings: { thera: [{ name: 'orange', kg: '3 kg' }] }, ladders: { a1: { step: 99, since: 'x' }, kaputt: 1 }, run: { step: 2, since: '2027-01-01' } });
+    assert.equal(n.settings.thera[0].name, 'orange');
+    assert.equal(n.settings.loop.length, 5);
+    assert.equal(n.ladders.a1.step, app.LADDERS.a1.steps.length - 1);
+    assert.equal(n.ladders.a1.since, null);
+    assert.equal(n.run.step, 2);
+  });
+  test('Tab „Heute“ und „Fortschritt“ bauen sich auf und zeigen Vorschlag, Chips und Phasenleiste', async () => {
+    const app = await prog('2026-10-16');
+    const ex = { a1: { sets: '1', reps: '12', weight: '' }, a3: { sets: '1', reps: '15', weight: '' } };
+    const entries = ['2026-10-08', '2026-10-10', '2026-10-13'].map(d => kraft(d, ex));
+    const mornings = ['2026-10-08', '2026-10-09', '2026-10-10', '2026-10-11', '2026-10-13', '2026-10-14'].map(d => morn(app, d));
+    app._test.setState({ entries, mornings, ladders: { a1: { step: 0, since: '2026-10-08' }, a3: { step: 0, since: '2026-10-08' } } });
+    const h = app.tabToday();
+    assert.match(h, /Sehnenkraft fällig/);
+    assert.match(h, /Wadenheben gebeugt<\/b> 1 × 12[\s\S]*⬆ heute steigern/);
+    assert.match(h, /Theraband gelb \(4,5 kg\)/);
+    assert.match(h, /class="swatch" style="background:#E3B93C"/);
+    assert.match(h, /data-act="openFromToday" data-type="kraft"/);
+    const f = app.tabProgress();
+    assert.match(f, /class="phase cur"/);
+    assert.match(f, /von 6 Kriterien erfüllt/);
+    assert.match(f, /data-acc="equip"/); assert.match(f, /Theraband gelb → rot → grün → blau/);
+    assert.match(f, /data-act="ladderUp" data-key="a1"/);
   });
 });

@@ -353,6 +353,38 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
     .btn, .seg button, .scale button, .tabs button { transition: background-color .12s ease, color .12s ease; }
   }
 
+  /* Programm 2.0 */
+  .chip { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; padding: 2px 8px; border-radius: 999px; background: var(--surface-3); border: 1px solid var(--rule); vertical-align: middle; }
+  .swatch { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 1px solid rgba(0,0,0,.25); flex-shrink: 0; }
+  .today-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--rule); }
+  .today-row:first-of-type { border-top: 0; }
+  .today-main { min-width: 0; line-height: 1.4; }
+  .today-side { flex-shrink: 0; }
+  .today-up { background: var(--tint); margin: 0 -10px; padding: 8px 10px; border-radius: 8px; border-top: 0; }
+  .arrow { color: var(--act); font-weight: 650; font-size: 13px; }
+  .dots { letter-spacing: 2px; color: var(--act); font-size: 13px; }
+  .phasebar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .phase { text-align: center; padding: 8px 4px; border-radius: 8px; border: 1px solid var(--rule); background: var(--surface-3); color: var(--ink-soft); display: flex; flex-direction: column; gap: 2px; }
+  .phase b { font-size: 16px; }
+  .phase span { font-size: 12.5px; }
+  .phase.cur { background: var(--ink); color: var(--on-ink); border-color: var(--ink); }
+  .phase.done { background: var(--up-bg); border-color: var(--up-border); color: var(--ink); }
+  .crit-row { display: flex; gap: 10px; padding: 7px 0; border-top: 1px solid var(--rule); align-items: flex-start; }
+  .crit-row:first-child { border-top: 0; }
+  .crit-mark { width: 20px; flex-shrink: 0; text-align: center; color: var(--ink-soft); font-weight: 700; }
+  .crit-row.ok .crit-mark { color: var(--up-border); }
+  .crit-row.ready { background: var(--tint); margin: 0 -10px; padding: 7px 10px; border-radius: 8px; }
+  .ladder { padding: 10px 0; border-top: 1px solid var(--rule); }
+  .ladder:first-of-type { border-top: 0; }
+  .ladder-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .lbar { display: flex; gap: 3px; margin: 6px 0; flex-wrap: wrap; }
+  .lb { display: inline-block; width: 14px; height: 10px; border-radius: 2px; background: var(--surface-3); border: 1px solid var(--rule); }
+  .lb.done { background: var(--up-border); border-color: var(--up-border); }
+  .lb.cur { background: var(--ink); border-color: var(--ink); }
+  .ladder-cur { font-size: 13.5px; line-height: 1.5; }
+  .eq-row { display: grid; grid-template-columns: 20px 1fr 1fr; gap: 8px; align-items: center; margin: 6px 0; }
+  .eq-row input { min-width: 0; }
+  .eq-row-2 { grid-template-columns: 1fr 1fr; }
 </style>
 </head>
 <body>
@@ -679,8 +711,9 @@ const SCALES = [
 /* ============================================ State */
 let _now = () => new Date();   // die Uhr – vor dem Zustand, weil newDraft() sie beim Start braucht; im Test austauschbar
 let state = { entries: [], mornings: [], tests: [], loaded: false, error: null, dataNote: null, migrationNote: null,
-  persist: null, snapPrev: null, snapTrash: null, rescue: null, meta: { lastBackup: null } };
-let tab = 'log';
+  persist: null, snapPrev: null, snapTrash: null, rescue: null, meta: { lastBackup: null },
+  settings: null, ladders: null, run: null };   // Programm 2.0 – werden in adopt()/_test gesetzt
+let tab = 'heute';
 let openAcc = null;
 let scaleJump = null;   // { sc, from }: Sprung aus dem Formular in den Skalen-Tab und zurück
 let draft = newDraft();
@@ -797,7 +830,12 @@ function skippedMorning(date) { return { id: 'm' + date, date, pain: null, stiff
 // Rechts ist die betroffene Seite, links die gesunde (so steht es im Plan).
 const asCount = v => (typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 999) ? Math.round(v) : null;
 function validTest(x) { return !!x && typeof x === 'object' && isIsoDate(x.date) && asCount(x.right) !== null && asCount(x.left) !== null; }
-function makeTest(date, right, left, note) { return { id: 't' + date, date, right: asCount(right), left: asCount(left), note: asStr(note).trim() }; }
+function makeTest(date, right, left, note, x) {
+  const o = x && typeof x === 'object' ? x : {};
+  const num = v => (typeof v === 'number' && Number.isFinite(v) && v >= 0) ? v : (typeof v === 'string' && v.trim() !== '' && Number.isFinite(+v.replace(',', '.')) && +v.replace(',', '.') >= 0 ? +v.replace(',', '.') : null);
+  return { id: 't' + date, date, right: asCount(right), left: asCount(left), note: asStr(note).trim(),
+    jumpR: num(o.jumpR), jumpL: num(o.jumpL), hops: asCount(num(o.hops)), balance: !!o.balance, after: asScore(o.after) };
+}
 // Alles, was aus einer Sicherung kommt, wird hier auf die erwarteten Typen gebracht.
 // Sonst landet ein „time“ als Attribut-Injektion im Formular oder ein null in summary().
 const asStr = v => (typeof v === 'string' || typeof v === 'number') ? String(v) : '';
@@ -866,8 +904,9 @@ function normalize(p) {
   const e = keepValid(p.entries, validEntry), m = keepValid(p.mornings, validMorning), t = keepValid(p.tests, validTest);
   const map = new Map(), tmap = new Map();
   m.ok.forEach(x => map.set(x.date, x.skipped ? skippedMorning(x.date) : makeMorning(x.date, x.pain, x.stiff, x.note, x.spots)));
-  t.ok.forEach(x => tmap.set(x.date, makeTest(x.date, x.right, x.left, x.note)));
+  t.ok.forEach(x => tmap.set(x.date, makeTest(x.date, x.right, x.left, x.note, x)));
   return { entries: e.ok.map(cleanEntry), mornings: [...map.values()], tests: [...tmap.values()],
+    settings: cleanSettings(p.settings), ladders: cleanLadders(p.ladders), run: cleanRun(p.run),
     dropped: e.dropped + m.dropped + t.dropped, doppelt: 0, legacy: false, from: typeof p.v === 'number' ? p.v : 4 };
 }
 
@@ -876,11 +915,14 @@ function adopt(n) {
   state.entries = n.entries;
   state.mornings = n.mornings;
   state.tests = n.tests || [];
+  state.settings = cleanSettings(n.settings);
+  state.ladders = cleanLadders(n.ladders);
+  state.run = cleanRun(n.run);
   invalidate();
   noteDropped(n.dropped);
   return hasData();
 }
-function packState() { return { v: 5, entries: state.entries, mornings: state.mornings, tests: state.tests }; }
+function packState() { return { v: 5, entries: state.entries, mornings: state.mornings, tests: state.tests, settings: state.settings || cleanSettings(null), ladders: state.ladders || cleanLadders(null), run: state.run || cleanRun(null) }; }
 function migrationText(n) {
   if (!n.legacy) return 'Neu in dieser Fassung: „Schmerz danach“, Schmerzort und Distanz beim Lauf. Deine Daten wurden übernommen – bei alten Einträgen sind die neuen Felder leer, das zählt nicht als Verstoß. Der alte Stand bleibt zusätzlich gespeichert.';
   return 'Morgenwerte stehen jetzt an dem Tag, an dem du aufgewacht bist – nicht mehr beim Training vom Vortag. Deine Daten wurden übernommen, der alte Stand bleibt zusätzlich unverändert gespeichert.'
@@ -997,6 +1039,7 @@ async function load() {
       }
     }
   }
+  if (!state.settings) { state.settings = cleanSettings(null); state.ladders = cleanLadders(null); state.run = cleanRun(null); }
   await loadMeta();
   state.snapPrev  = await readSnapshot(KEY_PREV);
   state.snapTrash = await readSnapshot(KEY_TRASH);
@@ -1287,17 +1330,11 @@ function testFlags() {
   const t = today(), list = testsSorted().filter(x => x.date <= t);
   const last = list[list.length - 1], prev = list[list.length - 2];
   if (!last || daysBetween(last.date, t) > TEST_WARN_TAGE) return [];
-  if (last.right === 0 && last.left > 0) return [`Beim Monatstest vom ${fmt(last.date)} war rechts kein einbeiniges Wadenheben möglich.`];
-  if (prev && prev.right > 0 && last.right <= prev.right * 0.7) return [`Beim Monatstest ist die Wiederholungszahl rechts von ${prev.right} auf ${last.right} gefallen.`];
+  if (last.right === 0 && last.left > 0) return [`Beim Test vom ${fmt(last.date)} war rechts kein einbeiniges Wadenheben möglich.`];
+  if (prev && prev.right > 0 && last.right <= prev.right * 0.7) return [`Beim Test ist die Wiederholungszahl rechts von ${prev.right} auf ${last.right} gefallen.`];
   return [];
 }
 function lastTest() { const l = testsSorted(); return l.length ? l[l.length - 1] : null; }
-function testDue() {
-  const last = lastTest();
-  if (last) return daysBetween(last.date, today()) >= TEST_INTERVALL_TAGE;
-  const dates = dayList(), oldest = dates[dates.length - 1];
-  return !!oldest && daysBetween(oldest, today()) >= TEST_ERSTER_AB_TAGE;
-}
 
 function buildExport() {
   const dates = dayList();
@@ -1305,24 +1342,25 @@ function buildExport() {
   const a = assess();
   const tests = testsSorted();
   const L = ['Sehnenlog – Auswertung bitte', `Stand: ${_now().toLocaleDateString('de-DE')}`,
-    `Einheiten: ${state.entries.length}, erfasste Morgen: ${state.mornings.filter(m => !m.skipped).length}, Monatstests: ${tests.length}`,
+    `Einheiten: ${state.entries.length}, erfasste Morgen: ${state.mornings.filter(m => !m.skipped).length}, Austrittstests: ${tests.length}`,
     `Aktuelle Einschätzung der App: ${a.word}`,
     'Schmerzwerte 0–10: während der Einheit, danach (Spitze 1–6 Std. später), am Morgen. Ein Morgenwert gilt jeweils für das Training vom Vortag (24-Stunden-Regel).'];
   if (dates.length > EXPORT_TAGE) L.push(`Gekürzt auf die letzten ${EXPORT_TAGE} Tage mit Einträgen (von ${dates.length}).`);
   L.push('');
   if (tests.length) {
-    L.push('Monatstests – einbeiniges Wadenheben, Wiederholungen (rechts = betroffene Seite):');
-    tests.forEach(x => L.push(`  ${fmtY(x.date)}: rechts ${x.right}, links ${x.left}${x.note ? ' – ' + x.note : ''}`));
+    L.push('Austrittstests – einbeiniges Wadenheben, Wiederholungen (rechts = betroffene Seite):');
+    tests.forEach(x => L.push(`  ${fmtY(x.date)}: rechts ${x.right}, links ${x.left}${x.jumpR != null && x.jumpL ? `, Hop ${x.jumpR}/${x.jumpL} cm` : ''}${x.hops != null ? `, ${x.hops} Hops` : ''}${x.after != null ? `, danach ${x.after}/10` : ''}${x.note ? ' – ' + x.note : ''}`));
+    const ph = phaseState(); L.push(`Phase: ${ph.nr} (${ph.def.title}) seit ${fmtY(ph.since)}`);
     L.push('');
   }
   dates.slice(0, EXPORT_TAGE).reverse().forEach(date => {
     const list = entriesOf(date), prev = addDays(date, -1), m = morningOf(date), x = testOf(date);
-    L.push(`${weekday(date)}, ${fmt(date)}${list.length ? '' : x ? ' – Monatstest' : ' – Ruhetag'}`);
+    L.push(`${weekday(date)}, ${fmt(date)}${list.length ? '' : x ? ' – Austrittstest' : ' – Ruhetag'}`);
     if (m && !m.skipped) {
       L.push(`  Morgen: Schmerz ${m.pain}/10, Sehne steif ${stiffLabel(m.stiff)}${m.spots && m.spots.length ? ', Ort: ' + spotsLabel(m.spots) : ''}${hasTraining(prev) ? ` (gilt für das Training vom ${fmt(prev)})` : ''}${m.note ? ' – ' + m.note : ''}`);
     } else if (m && m.skipped) L.push('  Morgen: übersprungen');
     else if (hasTraining(prev)) L.push('  Morgen: nicht erfasst');
-    if (x) L.push(`  Monatstest: rechts ${x.right}, links ${x.left}`);
+    if (x) L.push(`  Austrittstest: rechts ${x.right}, links ${x.left}`);
     list.forEach(e => {
       const parts = [`${e.time || '–'} ${typeLabel(e.type)}: ${summary(e)}`,
         `während ${e.painDuring != null ? e.painDuring + '/10' : '–'}`,
@@ -1337,6 +1375,546 @@ function buildExport() {
     L.push('');
   });
   return L.join('\n').trimEnd();
+}
+
+/* ============================================ Programm 2.0: Ausrüstung, Leitern, Lauf-Leiter */
+// Bänder und Hantel – als Einstellung gespeichert, in der App änderbar. Farben erscheinen als Chips.
+const BAND_HEX = { gelb:'#E3B93C', rot:'#D4574E', 'grün':'#4A9D5B', blau:'#3A7BD5', schwarz:'#2B2B2B', orange:'#E68A2E', lila:'#8E5BD1', silber:'#9AA3AB' };
+const DEFAULT_SETTINGS = {
+  thera: [ { name:'gelb', kg:'4,5 kg' }, { name:'rot', kg:'6,8 kg' }, { name:'grün', kg:'9 kg' }, { name:'blau', kg:'11,3 kg' } ],
+  loop:  [ { name:'grün', kg:'5–10 lbs' }, { name:'blau', kg:'10–15 lbs' }, { name:'gelb', kg:'15–20 lbs' }, { name:'rot', kg:'25–30 lbs' }, { name:'schwarz', kg:'30–40 lbs' } ],
+  hantelSchritt: 5
+};
+function cleanSettings(s) {
+  const d = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
+  if (!s || typeof s !== 'object') return d;
+  const list = (a, fb) => Array.isArray(a) && a.length ? a.filter(x => x && typeof x === 'object').map(x => ({ name: asStr(x.name).trim() || '–', kg: asStr(x.kg).trim() })) : fb;
+  return { thera: list(s.thera, d.thera), loop: list(s.loop, d.loop),
+    hantelSchritt: (typeof s.hantelSchritt === 'number' && s.hantelSchritt > 0) ? s.hantelSchritt : d.hantelSchritt };
+}
+function bandHex(name) { return BAND_HEX[String(name || '').toLowerCase()] || '#8A9299'; }
+function bandChipHtml(kind, idx, doppelt) {
+  const list = state.settings[kind] || [], b = list[Math.min(idx, list.length - 1)];
+  if (!b) return '';
+  const typ = kind === 'thera' ? 'Theraband' : 'Mini-Loop';
+  return `<span class="chip"><i class="swatch" style="background:${bandHex(b.name)}"></i>${esc(typ)} ${esc(b.name)}${b.kg ? ` (${esc(b.kg)})` : ''}${doppelt ? ', doppelt' : ''}</span>`;
+}
+function bandText(kind, idx, doppelt) {
+  const list = state.settings[kind] || [], b = list[Math.min(idx, list.length - 1)];
+  if (!b) return '';
+  return `${kind === 'thera' ? 'Theraband' : 'Mini-Loop'} ${b.name}${b.kg ? ` (${b.kg})` : ''}${doppelt ? ', doppelt' : ''}`;
+}
+
+// Leitern: feste Stufen je Übung. Ein Schritt = eine Zeile. kind: was sich gegenüber der Vorstufe ändert.
+function calfSteps() {
+  const s = [
+    { sets:1, reps:12, v:'beidbeinig' }, { sets:2, reps:12, v:'beidbeinig' }, { sets:3, reps:12, v:'beidbeinig' },
+    { sets:3, reps:12, v:'beidbeinig auf der Stufe' }, { sets:3, reps:8, v:'einbeinig' }, { sets:3, reps:12, v:'einbeinig' } ];
+  for (let w = 5; w <= 30; w += 5) { s.push({ sets:4, reps:8, v:'einbeinig', weight:w }); s.push({ sets:4, reps:12, v:'einbeinig', weight:w }); }
+  return s;
+}
+function bandSteps() {
+  const s = [{ sets:1, reps:15, band:0 }, { sets:2, reps:15, band:0 }, { sets:3, reps:15, band:0 }];
+  for (let b = 1; b <= 3; b++) { s.push({ sets:2, reps:15, band:b }); s.push({ sets:3, reps:15, band:b }); }
+  s.push({ sets:3, reps:15, band:3, doppelt:true });
+  return s;
+}
+function hipSteps() {
+  const s = [];
+  for (let l = 1; l <= 4; l++) { if (l === 1) s.push({ sets:1, reps:12, loop:l }); s.push({ sets:2, reps:12, loop:l }); s.push({ sets:3, reps:15, loop:l }); }
+  return s;
+}
+const LADDERS = {
+  a1:  { name:'Wadenheben gestreckt', ex:['a1'], order:0, unlock:0, unit:'wdh', steps: calfSteps() },
+  a3:  { name:'Band-Adduktion',       ex:['a3'], order:1, unlock:0, unit:'wdh', steps: bandSteps() },
+  a2:  { name:'Wadenheben gebeugt',   ex:['a2'], order:2, unlock:1, unit:'wdh', steps: calfSteps() },
+  hip: { name:'Hüfte',                ex:['b4','b3'], order:3, unlock:2, unit:'wdh', steps: hipSteps() },
+  a6:  { name:'Wadenheben mit Ball',  ex:['a6'], order:4, unlock:3, gate:'kahnbein', unit:'wdh', steps:[
+    { sets:1, reps:10, v:'beidbeinig, mittlere Höhe' }, { sets:2, reps:10, v:'beidbeinig, mittlere Höhe' }, { sets:3, reps:10, v:'beidbeinig, mittlere Höhe' }, { sets:3, reps:12, v:'beidbeinig, mittlere Höhe' },
+    { sets:2, reps:8, v:'einbeinig, mittlere Höhe' }, { sets:3, reps:8, v:'einbeinig, mittlere Höhe' }, { sets:3, reps:12, v:'einbeinig, mittlere Höhe' } ] },
+  a5:  { name:'Doming',               ex:['a5'], order:5, unlock:3, gate:'kahnbein', unit:'wdh', steps:[
+    { sets:1, reps:5, v:'sitzend, je 5 Sek.' }, { sets:2, reps:5, v:'sitzend, je 5 Sek.' }, { sets:3, reps:5, v:'sitzend, je 5 Sek.' },
+    { sets:2, reps:5, v:'stehend, je 5 Sek.' }, { sets:3, reps:5, v:'stehend, je 5 Sek.' }, { sets:2, reps:5, v:'einbeinig, je 5 Sek.' } ] }
+};
+const LADDER_ORDER = Object.keys(LADDERS).sort((a, b) => LADDERS[a].order - LADDERS[b].order);
+const UNLOCK_STAGES = [['a1', 'a3'], ['a2'], ['hip'], ['a6', 'a5']];   // Reihenfolge, in der Übungen dazukommen
+const GATE_KAHNBEIN_TAGE = 7;   // Ball und Doming erst, wenn Innenfuß/Kahnbein so lange ohne Schmerz war
+
+function stepText(step, unit) {
+  const b = [`${step.sets} × ${step.reps}${unit === 'sek' ? ' Sek.' : ''}`];
+  if (step.v) b.push(step.v);
+  if (step.weight) b.push(`+${step.weight} kg Kurzhantel`);
+  if (step.band != null) b.push(bandText('thera', step.band, step.doppelt));
+  if (step.loop != null) b.push(bandText('loop', step.loop));
+  return b.join(' · ');
+}
+function stepEquipHtml(step) {
+  if (step.band != null) return bandChipHtml('thera', step.band, step.doppelt);
+  if (step.loop != null) return bandChipHtml('loop', step.loop);
+  if (step.weight) return `<span class="chip">+${step.weight} kg Kurzhantel</span>`;
+  return '';
+}
+// Was ändert sich von a nach b? „neu“ (Leiter startet), „sätze“, „stufe“ (Variante/Band/Gewicht)
+function stepKind(a, b) {
+  if (!a) return 'neu';
+  if (a.v === b.v && a.band === b.band && a.loop === b.loop && a.weight === b.weight && !!a.doppelt === !!b.doppelt) return 'sätze';
+  return 'stufe';
+}
+const KIND_RANK = { neu:0, 'sätze':1, stufe:2 };
+
+function cleanLadders(l) {
+  const out = {};
+  LADDER_ORDER.forEach(k => {
+    const x = l && typeof l === 'object' && l[k] && typeof l[k] === 'object' ? l[k] : {};
+    const step = Number.isInteger(x.step) ? Math.max(-1, Math.min(x.step, LADDERS[k].steps.length - 1)) : -1;
+    out[k] = { step, since: isIsoDate(x.since) ? x.since : null };
+  });
+  return out;
+}
+function cleanRun(r) {
+  const x = r && typeof r === 'object' ? r : {};
+  return { step: Number.isInteger(x.step) && x.step >= -1 ? x.step : -1, since: isIsoDate(x.since) ? x.since : null };
+}
+
+// Entlastungswoche: jede vierte Woche ab Programmstart ohne Steigerung, 30 % weniger
+function programmWeek(date) { const n = daysBetween(PROGRAMM_START, date || today()); return n < 0 ? -1 : Math.floor(n / 7); }
+function isDeloadWeek(date) { const w = programmWeek(date); return w >= 3 && w % 4 === 3; }
+
+// Kraft-Trainingstage mit Ampel – Grundlage der Zähler
+function kraftDays() {
+  if (memo.kraftDays) return memo.kraftDays;
+  const all = days(), done = all.filter(d => d.painMorning != null);
+  const lv = new Map(); done.forEach((d, i) => lv.set(d.date, dayLevel(d, i, done).level));
+  memo.kraftDays = all.filter(d => entriesOf(d.date).some(e => e.type === 'kraft')).map(d => ({ date: d.date, level: lv.get(d.date) || 'offen', entries: entriesOf(d.date).filter(e => e.type === 'kraft') }));
+  return memo.kraftDays;
+}
+function runDays() {
+  if (memo.runDays) return memo.runDays;
+  const all = days(), done = all.filter(d => d.painMorning != null);
+  const lv = new Map(); done.forEach((d, i) => lv.set(d.date, dayLevel(d, i, done).level));
+  memo.runDays = all.filter(d => entriesOf(d.date).some(e => e.type === 'lauf')).map(d => ({ date: d.date, level: lv.get(d.date) || 'offen',
+    min: Math.max(0, ...entriesOf(d.date).filter(e => e.type === 'lauf').map(e => runMin(e) || 0)),
+    intervals: entriesOf(d.date).some(e => e.type === 'lauf' && asStr((e.details || {}).intervals).trim()) }));
+  return memo.runDays;
+}
+// Übung an einem Kraft-Tag mindestens in der Dosis der Stufe gemacht?
+function exLogged(entries, key) {
+  for (const e of entries) for (const id of LADDERS[key].ex) { const v = e.details && e.details.ex && e.details.ex[id]; if (v && (v.sets || v.reps)) return v; }
+  return null;
+}
+function doseMet(v, step) {
+  if (!v) return false;
+  const sets = +v.sets || 0, reps = +v.reps || 0, w = parseFloat(String(v.weight || '0').replace(',', '.')) || 0;
+  return sets >= step.sets && reps >= step.reps && (!step.weight || w >= step.weight);
+}
+// Grüne Kraft-Einheiten in Folge seit einem Datum (nur Tage ab Programmstart; ein Gelb/Rot setzt auf 0; offene Morgen zählen nicht)
+function greenSince(since, filter) {
+  let n = 0;
+  const list = kraftDays().filter(d => d.date >= PROGRAMM_START && (!since || d.date >= since));
+  for (let i = list.length - 1; i >= 0; i--) {
+    const d = list[i];
+    if (d.level === 'offen') continue;
+    if (d.level !== 'gruen') break;
+    if (!filter || filter(d)) n++;
+  }
+  return n;
+}
+function lastLadderChange() {
+  const dates = LADDER_ORDER.map(k => state.ladders[k].since).filter(Boolean);
+  return dates.length ? dates.sort().slice(-1)[0] : null;
+}
+function gateOk(key) {
+  const g = LADDERS[key].gate;
+  if (!g) return true;
+  const t = today();
+  const spotRecent = (list) => list.some(x => x.date <= t && daysBetween(x.date, t) < GATE_KAHNBEIN_TAGE && (x.spots || []).some(s => s === 'innenfuss' || s === 'spann'));
+  return !spotRecent(state.entries) && !spotRecent(state.mornings.filter(m => !m.skipped));
+}
+function ladderStatus(key) {
+  const L = LADDERS[key], st = state.ladders[key];
+  const cur = st.step >= 0 ? L.steps[st.step] : null, next = L.steps[st.step + 1] || null;
+  const counter = st.step >= 0 ? greenSince(st.since, d => doseMet(exLogged(d.entries, key), cur)) : 0;
+  return { key, name: L.name, step: st.step, since: st.since, cur, next, counter, total: L.steps.length, done: st.step >= L.steps.length - 1,
+    kind: next ? stepKind(cur, next) : null };
+}
+// Genau ein Vorschlag je Einheit: erst neue Übung, dann Sätze, dann Stufe – frei nach 3 grünen Einheiten seit der letzten Änderung
+function proposal() {
+  if (memo.proposal !== undefined) return memo.proposal;
+  const started = LADDER_ORDER.filter(k => state.ladders[k].step >= 0);
+  const out = { blocked: null, item: null, streak: 0, stages: [] };
+  if (isDeloadWeek()) out.blocked = 'Entlastungswoche – keine Steigerung, 30 % weniger Volumen.';
+  const since = lastLadderChange();
+  out.streak = started.length ? greenSince(since) : 0;
+  const a = assess();
+  if (!out.blocked && a.tone === 'down') out.blocked = a.word + ' – erst wieder grün werden.';
+  if (!started.length) {
+    out.item = { kind:'start', keys: UNLOCK_STAGES[0], text: 'Einheit 1: ' + UNLOCK_STAGES[0].map(k => `${LADDERS[k].name} ${stepText(LADDERS[k].steps[0], LADDERS[k].unit)}`).join(' + ') };
+    return (memo.proposal = out);
+  }
+  if (out.blocked || out.streak < GRUEN_FUER_STEIGERUNG) return (memo.proposal = out);
+  // nächste Stufe der Freischaltung: alle Übungen einer Stufe müssen laufen, bevor die nächste kommt
+  for (const stage of UNLOCK_STAGES) {
+    const missing = stage.filter(k => state.ladders[k].step < 0);
+    if (!missing.length) continue;
+    const ok = missing.filter(gateOk);
+    if (ok.length) { out.item = { kind:'neu', key: ok[0], step: 0, text: `Neu dazu: ${LADDERS[ok[0]].name} ${stepText(LADDERS[ok[0]].steps[0], LADDERS[ok[0]].unit)}` }; return (memo.proposal = out); }
+    out.gated = `${missing.map(k => LADDERS[k].name).join(' und ')} warten, bis Innenfuß/Kahnbein ${GATE_KAHNBEIN_TAGE} Tage ohne Schmerz war.`;
+    break;   // gesperrte Übungen überspringen, Sätze/Stufen der laufenden Übungen dürfen weiter
+  }
+  const cands = started.map(ladderStatus).filter(s => s.next && s.counter >= GRUEN_FUER_STEIGERUNG)
+    .sort((x, y) => (KIND_RANK[x.kind] - KIND_RANK[y.kind]) || (LADDERS[x.key].order - LADDERS[y.key].order));
+  if (cands.length) {
+    const s = cands[0];
+    out.item = { kind: s.kind, key: s.key, step: s.step + 1, text: `${s.name}: ${stepText(s.next, LADDERS[s.key].unit)} (war ${stepText(s.cur, LADDERS[s.key].unit)})` };
+  }
+  return (memo.proposal = out);
+}
+// Nach dem Speichern einer Kraft-Einheit: wurde der Vorschlag umgesetzt? Dann rückt die Leiter vor.
+function applyLadderAdvance(entry) {
+  if (entry.type !== 'kraft') return null;
+  const p = proposal();
+  if (!p.item) return null;
+  const changed = [];
+  if (p.item.kind === 'start') {
+    p.item.keys.forEach(k => { if (doseMet(exLogged([entry], k), LADDERS[k].steps[0])) { state.ladders[k] = { step: 0, since: entry.date }; changed.push(LADDERS[k].name); } });
+  } else {
+    const k = p.item.key, step = LADDERS[k].steps[p.item.step];
+    if (doseMet(exLogged([entry], k), step)) { state.ladders[k] = { step: p.item.step, since: entry.date }; changed.push(LADDERS[k].name); }
+  }
+  invalidate();
+  return changed.length ? changed : null;
+}
+// Entwurf aus dem Tagesvorschlag: alle laufenden Übungen mit ihrer Stufe, die vorgeschlagene mit der neuen Dosis
+function exFromLadders() {
+  const ex = {}, p = proposal();
+  LADDER_ORDER.forEach(k => {
+    const st = state.ladders[k]; if (st.step < 0) return;
+    const step = LADDERS[k].steps[st.step];
+    const id = LADDERS[k].ex[0];
+    ex[id] = { sets: String(step.sets), reps: String(step.reps), weight: step.weight ? String(step.weight) : '' };
+  });
+  if (p.item && !p.blocked) {
+    if (p.item.kind === 'start') p.item.keys.forEach(k => { const s = LADDERS[k].steps[0]; ex[LADDERS[k].ex[0]] = { sets: String(s.sets), reps: String(s.reps), weight: '' }; });
+    else { const s = LADDERS[p.item.key].steps[p.item.step]; ex[LADDERS[p.item.key].ex[0]] = { sets: String(s.sets), reps: String(s.reps), weight: s.weight ? String(s.weight) : '' }; }
+  }
+  return ex;
+}
+
+// Lauf-Leiter: Stufe 0 = Gehen/Laufen 3 × (8/2), Stufe 1 = 30 Min., danach +10 % je Stufe
+const RUN_MAX_STEPS = 24;
+function runStepMin(i) { if (i <= 1) return 30; let m = 30; for (let k = 2; k <= i; k++) m = Math.round(m * (1 + LAUF_SPRUNG)); return m; }
+function runStepText(i) { return i === 0 ? '3 × (8 Min. laufen / 2 Min. gehen), 30 Min. gesamt' : `${runStepMin(i)} Min. locker am Stück`; }
+const RUN_GREEN_NEEDED = 2;
+function morningCalm(days7) {
+  const t = today();
+  for (let i = 0; i < days7; i++) { const m = morningOf(addDays(t, -i)); if (!m || m.skipped || typeof m.pain !== 'number' || m.pain > 2) return false; }
+  return true;
+}
+function runStatus() {
+  if (memo.runStatus) return memo.runStatus;
+  const r = state.run, step = r.step;
+  const minNeeded = step >= 0 ? runStepMin(step) : 0;
+  let counter = 0;
+  const list = runDays().filter(d => d.date >= PROGRAMM_START && (!r.since || d.date >= r.since));
+  for (let i = list.length - 1; i >= 0; i--) { const d = list[i]; if (d.level === 'offen') continue; if (d.level !== 'gruen') break; if (d.min >= minNeeded * 0.95) counter++; }
+  const gate = morningCalm(7);
+  const next = step < 0 ? (gate ? 0 : null) : (step + 1 < RUN_MAX_STEPS && counter >= RUN_GREEN_NEEDED && !isDeloadWeek() ? step + 1 : null);
+  const lastRun = runsSorted().slice(-1)[0] || null;
+  const sinceLast = lastRun ? daysBetween(lastRun.date, today()) : null;
+  memo.runStatus = { step, counter, next, gate, lastRun, sinceLast, text: step >= 0 ? runStepText(step) : null, nextText: next != null ? runStepText(next) : null };
+  return memo.runStatus;
+}
+function applyRunAdvance(entry) {
+  if (entry.type !== 'lauf') return null;
+  const s = runStatus(), min = runMin(entry) || 0;
+  if (s.next == null) return null;
+  if (s.next === 0 && s.step < 0) { state.run = { step: 0, since: entry.date }; invalidate(); return runStepText(0); }
+  if (s.next >= 1 && min >= runStepMin(s.next) * 0.95) { state.run = { step: s.next, since: entry.date }; invalidate(); return runStepText(s.next); }
+  return null;
+}
+// Läufe in der laufenden Woche (Mo–So) und Volleyball-Einheiten – für die Regel „ein Lauf, solange Volleyball 3–4×“
+function weekDates(date) { const d = new Date(date + 'T12:00:00Z'); const wd = (d.getUTCDay() + 6) % 7; const mon = addDays(date, -wd); return Array.from({ length: 7 }, (_, i) => addDays(mon, i)); }
+function weekCounts(date) {
+  const ds = weekDates(date || today()); const c = { lauf:0, volleyball:0, crossfit:0, kraft:0, tage:0 };
+  ds.forEach(x => { const l = entriesOf(x); if (l.length) c.tage++; l.forEach(e => { if (c[e.type] != null) c[e.type]++; }); });
+  return c;
+}
+
+/* ============================================ Programm 2.0: Phasen und Austrittstests */
+const PHASEN = [
+  { nr:1, kurz:'Basis', title:'Beruhigen und Kraftbasis', test:{ reps:10, sym:0.70 } },
+  { nr:2, kurz:'Kraft', title:'Schwere Kraft und Laufaufbau', minTage:84, test:{ reps:25, sym:0.90, balance:true } },
+  { nr:3, kurz:'Tempo', title:'Tempo und Plyometrie', minTage:28, test:{ reps:25, sym:0.90, jump:0.90, hops:10 } },
+  { nr:4, kurz:'HM', title:'Halbmarathon-Training und Erhalt' }
+];
+const RETEST_TAGE = 14, RETEST_EINHEITEN = 4;
+
+// Ergebnis eines Austrittstests für eine Phase – „offen“, solange der Morgen danach fehlt
+function testOutcome(t, ph) {
+  const need = ph.test, fail = [];
+  if (!need) return { status:'nicht', reasons:['Phase 4 hat keinen Austrittstest.'] };
+  const pct = t.left > 0 ? t.right / t.left : 0;
+  if (t.right < need.reps) fail.push(`rechts ${t.right} Wdh. – Ziel ${need.reps}`);
+  if (pct < need.sym) fail.push(`rechts ${Math.round(pct * 100)} % von links – Ziel ${Math.round(need.sym * 100)} %`);
+  if (need.balance && !t.balance) fail.push('Einbeinstand 30 Sek. mit geschlossenen Augen nicht geschafft');
+  if (need.jump) { const j = (t.jumpR != null && t.jumpL > 0) ? t.jumpR / t.jumpL : null; if (j == null) fail.push('Hop-Test fehlt'); else if (j < need.jump) fail.push(`Hop-Test rechts ${Math.round(j * 100)} % von links – Ziel ${Math.round(need.jump * 100)} %`); }
+  if (need.hops) { if (t.hops == null) fail.push('einbeinige Hops fehlen'); else if (t.hops < need.hops) fail.push(`${t.hops} einbeinige Hops – Ziel ${need.hops}`); }
+  if (t.after != null && t.after > DANACH_MAX) fail.push(`Schmerz danach ${t.after}/10 – über ${DANACH_MAX}`);
+  const m = morningOf(addDays(t.date, 1));
+  if (!m || m.skipped || typeof m.pain !== 'number') {
+    if (fail.length) return { status:'nicht', reasons: fail };
+    return { status:'offen', reasons:['Der Morgenwert vom Folgetag fehlt noch.'] };
+  }
+  const m0 = morningOf(t.date);
+  const base = m0 && !m0.skipped && typeof m0.pain === 'number' ? m0.pain : null;
+  if (base != null && m.pain > base) fail.push(`Morgenwert danach ${m.pain} – über dem Ausgangswert ${base}`);
+  else if (base == null && m.pain >= MORGEN_ROT) fail.push(`Morgenwert danach ${m.pain}/10`);
+  return fail.length ? { status:'nicht', reasons: fail } : { status:'bestanden', reasons: [] };
+}
+// Phase ergibt sich aus den bestandenen Austrittstests seit Programmstart – nichts wird gespeichert
+function phaseState() {
+  if (memo.phase) return memo.phase;
+  let nr = 1, since = PROGRAMM_START, lastFailed = null, pendingTest = null;
+  const passed = [];
+  testsSorted().filter(t => t.date >= PROGRAMM_START).forEach(t => {
+    if (nr >= 4 || t.date < since) return;
+    const o = testOutcome(t, PHASEN[nr - 1]);
+    if (o.status === 'bestanden') { passed.push({ test: t, phase: nr }); nr++; since = addDays(t.date, 1); lastFailed = null; pendingTest = null; }
+    else if (o.status === 'nicht') { lastFailed = { test: t, outcome: o }; pendingTest = null; }
+    else pendingTest = t;
+  });
+  return (memo.phase = { nr, since, def: PHASEN[nr - 1], passed, lastFailed, pendingTest, tage: Math.max(0, daysBetween(since, today())) });
+}
+function runGreenCount(minMin, since) { return runDays().filter(d => d.level === 'gruen' && d.min >= minMin && (!since || d.date >= since)).length; }
+function phaseCriteria(nr) {
+  const ph = phaseState(), L = k => ladderStatus(k), r = runStatus();
+  const c = [];
+  const item = (label, ok, text) => c.push({ label, ok: !!ok, text });
+  if (nr === 1) {
+    item('Morgenwert ≤ 2 an 7 Tagen in Folge', morningCalm(7), morningCalm(7) ? 'erfüllt' : 'noch nicht – ein Morgen der letzten 7 Tage fehlt oder liegt über 2');
+    const g = greenSince(null); item('3 grüne Sehnenkraft-Einheiten in Folge', g >= 3, `${Math.min(g, 3)} von 3`);
+    const a1 = L('a1'), a2 = L('a2'); item('Wadenheben gestreckt und gebeugt 3 × 12 beidbeinig grün', a1.step >= 2 && a2.step >= 2, `gestreckt Stufe ${a1.step + 1} von 3 · gebeugt Stufe ${a2.step + 1} von 3`);
+    const a3 = L('a3'); item('Band-Adduktion 3 × 15 grün', a3.step >= 2, `Stufe ${a3.step + 1} von 3`);
+    item('Hüfte in der Einheit', L('hip').step >= 0, L('hip').step >= 0 ? 'läuft' : 'noch nicht dazugekommen');
+    const ok30 = r.step >= 2 || (r.step === 1 && r.counter >= 2); item('30 Min. am Stück zweimal grün', ok30, r.step < 0 ? 'Laufen noch nicht begonnen' : r.step === 0 ? 'Gehen/Laufen-Phase' : `${Math.min(r.counter, 2)} von 2`);
+  }
+  if (nr === 2) {
+    item('Mindestens 12 Wochen in Phase 2', ph.tage >= 84, `${Math.floor(ph.tage / 7)} von 12 Wochen`);
+    const a1 = L('a1'), a2 = L('a2'); item('Einbeinig 4 × 8 mit +5 kg grün, gestreckt und gebeugt', a1.step >= 6 && a2.step >= 6, `gestreckt ${a1.cur ? stepText(a1.cur, 'wdh') : '–'} · gebeugt ${a2.cur ? stepText(a2.cur, 'wdh') : '–'}`);
+    const n = runGreenCount(44, ph.since); item('Längster Lauf 44 Min. zweimal grün', n >= 2, `${Math.min(n, 2)} von 2 (aktuelle Stufe ${r.text || '–'})`);
+    item('Morgenwert in den letzten 14 Tagen nie über 2', morningCalm(14), morningCalm(14) ? 'erfüllt' : 'noch nicht');
+  }
+  if (nr === 3) {
+    item('Mindestens 4 Wochen in Phase 3', ph.tage >= 28, `${Math.floor(ph.tage / 7)} von 4 Wochen`);
+    const tempo = runDays().filter(d => d.level === 'gruen' && d.intervals && d.date >= ph.since).length; item('3 Tempoläufe grün (Feld „Intervalle“ ausgefüllt)', tempo >= 3, `${Math.min(tempo, 3)} von 3`);
+    const n = runGreenCount(58, ph.since); item('Längster Lauf 58 Min. grün', n >= 1, `${Math.min(n, 1)} von 1`);
+    const hops = days().filter(d => d.date >= ph.since && entriesOf(d.date).some(e => e.type === 'plyo' && e.details && e.details.ex && e.details.ex.p3)).length; item('Einbeinige Hops als Einheit erfasst', hops >= 1, hops ? 'erfüllt' : 'noch nicht');
+    item('Morgenwert in den letzten 14 Tagen nie über 2', morningCalm(14), morningCalm(14) ? 'erfüllt' : 'noch nicht');
+  }
+  return c;
+}
+// Wiederholung nach nicht bestandenem Test: 14 Tage, 4 Kraft-Einheiten, die letzten 3 grün, kein Rot in 7 Tagen
+function retestStatus() {
+  const ph = phaseState();
+  if (!ph.lastFailed) return null;
+  const d = ph.lastFailed.test.date, t = today();
+  const from = addDays(d, RETEST_TAGE);
+  const sessions = kraftDays().filter(x => x.date > d).length;
+  const green = greenSince(d) >= 3;
+  const all = days(), done = all.filter(x => x.painMorning != null);
+  const rot7 = done.some((x, i) => daysBetween(x.date, t) <= 7 && dayLevel(x, i, done).level === 'rot');
+  return { from, tageOk: t >= from, sessions, sessionsOk: sessions >= RETEST_EINHEITEN, green, rotOk: !rot7, ok: t >= from && sessions >= RETEST_EINHEITEN && green && !rot7, reasons: ph.lastFailed.outcome.reasons };
+}
+function exitTestStatus() {
+  const ph = phaseState();
+  if (ph.nr >= 4) return { ready:false, text:'Phase 4 hat keinen Austrittstest mehr.' };
+  const crit = phaseCriteria(ph.nr), open = crit.filter(c => !c.ok);
+  const rt = retestStatus();
+  if (ph.pendingTest) return { ready:false, pending:true, text:`Test vom ${fmt(ph.pendingTest.date)} – Ergebnis offen, bis der Morgenwert vom Folgetag eingetragen ist.` };
+  if (open.length) return { ready:false, text:`${crit.length - open.length} von ${crit.length} Kriterien erfüllt – offen: ${open.map(c => c.label).join('; ')}.` };
+  if (rt && !rt.ok) return { ready:false, retest: rt, text:`Alle Kriterien stehen. Wiederholung des Tests frühestens ab ${fmt(rt.from)}: ${rt.sessions} von ${RETEST_EINHEITEN} Einheiten${rt.green ? ', letzte 3 grün' : ', letzte 3 noch nicht grün'}${rt.rotOk ? '' : ', Rot in den letzten 7 Tagen'}.` };
+  return { ready:true, text:'Alle Kriterien stehen – Austrittstest jetzt machen, am besten nach einem Ruhetag.' };
+}
+// Für den alten Namen: „Test fällig“ heißt jetzt „Austrittstest bereit“
+function testDue() { return exitTestStatus().ready; }
+function testTargetText(nr) {
+  const t = PHASEN[nr - 1] && PHASEN[nr - 1].test; if (!t) return '';
+  const b = [`rechts ≥ ${t.reps} Wdh.`, `≥ ${Math.round(t.sym * 100)} % von links`];
+  if (t.balance) b.push('Einbeinstand 30 Sek. Augen zu');
+  if (t.jump) b.push(`Hop-Test rechts ≥ ${Math.round(t.jump * 100)} % von links`);
+  if (t.hops) b.push(`${t.hops} einbeinige Hops`);
+  b.push('Schmerz danach ≤ 3', 'Morgenwert am Folgetag nicht höher');
+  return b.join(' · ');
+}
+
+/* ============================================ Programm 2.0: Tab „Heute“ */
+function ladderLineHtml(s, mark) {
+  const L = LADDERS[s.key], step = mark ? L.steps[mark.step] : s.cur;
+  if (!step) return '';
+  return `<div class="today-row${mark ? ' today-up' : ''}">
+      <div class="today-main"><b>${esc(s.name)}</b> ${esc(`${step.sets} × ${step.reps}`)}${step.v ? ` · ${esc(step.v)}` : ''} ${stepEquipHtml(step)}</div>
+      <div class="today-side">${mark ? `<span class="arrow">⬆ heute steigern${s.cur ? ` (war ${esc(`${s.cur.sets} × ${s.cur.reps}`)})` : ''}</span>` : `<span class="dots" aria-label="${s.counter} von 3 grün">${'●'.repeat(Math.min(s.counter, 3))}${'○'.repeat(Math.max(0, 3 - s.counter))}</span>`}</div>
+    </div>`;
+}
+function kraftTodayHtml() {
+  const p = proposal(), started = LADDER_ORDER.filter(k => state.ladders[k].step >= 0);
+  const lastK = kraftDays().slice(-1)[0] || null;
+  const hours = lastK ? (new Date(today() + 'T12:00') - new Date(lastK.date + 'T12:00')) / 3600000 : null;
+  const due = hours === null || hours >= KRAFT_ABSTAND_H;
+  const faellig = due ? 'Sehnenkraft fällig' : `Sehnenkraft: frühestens ${fmt(addDays(lastK.date, 2))}`;
+  let rows = `<div class="today-row"><div class="today-main"><b>Einbeinstand</b> 2 × 30 Sek. · Aufwärmen, ohne Zähler</div></div>`;
+  if (!started.length) {
+    rows += UNLOCK_STAGES[0].map(k => ladderLineHtml(ladderStatus(k), { step: 0 })).join('');
+  } else {
+    started.forEach(k => {
+      const s = ladderStatus(k), mark = p.item && !p.blocked && p.item.kind !== 'start' && p.item.key === k ? { step: p.item.step } : null;
+      rows += ladderLineHtml(s, mark);
+    });
+    if (p.item && !p.blocked && p.item.kind === 'neu') rows += ladderLineHtml(ladderStatus(p.item.key), { step: 0 });
+  }
+  rows += `<div class="today-row"><div class="today-main"><b>Wadendehnung</b> gestreckt und gebeugt je 2 × 30 Sek. · Pflicht zum Schluss</div></div>`;
+  const note = p.blocked ? `<div class="warnbox">${esc(p.blocked)}</div>`
+    : p.item ? '' : `<p class="hint">Zähler: ${p.streak} von ${GRUEN_FUER_STEIGERUNG} grünen Einheiten seit der letzten Änderung – danach schlägt die App genau eine Steigerung vor.</p>`;
+  const gated = p.gated ? `<p class="hint">${esc(p.gated)}</p>` : '';
+  return `<div class="card${due ? ' pending' : ''}">
+      <h2>${esc(faellig)}</h2>
+      <p class="lede">${lastK ? `Letzte Einheit: ${esc(relDay(lastK.date).replace(/\.$/, ''))}.` : 'Noch keine Einheit erfasst.'} Mindestens 48 Stunden Abstand. An CrossFit-Tagen direkt danach.</p>
+      ${rows}${note}${gated}
+      <div class="btn-row" style="margin-top:12px"><button class="btn small" data-act="openFromToday" data-type="kraft">Einheit erfassen – Übungen sind vorausgefüllt</button></div>
+    </div>`;
+}
+function runTodayHtml() {
+  const r = runStatus(), c = runCheck({ date: today(), min: '', pace: '' }, null), w = weekCounts();
+  if (r.step < 0) {
+    return `<div class="card"><h2>Laufen</h2>
+      <p class="lede">${r.gate ? 'Laufeinstieg frei: der Morgenwert lag 7 Tage in Folge bei höchstens 2.' : 'Noch nicht: Der Morgenwert muss 7 Tage in Folge bei höchstens 2 liegen.'}</p>
+      ${r.gate ? `<div class="today-row today-up"><div class="today-main"><b>Erster Lauf</b> ${esc(runStepText(0))}</div></div>
+      <p class="hint">Kadenz 5 % über gewohnt, flach, mit Einlagen. Die ersten drei Läufe setzen die Referenz für Pace und Kadenz.</p>` : ''}
+    </div>`;
+  }
+  const due = r.sinceLast === null || r.sinceLast >= 2;
+  const target = r.next != null && !isDeloadWeek() ? runStepText(r.next) : runStepText(r.step);
+  const pace = c.ref.pace != null ? `Pace nicht schneller als ${paceFmt(c.ref.pace * (1 - PACE_TOLERANZ))} (Referenz ${paceFmt(c.ref.pace)})` : `Referenzpace entsteht aus den ersten ${PACE_REF_LAEUFE} Läufen (${c.ref.paceN} von ${PACE_REF_LAEUFE})`;
+  const cad = c.cadTarget != null ? ` · Kadenz ≥ ${c.cadTarget}/Min.` : '';
+  const limitNote = r.next != null && c.limit != null && runStepMin(r.next) > c.limit ? `<div class="warnbox">Die nächste Stufe (${runStepMin(r.next)} Min.) liegt über der 10-%-Grenze von ${c.limit} Min. – erst wieder ${c.limit} Min. laufen.</div>` : '';
+  const wk = w.volleyball >= 3 ? `<p class="hint">Diese Woche ${w.volleyball}× Volleyball: ein Lauf pro Woche (bisher ${w.lauf}).</p>` : w.volleyball <= 2 && phaseState().nr <= 2 ? `<p class="hint">Diese Woche nur ${w.volleyball}× Volleyball: ein zweiter Lauf (60–80 % der Länge) ist möglich.</p>` : '';
+  return `<div class="card${due ? ' pending' : ''}">
+      <h2>${due ? 'Lauf möglich' : `Lauf: frühestens ${fmt(addDays(r.lastRun.date, 2))}`}</h2>
+      <p class="lede">${r.lastRun ? `Letzter Lauf: ${esc(relDay(r.lastRun.date).replace(/\.$/, ''))}.` : ''} Mindestens ein Tag Pause zwischen Läufen; nicht am Tag nach einem Turnier.</p>
+      <div class="today-row${r.next != null && !isDeloadWeek() ? ' today-up' : ''}"><div class="today-main"><b>Ziel</b> ${esc(target)}${r.next != null && !isDeloadWeek() ? ` <span class="arrow">⬆ nächste Stufe (war ${esc(runStepText(r.step))})</span>` : ''}</div>
+        <div class="today-side"><span class="dots" aria-label="${r.counter} von 2 grün">${'●'.repeat(Math.min(r.counter, 2))}${'○'.repeat(Math.max(0, 2 - r.counter))}</span></div></div>
+      <p class="hint">${esc(pace)}${esc(cad)}</p>
+      ${limitNote}${isDeloadWeek() ? '<div class="warnbox">Entlastungswoche: 30 % kürzer, keine Steigerung.</div>' : ''}${wk}
+    </div>`;
+}
+function testTodayHtml() {
+  const ph = phaseState(), st = exitTestStatus();
+  if (ph.nr >= 4) return '';
+  return `<div class="card${st.ready ? ' pending' : ''}">
+      <h2>${st.ready ? 'Austrittstest jetzt machen' : `Austrittstest Phase ${ph.nr}`}</h2>
+      <p class="lede">${esc(st.text)}</p>
+      <p class="hint">Ziel: ${esc(testTargetText(ph.nr))}. Der Test ersetzt an dem Tag die Kraft-Einheit.</p>
+      ${st.ready ? '<div class="btn-row"><button class="btn small" data-act="openTest">Test eintragen</button></div>' : ''}
+    </div>`;
+}
+function adviceHtml() {
+  const out = [];
+  const lastK = kraftDays().slice(-2);
+  if (lastK.length === 2 && lastK.every(d => d.entries.some(e => (e.spots || []).includes('innenfuss')))) out.push('Innenfuß/Kahnbein in zwei Einheiten in Folge: Doming und Ball-Wadenheben pausieren, der Rest läuft weiter.');
+  const lastR = runDays().slice(-2);
+  if (lastR.length === 2 && lastR.every(d => entriesOf(d.date).some(e => e.type === 'lauf' && (e.spots || []).includes('vorne')))) out.push('Vorne am Sprunggelenk bei zwei Läufen in Folge: Band-Dorsalextension 1 × 15 als Zusatzübung aufnehmen.');
+  const w = weekCounts();
+  if (w.tage >= 6) out.push(`Diese Woche schon ${w.tage} Belastungstage – ein kompletter Ruhetag muss noch rein.`);
+  if (!out.length) return '';
+  return `<div class="card"><h2>Hinweise</h2>${out.map(x => `<div class="warnbox">${esc(x)}</div>`).join('')}</div>`;
+}
+function phaseBarHtml() {
+  const ph = phaseState(), crit = phaseCriteria(ph.nr), ok = crit.filter(c => c.ok).length;
+  return `<div class="phasebar" role="list">${PHASEN.map(p => `<div class="phase${p.nr === ph.nr ? ' cur' : p.nr < ph.nr ? ' done' : ''}" role="listitem"><b>${p.nr}</b><span>${esc(p.kurz)}</span></div>`).join('')}</div>
+    <p class="lede" style="margin-top:8px">Phase ${ph.nr} · ${esc(ph.def.title)} · seit ${fmt(ph.since)} (${Math.floor(ph.tage / 7) === 1 ? '1 Woche' : Math.floor(ph.tage / 7) + ' Wochen'})${ph.nr < 4 ? ` · ${ok} von ${crit.length} Kriterien erfüllt` : ''}${isDeloadWeek() ? ' · <b>Entlastungswoche</b>' : ''}</p>`;
+}
+function tabToday() {
+  const flags = redFlags();
+  return `<div class="log">
+    ${flags.length ? `<div class="flag"><b>Das gehört ärztlich angeschaut</b>${flags.map(f => `<div>${esc(f)}</div>`).join('')}</div>` : ''}
+    <div class="card"><h2>${esc(dayLabel(today()))}</h2>${phaseBarHtml()}
+      <p class="hint">Grün zählt den Zähler hoch, Gelb setzt ihn auf null, Rot heißt Stufe wiederholen. Details im Tab „Fortschritt“.</p></div>
+    ${kraftTodayHtml()}
+    ${runTodayHtml()}
+    ${testTodayHtml()}
+    ${adviceHtml()}
+  </div>`;
+}
+
+/* ============================================ Programm 2.0: Tab „Fortschritt“ und Ausrüstung */
+function ladderBarHtml(s) {
+  const L = LADDERS[s.key];
+  const boxes = L.steps.map((st, i) => `<i class="lb${i < s.step ? ' done' : i === s.step ? ' cur' : ''}" title="${esc(stepText(st, L.unit))}"></i>`).join('');
+  const cur = s.cur ? stepText(s.cur, L.unit) : (gateOk(s.key) ? 'noch nicht dabei' : 'wartet auf Innenfuß/Kahnbein ohne Schmerz');
+  return `<div class="ladder">
+      <div class="ladder-head"><b>${esc(s.name)}</b><span class="hint" style="margin:0">${s.step < 0 ? `${s.total} Stufen` : `Stufe ${s.step + 1} von ${s.total}`}${s.step >= 0 ? ` · <span class="dots">${'●'.repeat(Math.min(s.counter, 3))}${'○'.repeat(Math.max(0, 3 - s.counter))}</span>` : ''}</span></div>
+      <div class="lbar">${boxes}</div>
+      <div class="ladder-cur">${esc(cur)} ${s.cur ? stepEquipHtml(s.cur) : ''}${s.next && s.step >= 0 ? `<span class="hint" style="margin:0"> → nächste: ${esc(stepText(s.next, L.unit))}</span>` : ''}</div>
+      <div class="btn-row" style="margin-top:6px">
+        <button type="button" class="btn quiet small" data-act="ladderDown" data-key="${s.key}" ${s.step < 0 ? 'disabled' : ''}>Stufe runter</button>
+        <button type="button" class="btn quiet small" data-act="ladderUp" data-key="${s.key}" ${s.done ? 'disabled' : ''}>Stufe hoch</button>
+      </div>
+    </div>`;
+}
+function runBarHtml() {
+  const r = runStatus();
+  const boxes = Array.from({ length: 12 }, (_, i) => `<i class="lb${i < r.step ? ' done' : i === r.step ? ' cur' : ''}" title="${esc(runStepText(i))}"></i>`).join('');
+  return `<div class="ladder">
+      <div class="ladder-head"><b>Längster Lauf</b><span class="hint" style="margin:0">${r.step >= 0 ? `Stufe ${r.step + 1} · <span class="dots">${'●'.repeat(Math.min(r.counter, 2))}${'○'.repeat(Math.max(0, 2 - r.counter))}</span>` : 'noch nicht begonnen'}</span></div>
+      <div class="lbar">${boxes}</div>
+      <div class="ladder-cur">${esc(r.text || (r.gate ? 'Einstieg frei' : 'wartet auf 7 ruhige Morgen'))}${r.step >= 0 && r.step + 1 < RUN_MAX_STEPS ? `<span class="hint" style="margin:0"> → nächste: ${esc(runStepText(r.step + 1))} nach 2 grünen Läufen</span>` : ''}</div>
+      <div class="btn-row" style="margin-top:6px">
+        <button type="button" class="btn quiet small" data-act="runDown" ${r.step < 0 ? 'disabled' : ''}>Stufe runter</button>
+        <button type="button" class="btn quiet small" data-act="runUp" ${r.step + 1 >= RUN_MAX_STEPS ? 'disabled' : ''}>Stufe hoch</button>
+      </div>
+    </div>`;
+}
+function settingsHtml() {
+  const row = (kind, i, b) => `<div class="eq-row">
+      <i class="swatch" style="background:${bandHex(b.name)}"></i>
+      <input type="text" data-spath="${kind}.${i}.name" value="${esc(b.name)}" aria-label="Farbe" placeholder="Farbe">
+      <input type="text" data-spath="${kind}.${i}.kg" value="${esc(b.kg)}" aria-label="Stärke" placeholder="Stärke">
+    </div>`;
+  const s = state.settings;
+  return `<p class="txt txt-gap">Reihenfolge = Leiter, schwächstes Band zuerst. Farben werden als Chips in den Vorschlägen gezeigt (bekannt: gelb, rot, grün, blau, schwarz, orange, lila, silber).</p>
+    <h3>Theraband (Band-Adduktion, ggf. Dorsalextension)</h3>${s.thera.map((b, i) => row('thera', i, b)).join('')}
+    <h3>Mini-Loop (Hüfte)</h3>${s.loop.map((b, i) => row('loop', i, b)).join('')}
+    <h3>Kurzhantel</h3><div class="eq-row eq-row-2"><label class="sublabel" for="eq-hantel">Schritt in kg</label><input type="number" id="eq-hantel" inputmode="numeric" min="1" data-spath="hantelSchritt" value="${esc(s.hantelSchritt)}"></div>
+    <p class="hint">Änderungen werden beim Verlassen des Felds gespeichert.</p>`;
+}
+function testsTableHtml() {
+  const ph = phaseState(), rows = [...testsSorted()].reverse();
+  if (!rows.length) return '<p class="txt">Noch kein Test erfasst.</p>';
+  return `<table class="ttab"><thead><tr><th>Datum</th><th>rechts</th><th>links</th><th>%</th><th>Ergebnis</th></tr></thead><tbody>${rows.map(x => {
+    const p = ph.passed.find(y => y.test.date === x.date);
+    const nr = p ? p.phase : (x.date >= ph.since ? ph.nr : null);
+    const o = nr ? testOutcome(x, PHASEN[nr - 1]) : null;
+    const res = !o ? 'vor dem Programm' : o.status === 'bestanden' ? `Phase ${nr} bestanden` : o.status === 'offen' ? 'offen' : `nicht bestanden (${o.reasons.join('; ')})`;
+    return `<tr><td>${esc(weekday(x.date))}, ${fmtY(x.date)}</td><td>${x.right}</td><td>${x.left}</td><td>${x.left > 0 ? Math.round(x.right / x.left * 100) : '–'}</td><td>${esc(res)}</td></tr>`; }).join('')}</tbody></table>`;
+}
+function tabProgress() {
+  const ph = phaseState(), crit = phaseCriteria(ph.nr), st = exitTestStatus();
+  return `<div class="log">
+    <div class="card"><h2>Fortschritt</h2>${phaseBarHtml()}
+      ${ph.nr < 4 ? `<h3 style="margin-top:14px">Austrittskriterien Phase ${ph.nr}</h3>
+      <div class="crit">${crit.map(c => `<div class="crit-row${c.ok ? ' ok' : ''}"><span class="crit-mark">${c.ok ? '✓' : '○'}</span><div><div>${esc(c.label)}</div><div class="hint" style="margin:0">${esc(c.text)}</div></div></div>`).join('')}
+        <div class="crit-row${st.ready ? ' ready' : ''}"><span class="crit-mark">${st.pending ? '…' : '▶'}</span><div><div>Austrittstest: ${esc(testTargetText(ph.nr))}</div><div class="hint" style="margin:0">${esc(st.text)}</div></div></div>
+      </div>` : '<p class="txt">Erhalt: Sehnenkraft 2× pro Woche, dauerhaft. Der Halbmarathon-Plan läuft außerhalb der App.</p>'}
+    </div>
+    <div class="card"><h2>Leitern</h2>
+      <p class="lede">Jede Übung hat ihre Stufen. Drei grüne Einheiten seit der letzten Änderung, dann schlägt die App genau eine Steigerung vor. Die Knöpfe sind für Korrekturen von Hand.</p>
+      ${LADDER_ORDER.map(k => ladderBarHtml(ladderStatus(k))).join('')}
+      ${runBarHtml()}
+    </div>
+    <div class="card"><h2>Austrittstests</h2>${testsTableHtml()}
+      <div class="btn-row" style="margin-top:12px"><button type="button" class="btn ghost small" data-act="openTest">Test eintragen</button></div></div>
+    ${acc('equip', 'Ausrüstung', `Theraband ${state.settings.thera.map(b => b.name).join(' → ')} · Mini-Loop ${state.settings.loop.map(b => b.name).join(' → ')} · Kurzhantel ${state.settings.hantelSchritt} kg`, settingsHtml())}
+  </div>`;
 }
 
 /* ============================================ Render-Bausteine */
@@ -1963,13 +2541,13 @@ function testRowHtml(date) {
   return `<div class="day-row${testDraft && testDraft.orig === date ? ' editing' : ''}">
       <span class="day-time">Test</span>
       <div class="day-main">
-        <div class="day-title">Monatstest</div>
-        <div class="day-sub">rechts ${x.right} · links ${x.left} · ${abstand}${pct !== null ? ` (${pct} % von links)` : ''}</div>
+        <div class="day-title">Austrittstest${(() => { const ph = phaseState(); const p = ph.passed.find(y => y.test.date === date); const nr = p ? p.phase : (date >= ph.since ? ph.nr : null); if (!nr) return ''; const o = testOutcome(x, PHASEN[nr - 1]); return o.status === 'bestanden' ? ` · Phase ${nr} bestanden` : o.status === 'offen' ? ' · Ergebnis offen' : ' · nicht bestanden'; })()}</div>
+        <div class="day-sub">rechts ${x.right} · links ${x.left} · ${abstand}${pct !== null ? ` (${pct} % von links)` : ''}${x.jumpR != null && x.jumpL ? ` · Hop ${x.jumpR}/${x.jumpL} cm` : ''}${x.hops != null ? ` · ${x.hops} Hops` : ''}${x.balance ? ' · Einbeinstand ✓' : ''}${x.after != null ? ` · danach ${x.after}` : ''}</div>
         ${x.note ? `<div class="day-sub day-note">${esc(x.note)}</div>` : ''}
       </div>
       <div class="day-side">
         <div class="day-val">rechts<b>${x.right}</b></div>
-        <div class="day-acts"><button type="button" class="edit" data-act="editTest" data-date="${date}" aria-label="Monatstest vom ${fmt(date)} ändern">ändern</button></div>
+        <div class="day-acts"><button type="button" class="edit" data-act="editTest" data-date="${date}" aria-label="Test vom ${fmt(date)} ändern">ändern</button></div>
       </div>
     </div>`;
 }
@@ -2024,7 +2602,7 @@ function testMissing(c) {
 }
 // Beim Tippen nur Knopf und Hinweis nachführen – ein Neuaufbau würde das Feld unter dem Finger ersetzen
 function testNotesHtml(d, c) {
-  return !d.orig && c.gueltig && !c.zukunft && testOf(d.date) ? '<div class="warnbox">Für diesen Tag gibt es schon einen Monatstest. Er wird ersetzt.</div>' : '';
+  return !d.orig && c.gueltig && !c.zukunft && testOf(d.date) ? '<div class="warnbox">Für diesen Tag gibt es schon einen Test. Er wird ersetzt.</div>' : '';
 }
 function updateTestForm() {
   if (!testDraft) return;
@@ -2037,8 +2615,8 @@ function testFormHtml() {
   const d = testDraft, editing = !!d.orig, c = testCheck(d);
   const last = testsSorted().filter(x => x.date !== d.orig).slice(-1)[0];
   return `<div class="card" id="form">
-      <h2 tabindex="-1">${editing ? 'Monatstest bearbeiten' : 'Monatstest erfassen'}</h2>
-      <p class="lede">Einbeiniges Wadenheben auf ebenem Boden, volle Reichweite, ruhiges Tempo – zählen, bis die Höhe sichtbar einbricht. Beide Seiten, die gesunde zuerst.</p>
+      <h2 tabindex="-1">${editing ? 'Austrittstest bearbeiten' : 'Austrittstest erfassen'}</h2>
+      <p class="lede">Einbeiniges Wadenheben auf ebenem Boden, volle Reichweite, ruhiges Tempo – zählen, bis die Höhe sichtbar einbricht. Beide Seiten, die gesunde zuerst. Ziel Phase ${phaseState().nr}: ${esc(testTargetText(phaseState().nr) || '–')}.</p>
       <div class="field"><label class="sublabel" for="t-date">Datum</label><input type="date" id="t-date" value="${esc(d.date)}" max="${today()}" data-tpath="date"></div>
       <div id="t-notes">${testNotesHtml(d, c)}</div>
       <div class="field"><div class="grid2">
@@ -2048,6 +2626,20 @@ function testFormHtml() {
           <input type="number" id="t-left" inputmode="numeric" min="0" max="999" value="${esc(d.left)}" placeholder="${last ? esc(last.left) : '25'}" data-tpath="left"></div>
       </div>
       ${last ? `<p class="hint" style="margin:7px 0 0">Zuletzt am ${esc(weekday(last.date))}, ${fmtY(last.date)}: rechts ${last.right}, links ${last.left}.</p>` : ''}</div>
+      <div class="field"><div class="grid2">
+        <div><label class="sublabel" for="t-jr">Hop-Test rechts (cm, Phase 3)</label><input type="text" id="t-jr" inputmode="decimal" value="${esc(d.jumpR)}" placeholder="z. B. 120" data-tpath="jumpR"></div>
+        <div><label class="sublabel" for="t-jl">Hop-Test links (cm)</label><input type="text" id="t-jl" inputmode="decimal" value="${esc(d.jumpL)}" placeholder="z. B. 130" data-tpath="jumpL"></div>
+      </div>
+      <p class="hint" style="margin:7px 0 0">Einbeiniger Weitsprung, bester von drei Versuchen je Seite. Nur in Phase 3 nötig.</p></div>
+      <div class="field"><div class="grid2">
+        <div><label class="sublabel" for="t-hops">Einbeinige Hops rechts ohne Schmerz (Phase 3)</label><input type="number" id="t-hops" inputmode="numeric" min="0" max="999" value="${esc(d.hops)}" placeholder="10" data-tpath="hops"></div>
+        <div><label class="check" style="margin-top:22px"><input type="checkbox" data-tpath="balance" ${d.balance ? 'checked' : ''}><span>Einbeinstand 30 Sek. mit geschlossenen Augen geschafft (Phase 2)</span></label></div>
+      </div></div>
+      <div class="field" id="f-tAfter">
+        <span class="field-label">Schmerz danach</span>
+        <p class="hint">Spitze in den 1–6 Stunden nach dem Test. Nachtragen: Test über „ändern“ öffnen.${scaleLink('after', 'f-tAfter')}</p>
+        ${scaleHtml('tAfter', d.after, true, 'Schmerz nach dem Test, 0 bis 10')}
+      </div>
       <div class="field"><label for="t-note">Notiz</label>
         <textarea id="t-note" data-tpath="note" placeholder="Optional – z. B. „mit Rucksack 5 kg“">${esc(d.note)}</textarea></div>
       <div class="btn-row">
@@ -2058,19 +2650,14 @@ function testFormHtml() {
       <p class="hint" id="t-hint" style="margin-top:8px"${c.ok ? ' hidden' : ''}>${esc(testMissing(c))}</p>
     </div>`;
 }
-// Übersicht aller Monatstests – zugeklappt eine Zeile, bei Fälligkeit markiert
+// Austrittstest im Logbuch – Status und Schnellzugriff; Details im Tab „Fortschritt“
 function testAccHtml() {
-  const t = testsSorted(), last = t[t.length - 1], due = testDue();
-  const meta = last
-    ? `${due ? 'Fällig – ' : ''}zuletzt ${fmt(last.date)}: rechts ${last.right}, links ${last.left}`
-    : due ? 'Fällig – noch keiner erfasst' : 'Noch keiner erfasst';
-  const rows = [...t].reverse();
-  const body = `<p class="txt txt-gap">Einmal im Monat, immer gleich ausgeführt: einbeiniges Wadenheben, bis die Höhe einbricht – beide Seiten. Zwei Zahlen sollen sich bewegen: die Wiederholungen rechts und der Abstand zur gesunden Seite.</p>
-    ${rows.length ? `<table class="ttab"><thead><tr><th>Datum</th><th>rechts</th><th>links</th><th>Abstand</th></tr></thead><tbody>${rows.map(x =>
-      `<tr><td>${esc(weekday(x.date))}, ${fmtY(x.date)}</td><td>${x.right}</td><td>${x.left}</td><td>${x.left - x.right}</td></tr>`).join('')}</tbody></table>` : ''}
-    ${last && last.left > 0 && last.right <= last.left / 2 ? '<div class="warnbox" style="margin-top:12px"><b>Rechts schafft höchstens die Hälfte von links.</b> Im Plan steht das unter den Warnzeichen. Schließt sich der Abstand über die nächsten Tests nicht oder wird er größer, gehört das ärztlich angeschaut.</div>' : ''}
-    <div class="btn-row" style="margin-top:12px"><button type="button" class="btn ghost small" data-act="openTest">Monatstest eintragen</button></div>`;
-  return acc('mtest', 'Monatstest', meta, body, due);
+  const ph = phaseState(), st = exitTestStatus(), t = testsSorted(), last = t[t.length - 1];
+  const meta = st.ready ? 'Bereit – jetzt machen' : last ? `zuletzt ${fmt(last.date)}: rechts ${last.right}, links ${last.left}` : 'Noch keiner erfasst';
+  const body = `<p class="txt txt-gap">Der Test schließt eine Phase ab: einbeiniges Wadenheben beide Seiten${ph.nr >= 2 ? ', Einbeinstand mit geschlossenen Augen' : ''}${ph.nr >= 3 ? ', Hop-Test und einbeinige Hops' : ''}. Bestanden ist er erst, wenn am Folgetag der Morgenwert nicht gestiegen ist.</p>
+    <p class="txt">${esc(st.text)}</p>
+    <div class="btn-row" style="margin-top:12px"><button type="button" class="btn ghost small" data-act="openTest">Test eintragen</button><button type="button" class="btn quiet small" data-tab="fort">Fortschritt öffnen</button></div>`;
+  return acc('mtest', `Austrittstest Phase ${ph.nr}`, meta, body, st.ready);
 }
 
 // Teile des Formulars, die von Datum, Uhrzeit oder den Häkchen abhängen. Sie werden beim
@@ -2325,7 +2912,7 @@ function tabData() {
 }
 
 /* ============================================ Render */
-const TABS = [['log','Logbuch'],['scale','Skalen'],['plan','Plan'],['ex','Übungen'],['supp','Supplemente'],['data','Daten']];
+const TABS = [['heute','Heute'],['log','Logbuch'],['fort','Fortschritt'],['scale','Skalen'],['plan','Plan'],['ex','Übungen'],['supp','Supplemente'],['data','Daten']];
 
 // Notausgang: wirft ein Tab beim Aufbau, bleibt die Seite sonst auf dem alten Stand
 // stehen und ist auch nach dem Neuladen tot. Lieber die Rohdaten zum Sichern anbieten.
@@ -2373,7 +2960,7 @@ function render() {
   const focusKey = focusKeyOf(document.activeElement);
   let body;
   try {
-    body = tab === 'plan' ? tabPlan() : tab === 'ex' ? tabEx() : tab === 'supp' ? tabSupp() : tab === 'scale' ? tabScales() : tab === 'data' ? tabData() : tabLog();
+    body = tab === 'heute' ? tabToday() : tab === 'fort' ? tabProgress() : tab === 'plan' ? tabPlan() : tab === 'ex' ? tabEx() : tab === 'supp' ? tabSupp() : tab === 'scale' ? tabScales() : tab === 'data' ? tabData() : tabLog();
   } catch (err) {
     body = crashHtml(err);
   }
@@ -2516,6 +3103,7 @@ document.addEventListener('click', async (ev) => {
     if (t.dataset.scale === 'mPain') morningDraft.pain = v;
     else if (t.dataset.scale === 'ePain') { if (mEdit) mEdit.pain = v; }
     else if (t.dataset.scale === 'aPain') { if (afterEdit) afterEdit.pain = v; }
+    else if (t.dataset.scale === 'tAfter') { if (testDraft) testDraft.after = v; }
     else draft[t.dataset.scale] = v;
     return render();
   }
@@ -2552,6 +3140,30 @@ document.addEventListener('click', async (ev) => {
     return;
   }
   if (act === 'setToday') { draft.date = today(); draft.time = nowTime(); whenOpen = false; return render(); }
+  if (act === 'openFromToday') {
+    draft = newDraft(); draft.type = t.dataset.type === 'lauf' ? 'lauf' : 'kraft';
+    if (draft.type === 'kraft') draft.ex = exFromLadders();
+    testDraft = null; formOpen = true; editingId = null; tab = 'log';
+    render();
+    document.getElementById('form')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    focusEl('#form h2');
+    return;
+  }
+  if (act === 'ladderUp' || act === 'ladderDown') {
+    const k = t.dataset.key, L = LADDERS[k]; if (!L) return;
+    const st = state.ladders[k], ns = act === 'ladderUp' ? Math.min(st.step + 1, L.steps.length - 1) : Math.max(-1, st.step - 1);
+    if (ns === st.step) return;
+    state.ladders[k] = { step: ns, since: today() };
+    await save(); announce(`${L.name}: ${ns < 0 ? 'aus der Einheit genommen' : 'Stufe ' + (ns + 1)}.`);
+    return;
+  }
+  if (act === 'runUp' || act === 'runDown') {
+    const st = state.run, ns = act === 'runUp' ? Math.min(st.step + 1, RUN_MAX_STEPS - 1) : Math.max(-1, st.step - 1);
+    if (ns === st.step) return;
+    state.run = { step: ns, since: today() };
+    await save(); announce(ns < 0 ? 'Laufen zurückgesetzt.' : `Laufen: ${runStepText(ns)}.`);
+    return;
+  }
   if (act === 'editWhen') { whenOpen = true; return render(); }
   if (act === 'openForm') {
     if (!TYPES[t.dataset.type]) return;
@@ -2584,8 +3196,13 @@ document.addEventListener('click', async (ev) => {
       else text = null;   // die Einheit gibt es nicht mehr (gelöscht, zurückgeholt, ersetzt)
       editingId = null;
     } else {
-      state.entries.push({ id:'e'+Date.now(), ...base });
+      const neu = { id:'e'+Date.now(), ...base };
+      state.entries.push(neu);
       text = `Gespeichert: ${art}, ${wann}.`;
+      invalidate();
+      const adv = applyLadderAdvance(neu), radv = applyRunAdvance(neu);
+      if (adv) text += ` Leiter vorgerückt: ${adv.join(', ')}.`;
+      if (radv) text += ` Lauf-Leiter: ${radv}.`;
     }
     closeForm();
     await save();
@@ -2721,7 +3338,7 @@ document.addEventListener('click', async (ev) => {
 
   if (act === 'openTest') {
     closeForm();
-    testDraft = { date: today(), right: '', left: '', note: '', orig: null };
+    testDraft = { date: today(), right: '', left: '', note: '', jumpR: '', jumpL: '', hops: '', balance: false, after: null, orig: null };
     render();
     document.getElementById('form')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
     focusEl('#form h2');
@@ -2731,7 +3348,7 @@ document.addEventListener('click', async (ev) => {
     const x = testOf(t.dataset.date);
     if (!x) return;
     closeForm();
-    testDraft = { date: x.date, right: String(x.right), left: String(x.left), note: x.note || '', orig: x.date };
+    testDraft = { date: x.date, right: String(x.right), left: String(x.left), note: x.note || '', jumpR: x.jumpR ?? '', jumpL: x.jumpL ?? '', hops: x.hops ?? '', balance: !!x.balance, after: x.after ?? null, orig: x.date };
     render();
     document.getElementById('form')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
     focusEl('#form h2');
@@ -2743,8 +3360,8 @@ document.addEventListener('click', async (ev) => {
     const d = testDraft, c = testCheck(d);
     if (!c.ok) return;   // der Knopf ist dann ohnehin gesperrt
     if (d.orig && d.orig !== d.date) state.tests = state.tests.filter(x => x.date !== d.orig);   // umdatiert
-    upsertTest(makeTest(d.date, c.r, c.l, d.note));
-    const text = `${d.orig ? 'Änderung gespeichert' : 'Gespeichert'}: Monatstest, ${relDay(d.date)} – rechts ${c.r}, links ${c.l}.`;
+    upsertTest(makeTest(d.date, c.r, c.l, d.note, d));
+    const text = `${d.orig ? 'Änderung gespeichert' : 'Gespeichert'}: Test, ${relDay(d.date)} – rechts ${c.r}, links ${c.l}. Das Ergebnis steht, sobald der Morgenwert vom Folgetag da ist.`;
     testDraft = null;
     await save();
     if (!state.error) { uiFlash = { where: 'entry', ok: true, text }; announce(text); }
@@ -2866,7 +3483,16 @@ function onField(ev) {
   const ap = ev.target.dataset.apath;
   if (ap) { if (afterEdit) afterEdit[ap] = ev.target.type === 'checkbox' ? ev.target.checked : ev.target.value; return; }
   const tp = ev.target.dataset.tpath;
-  if (tp) { if (testDraft) { testDraft[tp] = ev.target.value; updateTestForm(); } return; }
+  if (tp) { if (testDraft) { testDraft[tp] = ev.target.type === 'checkbox' ? ev.target.checked : ev.target.value; updateTestForm(); } return; }
+  const sp = ev.target.dataset.spath;
+  if (sp) {
+    if (ev.type !== 'change') return;   // erst beim Verlassen des Felds speichern
+    const [kind, i, f] = sp.split('.');
+    if (kind === 'hantelSchritt') { const v = +ev.target.value; if (v > 0) state.settings.hantelSchritt = v; }
+    else if (state.settings[kind] && state.settings[kind][+i]) state.settings[kind][+i][f] = ev.target.value.trim();
+    save({ silent: true }).then(render);
+    return;
+  }
   const mp = ev.target.dataset.mpath;
   if (mp) { morningDraft[mp] = ev.target.value; return; }
   const p = ev.target.dataset.path;
@@ -2955,7 +3581,8 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
 // Nur für Tests (siehe test/): Uhr, Datenstand und Entwurf von außen setzen
 const _test = {
   setNow(f) { _now = f; },
-  setState(s) { state.entries = s.entries || []; state.mornings = s.mornings || []; state.tests = s.tests || []; state.loaded = true; invalidate(); },
+  setState(s) { state.entries = s.entries || []; state.mornings = s.mornings || []; state.tests = s.tests || [];
+    state.settings = cleanSettings(s.settings); state.ladders = cleanLadders(s.ladders); state.run = cleanRun(s.run); state.loaded = true; invalidate(); },
   setDraft(d, editing) { draft = d; editingId = editing ?? null; },
   setTab(t) { tab = t; },
   ui() { return { tab, formOpen, editingId, testDraft, uiFlash, lastDeleted, draft, mEdit }; },
