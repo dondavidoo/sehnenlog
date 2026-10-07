@@ -392,7 +392,8 @@ body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
   .lb { display: inline-block; width: 14px; height: 10px; border-radius: 2px; background: var(--surface-3); border: 1px solid var(--rule); }
   .lb.done { background: var(--up-border); border-color: var(--up-border); }
   .lb.cur { background: var(--ink); border-color: var(--ink); }
-  .ladder-cur { font-size: 13.5px; line-height: 1.5; }
+  .ladder-cur { font-size: 13.5px; line-height: 1.5; margin-top: 2px; }
+  .ladder-cur .lbl { display: inline-block; min-width: 64px; font-size: 11.5px; font-weight: 700; letter-spacing: .3px; text-transform: uppercase; color: var(--ink-soft); margin-right: 4px; }
   .eq-row { display: grid; grid-template-columns: 20px 1fr 1fr; gap: 8px; align-items: center; margin: 6px 0; }
   .eq-row input { min-width: 0; }
   .eq-row-2 { grid-template-columns: 1fr 1fr; }
@@ -2001,11 +2002,13 @@ function tabToday() {
 function ladderBarHtml(s) {
   const L = LADDERS[s.key];
   const boxes = L.steps.map((st, i) => `<i class="lb${i < s.step ? ' done' : i === s.step ? ' cur' : ''}" title="${esc(stepText(st, L.unit))}"></i>`).join('');
-  const cur = s.cur ? stepText(s.cur, L.unit) : (gateOk(s.key) ? 'noch nicht dabei' : 'wartet auf Innenfuß/Kahnbein ohne Schmerz');
+  const cur = s.cur ? stepText(s.cur, L.unit) : (gateOk(s.key) ? 'noch nicht dabei' : 'wartet, bis Innenfuß/Kahnbein 7 Tage ohne Schmerz war');
+  const nextLabel = s.step < 0 ? 'Start' : s.kind === 'sätze' ? 'Nächste Stufe (mehr Sätze)' : 'Nächste Stufe (neue Variante)';
   return `<div class="ladder">
       <div class="ladder-head"><b>${esc(s.name)}</b><span class="hint" style="margin:0">${s.step < 0 ? `${s.total} Stufen` : `Stufe ${s.step + 1} von ${s.total}`}${s.step >= 0 ? ` · <span class="dots">${'●'.repeat(Math.min(s.counter, 3))}${'○'.repeat(Math.max(0, 3 - s.counter))}</span>` : ''}</span></div>
       <div class="lbar">${boxes}</div>
-      <div class="ladder-cur">${esc(cur)} ${s.cur ? stepEquipHtml(s.cur) : ''}${s.next && s.step >= 0 ? `<span class="hint" style="margin:0"> → nächste: ${esc(stepText(s.next, L.unit))}</span>` : ''}</div>
+      <div class="ladder-cur"><span class="lbl">Aktuell</span> ${esc(cur)} ${s.cur ? stepEquipHtml(s.cur) : ''}</div>
+      ${s.next ? `<div class="ladder-cur"><span class="lbl">${esc(nextLabel)}</span> ${esc(stepText(s.next, L.unit))} ${stepEquipHtml(s.next)}<span class="hint" style="margin:0"> – ${s.step < 0 ? 'wenn die App sie vorschlägt' : 'nach 3 grünen Einheiten, wenn diese Übung an der Reihe ist'}</span></div>` : '<div class="ladder-cur"><span class="lbl">Nächste Stufe</span> keine – Endstufe erreicht</div>'}
       <div class="btn-row" style="margin-top:6px">
         <button type="button" class="btn quiet small" data-act="ladderDown" data-key="${s.key}" ${s.step < 0 ? 'disabled' : ''}>Stufe runter</button>
         <button type="button" class="btn quiet small" data-act="ladderUp" data-key="${s.key}" ${s.done ? 'disabled' : ''}>Stufe hoch</button>
@@ -2018,7 +2021,8 @@ function plyoBarHtml() {
   return `<div class="ladder">
       <div class="ladder-head"><b>Plyometrie</b><span class="hint" style="margin:0">${s.step >= 0 ? `Stufe ${s.step + 1} von ${PLYO_STEPS.length} · <span class="dots">${'●'.repeat(Math.min(s.counter, PLYO_EINHEITEN))}${'○'.repeat(Math.max(0, PLYO_EINHEITEN - s.counter))}</span>` : 'ab Phase 3'}</span></div>
       <div class="lbar">${boxes}</div>
-      <div class="ladder-cur">${esc(s.cur ? s.cur.label : s.hint)}${s.cur && s.next ? `<span class="hint" style="margin:0"> → nächste: ${esc(s.next.label)}</span>` : ''}</div>
+      <div class="ladder-cur"><span class="lbl">Aktuell</span> ${esc(s.cur ? s.cur.label : s.active ? 'noch nicht begonnen' : 'ab Phase 3')}</div>
+      <div class="ladder-cur"><span class="lbl">${s.step < 0 ? 'Start' : 'Nächste Stufe'}</span> ${esc(s.next ? s.next.label : 'keine – Endstufe erreicht')}${s.next && s.step >= 0 ? `<span class="hint" style="margin:0"> – nach ${PLYO_TAGE} Tagen und ${PLYO_EINHEITEN} grünen Einheiten</span>` : ''}</div>
       <div class="btn-row" style="margin-top:6px">
         <button type="button" class="btn quiet small" data-act="plyoDown" ${s.step < 0 ? 'disabled' : ''}>Stufe runter</button>
         <button type="button" class="btn quiet small" data-act="plyoUp" ${s.step + 1 >= PLYO_STEPS.length ? 'disabled' : ''}>Stufe hoch</button>
@@ -2031,7 +2035,8 @@ function runBarHtml() {
   return `<div class="ladder">
       <div class="ladder-head"><b>Längster Lauf</b><span class="hint" style="margin:0">${r.step >= 0 ? `Stufe ${r.step + 1} · <span class="dots">${'●'.repeat(Math.min(r.counter, 2))}${'○'.repeat(Math.max(0, 2 - r.counter))}</span>` : 'noch nicht begonnen'}</span></div>
       <div class="lbar">${boxes}</div>
-      <div class="ladder-cur">${esc(r.text || (r.gate ? 'Einstieg frei' : 'wartet auf 7 ruhige Morgen'))}${r.step >= 0 && r.step + 1 < RUN_MAX_STEPS ? `<span class="hint" style="margin:0"> → nächste: ${esc(runStepText(r.step + 1))} nach 2 grünen Läufen</span>` : ''}</div>
+      <div class="ladder-cur"><span class="lbl">Aktuell</span> ${esc(r.text || (r.gate ? 'noch kein Lauf – Einstieg frei' : 'noch kein Lauf – wartet auf 7 ruhige Morgen'))}</div>
+      <div class="ladder-cur"><span class="lbl">${r.step < 0 ? 'Start' : 'Nächste Stufe'}</span> ${esc(r.step < 0 ? runStepText(0) : r.step + 1 < RUN_MAX_STEPS ? runStepText(r.step + 1) : 'keine – Endstufe erreicht')}${r.step >= 0 && r.step + 1 < RUN_MAX_STEPS ? '<span class="hint" style="margin:0"> – nach 2 grünen Läufen auf der aktuellen Länge</span>' : ''}</div>
       <div class="btn-row" style="margin-top:6px">
         <button type="button" class="btn quiet small" data-act="runDown" ${r.step < 0 ? 'disabled' : ''}>Stufe runter</button>
         <button type="button" class="btn quiet small" data-act="runUp" ${r.step + 1 >= RUN_MAX_STEPS ? 'disabled' : ''}>Stufe hoch</button>
